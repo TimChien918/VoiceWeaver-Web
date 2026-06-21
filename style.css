@@ -48,11 +48,6 @@ input[type=range]{ padding:0; }
 .btn.primary{ background:var(--accent); color:#fff; }
 .btn.ghost{ background:var(--bg); color:var(--fg); border:1px solid var(--line); }
 .btn.big{ width:100%; margin-top:12px; padding:14px; font-size:1.05rem; }
-.btn.danger{ background:var(--danger); color:#fff; }
-/* topbar 上永遠看得到的緊急通報鈕 */
-.topbar .sos{ padding:8px 14px; border-radius:20px; font-size:.95rem; box-shadow:0 1px 4px rgba(255,59,48,.4); }
-/* 定位鈕：用 accent 外框，比一般 ghost 明顯 */
-.btn.loc{ background:var(--bg); color:var(--accent); border:1.5px solid var(--accent); }
 .chip{ border:1px solid var(--line); background:var(--card); color:var(--fg); border-radius:20px;
   padding:5px 12px; font-size:.82rem; cursor:pointer; }
 

@@ -26,7 +26,6 @@
       <span class="title">VoiceWeaver</span>
       <span class="spacer"></span>
       <span id="who" class="tiny muted"></span>
-      <button id="btnSos" class="btn danger sos" title="送出緊急通報到 Telegram">🆘 通報</button>
       <button id="btnLogout" class="chip">登出</button>
     </header>
 
@@ -45,10 +44,10 @@
           <textarea id="fragments" rows="3" placeholder="例：水 休息 現在"></textarea>
           <div class="row wrap">
             <button id="btnMic" class="btn ghost">🎤 語音輸入</button>
-            <button id="btnLoc" class="btn loc">📍 加入定位</button>
+            <button id="btnLoc" class="btn ghost">📍 加入地點</button>
             <button id="btnCam" class="btn ghost">📷 拍照辨識</button>
+            <span id="ctx" class="tiny muted"></span>
           </div>
-          <p id="ctx" class="tiny muted" style="margin:6px 0 0"></p>
           <button id="btnCompose" class="btn primary big">✨ 重組成自然句</button>
         </div>
         <div id="result" class="card result hidden">
