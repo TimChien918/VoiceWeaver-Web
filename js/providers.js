@@ -57,7 +57,8 @@ async function cohereText(entry, sys, user){
   const j = await r.json(); return (j.message?.content?.[0]?.text||"").trim();
 }
 function llmEntries(){
-  return (state.llmApis||[]).filter(e=>e.provider && (e.key || !LLM_PROVIDERS[e.provider]?.needsKey));
+  // 只留 web 支援的供應商（手機可能同步來 web 沒有的，如 cerebras → 跳過不報錯）
+  return (state.llmApis||[]).filter(e=>e.provider && LLM_PROVIDERS[e.provider] && (e.key || !LLM_PROVIDERS[e.provider].needsKey));
 }
 export function hasLlm(){ return llmEntries().length>0; }
 export async function runLlm(sys, user){
@@ -76,7 +77,7 @@ export async function runLlm(sys, user){
 
 // ── 生圖 ────────────────────────────────────────────
 function imageEntries(){
-  const list = (state.imageApis||[]).filter(e=>e.provider && (e.key || !IMAGE_PROVIDERS[e.provider]?.needsKey));
+  const list = (state.imageApis||[]).filter(e=>e.provider && IMAGE_PROVIDERS[e.provider] && (e.key || !IMAGE_PROVIDERS[e.provider].needsKey));
   // 永遠保底有 Pollinations（免金鑰）
   if(!list.some(e=>e.provider==="pollinations")) list.push({ provider:"pollinations", key:"" });
   return list;
