@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<title>VoiceWeaver 網頁版</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- 登入閘 -->
+  <div id="login" class="login hidden">
+    <div class="login-card">
+      <div class="logo">🗣️</div>
+      <h1>VoiceWeaver</h1>
+      <p class="muted">輕量網頁版 · 失語溝通輔助</p>
+      <button id="btnGoogle" class="btn primary">使用 Google 登入</button>
+      <button id="btnAnon" class="btn ghost">匿名試用</button>
+      <p class="tiny muted">登入後會自動記住你的 API 金鑰與設定，換裝置也能還原。</p>
+      <p id="loginErr" class="tiny err"></p>
+    </div>
+  </div>
+
+  <!-- 主畫面 -->
+  <div id="app" class="app hidden">
+    <header class="topbar">
+      <span class="title">VoiceWeaver</span>
+      <span class="spacer"></span>
+      <span id="who" class="tiny muted"></span>
+      <button id="btnLogout" class="chip">登出</button>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="compose">語句重組</button>
+      <button class="tab" data-tab="aac">AAC 圖卡</button>
+      <button class="tab" data-tab="history">歷史</button>
+      <button class="tab" data-tab="settings">設定</button>
+    </nav>
+
+    <main>
+      <!-- 重組 -->
+      <section id="tab-compose" class="panel">
+        <div class="card">
+          <label class="lbl">碎詞／想說的（可用語音輸入）</label>
+          <textarea id="fragments" rows="3" placeholder="例：水 休息 現在"></textarea>
+          <div class="row wrap">
+            <button id="btnMic" class="btn ghost">🎤 語音輸入</button>
+            <button id="btnLoc" class="btn ghost">📍 加入地點</button>
+            <button id="btnCam" class="btn ghost">📷 拍照辨識</button>
+            <span id="ctx" class="tiny muted"></span>
+          </div>
+          <button id="btnCompose" class="btn primary big">✨ 重組成自然句</button>
+        </div>
+        <div id="result" class="card result hidden">
+          <div id="resultText" class="result-text"></div>
+          <div class="row">
+            <button id="btnSpeak" class="btn primary">🔊 朗讀</button>
+            <button id="btnRegen" class="btn ghost">重組一次</button>
+            <button id="btnImg" class="btn ghost">🖼 生成圖卡</button>
+          </div>
+          <img id="resultImg" class="result-img hidden" alt="意圖圖卡" />
+        </div>
+      </section>
+
+      <!-- AAC -->
+      <section id="tab-aac" class="panel hidden">
+        <div class="card">
+          <div id="aacCats" class="chips"></div>
+          <div id="aacItems" class="cards-grid"></div>
+        </div>
+        <div class="card">
+          <label class="lbl">已選</label>
+          <div id="aacCombo" class="combo"></div>
+          <div class="row">
+            <button id="aacSpeak" class="btn primary">🔊 朗讀</button>
+            <button id="aacCompose" class="btn ghost">✨ 組成句子</button>
+            <button id="aacClear" class="btn ghost">清空</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 歷史 -->
+      <section id="tab-history" class="panel hidden">
+        <div id="historyList" class="card"></div>
+      </section>
+
+      <!-- 設定 -->
+      <section id="tab-settings" class="panel hidden">
+        <div class="card">
+          <h3>API 金鑰（自動雲端保存）</h3>
+          <p class="tiny muted">填一次就好，下次登入自動帶回。建議用可隨時撤銷的個人金鑰。</p>
+          <label class="lbl">Gemini API Key（重組／生圖／視覺，建議）</label>
+          <input id="k_gemini" type="password" autocomplete="off" />
+          <label class="lbl">Groq API Key（重組，選用）</label>
+          <input id="k_groq" type="password" autocomplete="off" />
+          <label class="lbl">OpenRouter API Key（重組，選用）</label>
+          <input id="k_openrouter" type="password" autocomplete="off" />
+          <label class="lbl">Telegram Bot Token（緊急通報，選用）</label>
+          <input id="k_tgtoken" type="password" autocomplete="off" />
+          <label class="lbl">Telegram Chat ID（接收者，選用）</label>
+          <input id="k_tgchat" type="text" autocomplete="off" />
+        </div>
+        <div class="card">
+          <h3>偏好</h3>
+          <label class="lbl">介面主題</label>
+          <select id="s_theme"><option value="auto">跟隨系統</option><option value="light">淺色</option><option value="dark">深色</option></select>
+          <label class="lbl">朗讀語言</label>
+          <select id="s_lang"><option value="zh-TW">中文</option><option value="en-US">English</option><option value="ja-JP">日本語</option><option value="ko-KR">한국어</option></select>
+          <label class="lbl">朗讀語速 <span id="rateVal" class="muted"></span></label>
+          <input id="s_rate" type="range" min="0.5" max="1.5" step="0.05" />
+          <label class="lbl">字體大小 <span id="fontVal" class="muted"></span></label>
+          <input id="s_font" type="range" min="0.9" max="1.6" step="0.05" />
+          <label class="lbl">重組供應商</label>
+          <select id="s_provider"><option value="auto">自動（有金鑰就輪詢）</option><option value="gemini">Gemini</option><option value="groq">Groq</option><option value="openrouter">OpenRouter</option></select>
+        </div>
+        <p id="saveState" class="tiny muted center">—</p>
+        <p class="tiny muted center">VoiceWeaver 網頁輕量版 · 純 API/瀏覽器、無本地運算</p>
+      </section>
+    </main>
+    <div id="toast" class="toast hidden"></div>
+  </div>
+
+  <!-- 你的 Firebase 設定（複製 config.example.js 為 config.js 並填入）。沒有 config.js 時為純本機模式。 -->
+  <script>window.__FIREBASE_CONFIG__ = null;</script>
+  <script src="config.js" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

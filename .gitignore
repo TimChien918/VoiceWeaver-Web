@@ -1,0 +1,5 @@
+.DS_Store
+*.log
+node_modules/
+# 註：config.js 需要 commit 才能部署到 GitHub Pages（Firebase web 設定是公開可見的）。
+# 若你不想公開 config.js，改用私有 repo。

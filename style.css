@@ -1,0 +1,71 @@
+:root{
+  --bg:#f2f2f7; --card:#fff; --fg:#1c1c1e; --muted:#6c6c70; --line:#e2e2e7;
+  --accent:#0a84ff; --accent2:#34c759; --danger:#ff3b30; --radius:14px; --font:1rem;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#000; --card:#1c1c1e; --fg:#fff; --muted:#98989f; --line:#2c2c2e; }
+}
+html[data-theme="light"]{ --bg:#f2f2f7; --card:#fff; --fg:#1c1c1e; --muted:#6c6c70; --line:#e2e2e7; }
+html[data-theme="dark"]{ --bg:#000; --card:#1c1c1e; --fg:#fff; --muted:#98989f; --line:#2c2c2e; }
+
+*{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+body{ margin:0; font-family:-apple-system,"PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  background:var(--bg); color:var(--fg); font-size:var(--font); }
+.hidden{ display:none !important; }
+.muted{ color:var(--muted); } .tiny{ font-size:.78rem; } .err{ color:var(--danger); }
+.center{ text-align:center; }
+.spacer{ flex:1; }
+
+/* 登入 */
+.login{ min-height:100dvh; display:flex; align-items:center; justify-content:center; padding:20px; }
+.login-card{ background:var(--card); border:1px solid var(--line); border-radius:20px; padding:32px 24px;
+  width:100%; max-width:360px; text-align:center; }
+.logo{ font-size:48px; } .login-card h1{ margin:6px 0 2px; }
+
+/* 主框 */
+.topbar{ display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid var(--line);
+  position:sticky; top:0; background:var(--bg); z-index:5; }
+.title{ font-weight:700; font-size:1.1rem; }
+.tabs{ display:flex; gap:4px; padding:8px 12px; overflow-x:auto; border-bottom:1px solid var(--line);
+  position:sticky; top:49px; background:var(--bg); z-index:4; }
+.tab{ border:0; background:transparent; color:var(--muted); padding:8px 12px; border-radius:10px;
+  font-size:.95rem; white-space:nowrap; cursor:pointer; }
+.tab.active{ background:var(--accent); color:#fff; font-weight:600; }
+main{ padding:14px; max-width:680px; margin:0 auto; }
+.panel{ display:flex; flex-direction:column; gap:14px; }
+
+.card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px; }
+.card h3{ margin:0 0 6px; }
+.lbl{ display:block; font-size:.85rem; color:var(--muted); margin:10px 0 4px; }
+textarea,input,select{ width:100%; font:inherit; color:var(--fg); background:var(--bg);
+  border:1px solid var(--line); border-radius:10px; padding:10px; }
+textarea{ resize:vertical; }
+input[type=range]{ padding:0; }
+
+.row{ display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:nowrap; }
+.row.wrap{ flex-wrap:wrap; }
+.btn{ border:0; border-radius:11px; padding:10px 14px; font:inherit; font-weight:600; cursor:pointer; }
+.btn.primary{ background:var(--accent); color:#fff; }
+.btn.ghost{ background:var(--bg); color:var(--fg); border:1px solid var(--line); }
+.btn.big{ width:100%; margin-top:12px; padding:14px; font-size:1.05rem; }
+.chip{ border:1px solid var(--line); background:var(--card); color:var(--fg); border-radius:20px;
+  padding:5px 12px; font-size:.82rem; cursor:pointer; }
+
+.result-text{ font-size:1.4rem; font-weight:600; line-height:1.5; padding:6px 2px 12px; }
+.result-img{ width:100%; border-radius:12px; margin-top:10px; }
+
+.chips{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+.chips .chip.on{ background:var(--accent); color:#fff; border-color:var(--accent); }
+.cards-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(92px,1fr)); gap:8px; }
+.acard{ background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:12px 6px;
+  text-align:center; cursor:pointer; font-size:.9rem; }
+.acard .emoji{ font-size:26px; display:block; }
+.combo{ min-height:42px; display:flex; gap:6px; flex-wrap:wrap; padding:6px 0; }
+.combo .chip.on{ background:var(--accent2); color:#fff; border-color:var(--accent2); }
+
+.hitem{ border-bottom:1px solid var(--line); padding:10px 2px; }
+.hitem:last-child{ border-bottom:0; }
+.hitem .h-main{ font-weight:600; } .hitem .h-sub{ font-size:.78rem; color:var(--muted); }
+
+.toast{ position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
+  background:rgba(0,0,0,.85); color:#fff; padding:10px 16px; border-radius:20px; font-size:.9rem; z-index:50; }
