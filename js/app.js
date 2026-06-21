@@ -192,11 +192,14 @@ function setupActions(){
     });
   });
   $("#btnLogout").addEventListener("click", logout);
-  // SOS（topbar 沒有，掛在登出旁；用鍵盤無法時可用 AAC 救命卡）—改用 AAC「救命」+ 此快捷
+  // SOS 緊急通報：topbar 上的明顯按鈕 + Esc 快捷
+  $("#btnSos").addEventListener("click", sos);
   document.addEventListener("keydown", e=>{ if(e.key==="Escape") sos(); });
 }
 async function sos(){
-  try{ await telegramNotify(lastResult || "我需要協助"); toast("已送出緊急通報"); }
+  if(!confirm("確定要送出緊急通報給你的 Telegram 聯絡人？")) return;
+  toast("通報中…");
+  try{ await telegramNotify(lastResult || "我需要協助"); toast("已送出緊急通報 ✓"); }
   catch(e){ toast("通報失敗："+(e.message||e)); }
 }
 
