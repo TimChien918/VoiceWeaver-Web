@@ -6,5 +6,4 @@ window.__FIREBASE_CONFIG__ = {
   storageBucket: "voiceweaver-af4da.firebasestorage.app",
   messagingSenderId: "944612365052",
   appId: "1:944612365052:web:2954695303d1bfeb83fd79",
-  measurementId: "G-HH3RH91YGG",
 };
