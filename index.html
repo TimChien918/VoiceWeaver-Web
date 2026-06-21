@@ -86,17 +86,22 @@
       <!-- 設定 -->
       <section id="tab-settings" class="panel hidden">
         <div class="card">
-          <h3>API 金鑰（自動雲端保存）</h3>
-          <p class="tiny muted">填一次就好，下次登入自動帶回。建議用可隨時撤銷的個人金鑰。</p>
-          <label class="lbl">Gemini API Key（重組／生圖／視覺，建議）</label>
-          <input id="k_gemini" type="password" autocomplete="off" />
-          <label class="lbl">Groq API Key（重組，選用）</label>
-          <input id="k_groq" type="password" autocomplete="off" />
-          <label class="lbl">OpenRouter API Key（重組，選用）</label>
-          <input id="k_openrouter" type="password" autocomplete="off" />
-          <label class="lbl">Telegram Bot Token（緊急通報，選用）</label>
+          <h3>💬 文字供應商（重組／組句）</h3>
+          <p class="tiny muted">可加多個供應商、同一家也能放多把金鑰；使用時自動輪詢＋失敗備援。</p>
+          <div id="llmList"></div>
+          <button id="addLlm" class="btn ghost" style="margin-top:8px">＋ 新增文字供應商</button>
+        </div>
+        <div class="card">
+          <h3>🖼 生圖供應商</h3>
+          <p class="tiny muted">Pollinations 免金鑰、永遠保底；可再加 Gemini／HuggingFace／OpenAI。</p>
+          <div id="imgList"></div>
+          <button id="addImg" class="btn ghost" style="margin-top:8px">＋ 新增生圖供應商</button>
+        </div>
+        <div class="card">
+          <h3>🆘 緊急通報（Telegram，選用）</h3>
+          <label class="lbl">Bot Token</label>
           <input id="k_tgtoken" type="password" autocomplete="off" />
-          <label class="lbl">Telegram Chat ID（接收者，選用）</label>
+          <label class="lbl">Chat ID（接收者）</label>
           <input id="k_tgchat" type="text" autocomplete="off" />
         </div>
         <div class="card">
@@ -109,8 +114,6 @@
           <input id="s_rate" type="range" min="0.5" max="1.5" step="0.05" />
           <label class="lbl">字體大小 <span id="fontVal" class="muted"></span></label>
           <input id="s_font" type="range" min="0.9" max="1.6" step="0.05" />
-          <label class="lbl">重組供應商</label>
-          <select id="s_provider"><option value="auto">自動（有金鑰就輪詢）</option><option value="gemini">Gemini</option><option value="groq">Groq</option><option value="openrouter">OpenRouter</option></select>
         </div>
         <p id="saveState" class="tiny muted center">—</p>
         <p class="tiny muted center">VoiceWeaver 網頁輕量版 · 純 API/瀏覽器、無本地運算</p>

@@ -8,15 +8,42 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const DEFAULTS = {
-  settings: { theme: "auto", lang: "zh-TW", rate: 0.95, font: 1.0, provider: "auto" },
-  apiKeys:  { gemini: "", groq: "", openrouter: "", tgtoken: "", tgchat: "" },
+  settings: { theme: "auto", lang: "zh-TW", rate: 0.95, font: 1.0 },
+  // 單一欄位的金鑰（通報用）
+  apiKeys:  { tgtoken: "", tgchat: "" },
+  // 多供應商、多金鑰清單（每筆 {id, provider, key, model}）→ 重組/生圖自動輪詢
+  llmApis:  [],
+  imageApis:[],
 };
+
+let _idc = 0;
+export function newId(){ return "k" + Date.now().toString(36) + (_idc++).toString(36); }
 
 export const state = {
   uid: null, online: false,
   settings: structuredClone(DEFAULTS.settings),
   apiKeys: structuredClone(DEFAULTS.apiKeys),
+  llmApis: [],
+  imageApis: [],
 };
+
+// 舊版單一金鑰 → 自動轉成清單第一筆（相容升級）
+function migrate(d){
+  const ak = d.apiKeys || {};
+  if((!d.llmApis || !d.llmApis.length)){
+    const seed = [];
+    for(const p of ["gemini","groq","openrouter"]) if(ak[p]) seed.push({ id:newId(), provider:p, key:ak[p], model:"" });
+    if(seed.length) d.llmApis = seed;
+  }
+  if((!d.imageApis || !d.imageApis.length)) d.imageApis = [{ id:newId(), provider:"pollinations", key:"", model:"" }];
+  return d;
+}
+function applyLoaded(d){
+  state.settings = { ...DEFAULTS.settings, ...(d.settings||{}) };
+  state.apiKeys  = { ...DEFAULTS.apiKeys,  ...(d.apiKeys||{}) };
+  state.llmApis  = Array.isArray(d.llmApis) ? d.llmApis : [];
+  state.imageApis= Array.isArray(d.imageApis) ? d.imageApis : [];
+}
 
 let _app=null, _auth=null, _db=null, _saveTimer=null, _onSaved=()=>{};
 const LS = "voiceweaver_web";
@@ -61,36 +88,30 @@ export async function logout(){
 }
 
 // ── 載入 ───────────────────────────────────────────
+function snapshot(){
+  return { settings:state.settings, apiKeys:state.apiKeys, llmApis:state.llmApis, imageApis:state.imageApis };
+}
 function loadLocal(){
-  try{
-    const raw = JSON.parse(localStorage.getItem(LS) || "{}");
-    if(raw.settings) state.settings = { ...DEFAULTS.settings, ...raw.settings };
-    if(raw.apiKeys)  state.apiKeys  = { ...DEFAULTS.apiKeys,  ...raw.apiKeys };
-  }catch{}
+  try{ applyLoaded(migrate(JSON.parse(localStorage.getItem(LS) || "{}"))); }
+  catch{ applyLoaded(migrate({})); }
 }
 async function loadCloud(uid){
   try{
     const snap = await getDoc(doc(_db,"users",uid));
-    if(snap.exists()){
-      const d = snap.data();
-      state.settings = { ...DEFAULTS.settings, ...(d.settings||{}) };
-      state.apiKeys  = { ...DEFAULTS.apiKeys,  ...(d.apiKeys||{}) };
-    } else {
-      // 首次登入 → 建預設文件
-      await setDoc(doc(_db,"users",uid), { settings:state.settings, apiKeys:state.apiKeys, updatedAt:Date.now() });
-    }
+    if(snap.exists()){ applyLoaded(migrate(snap.data())); }
+    else { applyLoaded(migrate({})); await setDoc(doc(_db,"users",uid), { ...snapshot(), updatedAt:Date.now() }); }
   }catch(e){ console.warn("loadCloud failed", e); loadLocal(); }
 }
 
 // ── 儲存（防抖：改動 800ms 後寫回；本機立即備份）──────
 export function save(){
-  try{ localStorage.setItem(LS, JSON.stringify({ settings:state.settings, apiKeys:state.apiKeys })); }catch{}
+  try{ localStorage.setItem(LS, JSON.stringify(snapshot())); }catch{}
   if(!_db || !state.uid || state.uid==="local"){ _onSaved("已存（本機）"); return; }
   clearTimeout(_saveTimer);
   _onSaved("儲存中…");
   _saveTimer = setTimeout(async ()=>{
     try{
-      await setDoc(doc(_db,"users",state.uid), { settings:state.settings, apiKeys:state.apiKeys, updatedAt:Date.now() }, { merge:true });
+      await setDoc(doc(_db,"users",state.uid), { ...snapshot(), updatedAt:Date.now() }, { merge:true });
       _onSaved("已雲端同步 ✓");
     }catch(e){ _onSaved("雲端儲存失敗（已存本機）"); }
   }, 800);

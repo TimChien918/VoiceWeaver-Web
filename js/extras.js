@@ -1,13 +1,12 @@
 // 進階功能（全部純 API / 瀏覽器）：生圖、定位、相機雲端辨識、Telegram 通報。
 import { state } from "./store.js";
+import { runImage } from "./providers.js";
 
-// ── AI 生圖：優先 Pollinations（免金鑰），有 Gemini 金鑰也可用 ──
-export async function generateImage(prompt){
-  const en = prompt; // Pollinations 直接吃文字
-  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`;
-  // 直接回傳 URL（瀏覽器 <img> 載入即生成），最輕量
-  return url;
-}
+// ── AI 生圖：走多供應商輪詢（pollinations 免金鑰保底）──
+export async function generateImage(prompt){ return runImage(prompt); }
+
+// 從 LLM 清單找第一把 Gemini 金鑰（相機視覺用）
+function geminiKey(){ return (state.llmApis||[]).find(e=>e.provider==="gemini" && e.key)?.key || ""; }
 
 // ── 意圖→圖卡用的英文提示（簡單關鍵字對應，讓圖更貼切）──
 export function intentPrompt(sentence){
@@ -30,8 +29,8 @@ export async function detectLocation(){
 
 // ── 相機雲端辨識：拍一張 → Gemini Vision 回傳看到的物品（中文，逗號分隔）──
 export async function recognizePhoto(base64Jpeg){
-  const key = state.apiKeys.gemini;
-  if(!key) throw new Error("需要 Gemini 金鑰才能用相機辨識（設定頁）");
+  const key = geminiKey();
+  if(!key) throw new Error("需要 Gemini 金鑰才能用相機辨識（請在設定頁新增一個 Gemini 供應商）");
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(key)}`;
   const r = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ contents:[{ parts:[

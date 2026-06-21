@@ -1,4 +1,5 @@
-import { state, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory } from "./store.js";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory } from "./store.js";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js";
 import { reconstruct, composeAac, hasAnyLlmKey } from "./llm.js";
 import { speak, listen, sttSupported } from "./speech.js";
 import { AAC, AAC_CATS } from "./aac.js";
@@ -22,27 +23,47 @@ function applyTheme(){
 
 // ── 設定 UI 綁定 ──
 function fillSettings(){
-  $("#k_gemini").value = state.apiKeys.gemini;
-  $("#k_groq").value = state.apiKeys.groq;
-  $("#k_openrouter").value = state.apiKeys.openrouter;
   $("#k_tgtoken").value = state.apiKeys.tgtoken;
   $("#k_tgchat").value = state.apiKeys.tgchat;
   $("#s_theme").value = state.settings.theme;
   $("#s_lang").value = state.settings.lang;
   $("#s_rate").value = state.settings.rate; $("#rateVal").textContent = state.settings.rate+"x";
   $("#s_font").value = state.settings.font; $("#fontVal").textContent = state.settings.font+"x";
-  $("#s_provider").value = state.settings.provider;
+  renderProviderList("#llmList", "llmApis", LLM_PROVIDERS);
+  renderProviderList("#imgList", "imageApis", IMAGE_PROVIDERS);
 }
 function bindSettings(){
-  const k = {k_gemini:"gemini",k_groq:"groq",k_openrouter:"openrouter",k_tgtoken:"tgtoken",k_tgchat:"tgchat"};
-  for(const [id,key] of Object.entries(k)){
-    $("#"+id).addEventListener("input", e=>{ state.apiKeys[key]=e.target.value.trim(); save(); });
-  }
+  $("#k_tgtoken").addEventListener("input", e=>{ state.apiKeys.tgtoken=e.target.value.trim(); save(); });
+  $("#k_tgchat").addEventListener("input", e=>{ state.apiKeys.tgchat=e.target.value.trim(); save(); });
   $("#s_theme").addEventListener("change", e=>{ state.settings.theme=e.target.value; applyTheme(); save(); });
   $("#s_lang").addEventListener("change", e=>{ state.settings.lang=e.target.value; save(); });
   $("#s_rate").addEventListener("input", e=>{ state.settings.rate=+e.target.value; $("#rateVal").textContent=e.target.value+"x"; save(); });
   $("#s_font").addEventListener("input", e=>{ state.settings.font=+e.target.value; $("#fontVal").textContent=e.target.value+"x"; applyTheme(); save(); });
-  $("#s_provider").addEventListener("change", e=>{ state.settings.provider=e.target.value; save(); });
+  $("#addLlm").addEventListener("click", ()=>{ state.llmApis.push({id:newId(),provider:Object.keys(LLM_PROVIDERS)[0],key:"",model:""}); save(); renderProviderList("#llmList","llmApis",LLM_PROVIDERS); });
+  $("#addImg").addEventListener("click", ()=>{ state.imageApis.push({id:newId(),provider:"pollinations",key:"",model:""}); save(); renderProviderList("#imgList","imageApis",IMAGE_PROVIDERS); });
+}
+
+// 多供應商/多金鑰清單：供應商下拉 + 金鑰欄 + 刪除
+function renderProviderList(containerId, listKey, catalog){
+  const box = $(containerId); const list = state[listKey] || [];
+  if(!list.length){ box.innerHTML = '<p class="tiny muted">尚未新增，點下方按鈕加入。</p>'; return; }
+  const opts = (sel)=>Object.entries(catalog).map(([k,v])=>`<option value="${k}" ${k===sel?'selected':''}>${v.label}</option>`).join("");
+  box.innerHTML = list.map((e,i)=>{
+    const needsKey = catalog[e.provider]?.needsKey !== false;
+    return `<div class="prow" data-i="${i}" style="border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px">
+      <div class="row" style="margin:0;gap:6px">
+        <select class="p-prov" style="flex:1">${opts(e.provider)}</select>
+        <span class="chip p-del" title="刪除">🗑</span>
+      </div>
+      ${needsKey?`<input class="p-key" type="password" placeholder="API 金鑰" value="${e.key||''}" autocomplete="off" style="margin-top:6px"/>`:'<p class="tiny muted" style="margin:6px 0 0">免金鑰</p>'}
+    </div>`;
+  }).join("");
+  box.querySelectorAll(".prow").forEach(row=>{
+    const i = +row.dataset.i;
+    row.querySelector(".p-prov").addEventListener("change", e=>{ state[listKey][i].provider=e.target.value; state[listKey][i].key=""; save(); renderProviderList(containerId,listKey,catalog); });
+    row.querySelector(".p-key")?.addEventListener("input", e=>{ state[listKey][i].key=e.target.value.trim(); save(); });
+    row.querySelector(".p-del").addEventListener("click", ()=>{ state[listKey].splice(i,1); save(); renderProviderList(containerId,listKey,catalog); });
+  });
 }
 
 // ── 分頁 ──
