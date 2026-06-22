@@ -4,7 +4,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, doc, getDoc, setDoc, collection, addDoc, getDocs, query, orderBy, limit
+  getFirestore, doc, getDoc, setDoc, onSnapshot, collection, addDoc, getDocs, query, orderBy, limit
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const DEFAULTS = {
@@ -46,12 +46,14 @@ function applyLoaded(d){
 }
 
 let _app=null, _auth=null, _db=null, _saveTimer=null, _onSaved=()=>{};
+let _userUnsub=null, _onRemote=()=>{};   // 使用者文件即時監聽
 const LS = "voiceweaver_web";
 
 export function hasFirebase(){ return !!window.__FIREBASE_CONFIG__?.apiKey && !window.__FIREBASE_CONFIG__.apiKey.startsWith("貼上"); }
 
-export function initAuth({ onUser, onSaved }){
+export function initAuth({ onUser, onSaved, onRemote }){
   _onSaved = onSaved || _onSaved;
+  _onRemote = onRemote || _onRemote;
   if(!hasFirebase()){
     // 純本機：直接「登入」成本機使用者，讀 localStorage
     loadLocal();
@@ -65,9 +67,10 @@ export function initAuth({ onUser, onSaved }){
   onAuthStateChanged(_auth, async (u) => {
     if(u){
       state.uid = u.uid; state.online = true;
-      await loadCloud(u.uid);
+      watchCloud(u.uid);   // 即時監聽：API 金鑰／模型／設定一改就同步
       onUser({ uid:u.uid, anon:u.isAnonymous, name: u.displayName || (u.isAnonymous?"匿名使用者":u.email) });
     } else {
+      if(_userUnsub){ _userUnsub(); _userUnsub=null; }
       state.uid = null; state.online = false;
       onUser(null);
     }
@@ -95,12 +98,25 @@ function loadLocal(){
   try{ applyLoaded(migrate(JSON.parse(localStorage.getItem(LS) || "{}"))); }
   catch{ applyLoaded(migrate({})); }
 }
-async function loadCloud(uid){
+// 即時監聽使用者文件：任一裝置改 API 金鑰／模型／設定，其他裝置立即更新。
+function watchCloud(uid){
+  if(_userUnsub){ _userUnsub(); _userUnsub=null; }
+  _userUnsub = onSnapshot(doc(_db,"users",uid), (snap)=>{
+    // 自己剛寫入的回聲（尚未落地）略過，避免覆蓋正在編輯的內容
+    if(snap.metadata.hasPendingWrites) return;
+    if(snap.exists()){ applyLoaded(migrate(snap.data())); _onRemote("doc"); }
+    else { applyLoaded(migrate({})); setDoc(doc(_db,"users",uid), { ...snapshot(), updatedAt:Date.now() }, { merge:true }); }
+  }, (e)=>{ console.warn("watchCloud failed", e); loadLocal(); _onRemote("doc"); });
+}
+
+// 手動更新：強制重抓一次使用者文件（給「🔄 更新」按鈕用）
+export async function refreshCloud(){
+  if(!_db || !state.uid || state.uid==="local") return false;
   try{
-    const snap = await getDoc(doc(_db,"users",uid));
-    if(snap.exists()){ applyLoaded(migrate(snap.data())); }
-    else { applyLoaded(migrate({})); await setDoc(doc(_db,"users",uid), { ...snapshot(), updatedAt:Date.now() }); }
-  }catch(e){ console.warn("loadCloud failed", e); loadLocal(); }
+    const snap = await getDoc(doc(_db,"users",state.uid));
+    if(snap.exists()){ applyLoaded(migrate(snap.data())); _onRemote("doc"); }
+    return true;
+  }catch(e){ console.warn("refreshCloud failed", e); return false; }
 }
 
 // ── 儲存（防抖：改動 800ms 後寫回；本機立即備份）──────
@@ -132,6 +148,12 @@ export async function listHistory(){
     }catch(e){ return getLocalHistory(); }
   }
   return getLocalHistory();
+}
+// 即時監聽歷史（使用紀錄）：新紀錄一寫入立即推給回呼。回傳 unsubscribe()。
+export function watchHistory(cb){
+  if(!_db || !state.uid || state.uid==="local"){ cb(getLocalHistory()); return ()=>{}; }
+  const q = query(collection(_db,"users",state.uid,"history"), orderBy("ts","desc"), limit(100));
+  return onSnapshot(q, (snap)=>cb(snap.docs.map(d=>d.data())), (e)=>{ console.warn("watchHistory", e); cb(getLocalHistory()); });
 }
 function pushLocalHistory(rec){
   const h = getLocalHistory(); h.unshift(rec);

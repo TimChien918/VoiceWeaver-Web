@@ -1,4 +1,4 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory } from "./store.js";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, watchHistory, refreshCloud } from "./store.js";
 import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js";
 import { reconstruct, composeAac, hasAnyLlmKey } from "./llm.js";
 import { speak, listen, sttSupported } from "./speech.js";
@@ -74,7 +74,6 @@ function setupTabs(){
     t.classList.add("active");
     $$(".panel").forEach(p=>p.classList.add("hidden"));
     $("#tab-"+t.dataset.tab).classList.remove("hidden");
-    if(t.dataset.tab==="history") renderHistory();
   }));
 }
 
@@ -154,14 +153,26 @@ function setupAac(){
   });
 }
 
-// ── 歷史 ──
-async function renderHistory(){
-  const list = await listHistory();
-  $("#historyList").innerHTML = list.length ? list.map(h=>`
+// ── 歷史（使用紀錄）：即時同步 + 手動更新 ──
+let _histUnsub = null;
+function renderHistoryList(list){
+  const body = list.length ? list.map(h=>`
     <div class="hitem"><div class="h-main">${escapeHtml(h.reconstructed||"")}</div>
     <div class="h-sub">${escapeHtml(h.original||"")} · ${new Date(h.ts).toLocaleString()}</div></div>`).join("")
     : '<p class="tiny muted center">尚無紀錄</p>';
+  $("#historyList").innerHTML =
+    `<div class="row" style="margin:0 0 8px;align-items:center">
+       <span class="tiny muted" style="flex:1">使用紀錄 · 即時同步</span>
+       <button id="histRefresh" class="chip">🔄 更新</button>
+     </div>` + body;
   $$("#historyList .hitem").forEach((el,i)=>el.addEventListener("click",()=>speak(list[i].reconstructed||"")));
+  $("#histRefresh").addEventListener("click", async ()=>{
+    toast("更新中…"); await refreshCloud(); renderHistoryList(await listHistory()); toast("已更新");
+  });
+}
+function startHistoryWatch(){
+  if(_histUnsub){ _histUnsub(); _histUnsub=null; }
+  _histUnsub = watchHistory(list=>renderHistoryList(list));   // onSnapshot 訂閱後立即回呼一次
 }
 function escapeHtml(s){ return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 
@@ -207,6 +218,7 @@ function showApp(user){
   $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
   $("#who").textContent = user.name || "";
   applyTheme(); fillSettings();
+  startHistoryWatch();   // 使用紀錄即時同步
 }
 
 function main(){
@@ -216,7 +228,14 @@ function main(){
 
   initAuth({
     onUser:(u)=>{ if(u) showApp(u); else showLogin(); },
-    onSaved:(msg)=>{ const el=$("#saveState"); if(el) el.textContent=msg; }
+    onSaved:(msg)=>{ const el=$("#saveState"); if(el) el.textContent=msg; },
+    // 其他裝置改了 API 金鑰／設定 → 即時套用；正在編輯設定欄位時先不重繪，避免打字跳掉
+    onRemote:()=>{
+      applyTheme();
+      const ae = document.activeElement;
+      const editing = ae && $("#tab-settings")?.contains(ae);
+      if(!editing) fillSettings();
+    }
   });
 }
 main();
