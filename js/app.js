@@ -4,6 +4,7 @@ import { reconstruct, composeAac, hasAnyLlmKey } from "./llm.js";
 import { speak, listen, sttSupported } from "./speech.js";
 import { AAC, AAC_CATS } from "./aac.js";
 import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js";
+import { setupRehab } from "./rehab.js";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -209,7 +210,7 @@ function showApp(user){
 }
 
 function main(){
-  setupTabs(); setupActions(); setupAac(); setupCamera(); bindSettings();
+  setupTabs(); setupActions(); setupAac(); setupCamera(); bindSettings(); setupRehab({ toast });
   $("#btnGoogle").addEventListener("click", async ()=>{ try{ await loginGoogle(); }catch(e){ $("#loginErr").textContent=e.message||e; } });
   $("#btnAnon").addEventListener("click", async ()=>{ try{ await loginAnon(); }catch(e){ $("#loginErr").textContent=e.message||e; } });
 
