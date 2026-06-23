@@ -47,6 +47,7 @@ function applyLoaded(d){
 
 let _app=null, _auth=null, _db=null, _saveTimer=null, _onSaved=()=>{};
 let _userUnsub=null, _onRemote=()=>{};   // 使用者文件即時監聽
+let _loaded=false;                        // 雲端資料是否已載入完成；未完成前禁止寫回，避免空 DEFAULTS 覆蓋雲端
 const LS = "voiceweaver_web";
 
 export function hasFirebase(){ return !!window.__FIREBASE_CONFIG__?.apiKey && !window.__FIREBASE_CONFIG__.apiKey.startsWith("貼上"); }
@@ -71,6 +72,7 @@ export function initAuth({ onUser, onSaved, onRemote }){
       onUser({ uid:u.uid, anon:u.isAnonymous, name: u.displayName || (u.isAnonymous?"匿名使用者":u.email) });
     } else {
       if(_userUnsub){ _userUnsub(); _userUnsub=null; }
+      _loaded = false;
       state.uid = null; state.online = false;
       onUser(null);
     }
@@ -104,8 +106,8 @@ function watchCloud(uid){
   _userUnsub = onSnapshot(doc(_db,"users",uid), (snap)=>{
     // 自己剛寫入的回聲（尚未落地）略過，避免覆蓋正在編輯的內容
     if(snap.metadata.hasPendingWrites) return;
-    if(snap.exists()){ applyLoaded(migrate(snap.data())); _onRemote("doc"); }
-    else { applyLoaded(migrate({})); setDoc(doc(_db,"users",uid), { ...snapshot(), updatedAt:Date.now() }, { merge:true }); }
+    if(snap.exists()){ applyLoaded(migrate(snap.data())); _loaded=true; _onRemote("doc"); }
+    else { _loaded=true; applyLoaded(migrate({})); setDoc(doc(_db,"users",uid), { ...snapshot(), updatedAt:Date.now() }, { merge:true }); }
   }, (e)=>{ console.warn("watchCloud failed", e); loadLocal(); _onRemote("doc"); });
 }
 
@@ -114,7 +116,7 @@ export async function refreshCloud(){
   if(!_db || !state.uid || state.uid==="local") return false;
   try{
     const snap = await getDoc(doc(_db,"users",state.uid));
-    if(snap.exists()){ applyLoaded(migrate(snap.data())); _onRemote("doc"); }
+    if(snap.exists()){ applyLoaded(migrate(snap.data())); _loaded=true; _onRemote("doc"); }
     return true;
   }catch(e){ console.warn("refreshCloud failed", e); return false; }
 }
@@ -123,6 +125,8 @@ export async function refreshCloud(){
 export function save(){
   try{ localStorage.setItem(LS, JSON.stringify(snapshot())); }catch{}
   if(!_db || !state.uid || state.uid==="local"){ _onSaved("已存（本機）"); return; }
+  // 雲端資料還沒載入完成 → 只存本機，先不要寫回雲端（避免登入瞬間的空狀態把雲端蓋掉）
+  if(!_loaded){ _onSaved("雲端載入中…（已暫存本機）"); return; }
   clearTimeout(_saveTimer);
   _onSaved("儲存中…");
   _saveTimer = setTimeout(async ()=>{
