@@ -33,11 +33,15 @@ export async function recognizePhoto(base64Jpeg){
   if(!key) throw new Error("需要 Gemini 金鑰才能用相機辨識（請在設定頁新增一個 Gemini 供應商）");
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(key)}`;
   const r = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ contents:[{ parts:[
+    body: JSON.stringify({ contents:[{ role:"user", parts:[
       { text:"用繁體中文列出這張照片裡最主要的 3-5 個物品，只輸出名詞、用頓號分隔，不要解釋。" },
       { inline_data:{ mime_type:"image/jpeg", data: base64Jpeg } }
     ]}] }) });
-  if(!r.ok) throw new Error("Vision "+r.status);
+  if(!r.ok){
+    let msg = "Vision "+r.status;
+    try{ const e = await r.json(); msg += "：" + (e?.error?.message || JSON.stringify(e)); }catch{}
+    throw new Error(msg);
+  }
   const j = await r.json();
   return (j.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
 }
