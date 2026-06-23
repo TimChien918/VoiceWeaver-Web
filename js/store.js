@@ -8,7 +8,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const DEFAULTS = {
-  settings: { theme: "auto", lang: "zh-TW", rate: 0.95, font: 1.0 },
+  settings: { theme: "auto", lang: "zh-TW", rate: 0.95, font: 1.0, voice: "" },
   // 單一欄位的金鑰（通報用）
   apiKeys:  { tgtoken: "", tgchat: "" },
   // 多供應商、多金鑰清單（每筆 {id, provider, key, model}）→ 重組/生圖自動輪詢

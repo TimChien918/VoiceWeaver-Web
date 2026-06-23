@@ -1,7 +1,7 @@
 import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, watchHistory, refreshCloud } from "./store.js";
 import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js";
 import { reconstruct, composeAac, hasAnyLlmKey } from "./llm.js";
-import { speak, listen, sttSupported } from "./speech.js";
+import { speak, listen, sttSupported, listVoices } from "./speech.js";
 import { AAC, AAC_CATS } from "./aac.js";
 import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js";
 import { setupRehab } from "./rehab.js";
@@ -30,14 +30,33 @@ function fillSettings(){
   $("#s_lang").value = state.settings.lang;
   $("#s_rate").value = state.settings.rate; $("#rateVal").textContent = state.settings.rate+"x";
   $("#s_font").value = state.settings.font; $("#fontVal").textContent = state.settings.font+"x";
+  populateVoices();
   renderProviderList("#llmList", "llmApis", LLM_PROVIDERS);
   renderProviderList("#imgList", "imageApis", IMAGE_PROVIDERS);
 }
+// 朗讀嗓音下拉：最自然的排前面；voices 載入是非同步的，故也在 voiceschanged 時重填。
+function populateVoices(){
+  const sel = $("#s_voice"); if(!sel) return;
+  const vs = listVoices(state.settings.lang);
+  sel.innerHTML = '<option value="">自動（挑最自然）</option>' +
+    vs.map(v=>`<option value="${v.voiceURI}">${v.name} (${v.lang})${v.localService?"":" · 線上"}</option>`).join("");
+  sel.value = state.settings.voice || "";
+}
+if(typeof speechSynthesis !== "undefined")
+  speechSynthesis.addEventListener?.("voiceschanged", ()=>populateVoices());
 function bindSettings(){
   $("#k_tgtoken").addEventListener("input", e=>{ state.apiKeys.tgtoken=e.target.value.trim(); save(); });
   $("#k_tgchat").addEventListener("input", e=>{ state.apiKeys.tgchat=e.target.value.trim(); save(); });
   $("#s_theme").addEventListener("change", e=>{ state.settings.theme=e.target.value; applyTheme(); save(); });
-  $("#s_lang").addEventListener("change", e=>{ state.settings.lang=e.target.value; save(); });
+  $("#s_lang").addEventListener("change", e=>{ state.settings.lang=e.target.value; state.settings.voice=""; populateVoices(); save(); });
+  $("#s_voice").addEventListener("change", e=>{
+    state.settings.voice=e.target.value; save();
+    const lang=(state.settings.lang||"zh").toLowerCase();
+    speak(lang.startsWith("en")?"Hello, this is a voice test."
+        : lang.startsWith("ja")?"こんにちは、音声テストです。"
+        : lang.startsWith("ko")?"안녕하세요, 음성 테스트입니다."
+        : "你好，這是嗓音測試。");
+  });
   $("#s_rate").addEventListener("input", e=>{ state.settings.rate=+e.target.value; $("#rateVal").textContent=e.target.value+"x"; save(); });
   $("#s_font").addEventListener("input", e=>{ state.settings.font=+e.target.value; $("#fontVal").textContent=e.target.value+"x"; applyTheme(); save(); });
   $("#addLlm").addEventListener("click", ()=>{ state.llmApis.push({id:newId(),provider:Object.keys(LLM_PROVIDERS)[0],key:"",model:""}); save(); renderProviderList("#llmList","llmApis",LLM_PROVIDERS); });

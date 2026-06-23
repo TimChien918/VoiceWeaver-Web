@@ -1,13 +1,32 @@
 // TTS / STT 全用瀏覽器原生 Web Speech API（免金鑰、無本地模型運算）。
 import { state } from "./store.js";
 
-function _pickVoice(lang){
+// 自然嗓音關鍵字：神經網路／線上嗓音通常比預設機械音「有人味」得多。
+const _NATURAL_HINTS = ["natural","neural","wavenet","journey","online","premium","enhanced","google","siri","自然","線上"];
+function _scoreVoice(v, lang){
+  const L = (lang||"").toLowerCase(), base = L.split("-")[0];
+  let s = 0;
+  const vl = (v.lang||"").toLowerCase();
+  if(vl === L) s += 100; else if(vl.startsWith(base)) s += 50;
+  const name = (v.name||"").toLowerCase();
+  if(_NATURAL_HINTS.some(h => name.includes(h))) s += 40;   // 自然/神經嗓音優先
+  if(!v.localService) s += 12;                              // 線上嗓音通常較自然
+  return s;
+}
+function _bestVoice(lang){
   const vs = speechSynthesis.getVoices();
   if(!vs.length) return null;
-  const L = lang.toLowerCase(), base = L.split("-")[0];
-  return vs.find(v => v.lang?.toLowerCase() === L)
-      || vs.find(v => v.lang?.toLowerCase().startsWith(base))
-      || null;
+  const base = (lang||"").split("-")[0].toLowerCase();
+  const pool = vs.filter(v => (v.lang||"").toLowerCase().startsWith(base));
+  return (pool.length ? pool : vs).slice().sort((a,b)=>_scoreVoice(b,lang)-_scoreVoice(a,lang))[0] || null;
+}
+
+/** 供設定頁下拉用：列出（指定語言的）可用嗓音，最自然的排前面。 */
+export function listVoices(lang){
+  const base = (lang||"").split("-")[0].toLowerCase();
+  return speechSynthesis.getVoices()
+    .filter(v => !base || (v.lang||"").toLowerCase().startsWith(base))
+    .sort((a,b)=>_scoreVoice(b,lang||"")-_scoreVoice(a,lang||""));
 }
 
 export function speak(text){
@@ -19,8 +38,11 @@ export function speak(text){
       const u = new SpeechSynthesisUtterance(text);
       u.lang = state.settings.lang || "zh-TW";
       u.rate = state.settings.rate || 0.95;
-      const v = _pickVoice(u.lang);
-      if(v) u.voice = v;
+      u.pitch = 1.0;
+      const vs = speechSynthesis.getVoices();
+      // 使用者在設定頁選的嗓音優先；沒選就自動挑「最有人味」的那個
+      const chosen = (state.settings.voice && vs.find(v => v.voiceURI === state.settings.voice)) || _bestVoice(u.lang);
+      if(chosen){ u.voice = chosen; u.lang = chosen.lang || u.lang; }
       speechSynthesis.speak(u);
     }catch(e){ console.warn("TTS失敗", e); }
   };
