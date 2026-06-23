@@ -1,6 +1,7 @@
 // 語音復健：聽整句(TTS) → 點字卡發音 → 跟讀錄音(STT) → Levenshtein 評分 → 記錄。
 // 全部走瀏覽器原生 Web Speech API + 純前端計分，免金鑰、免後端，與 App 端 RehabScreen 對齊。
 import { speak, listen, sttSupported } from "./speech.js";
+import { suggestRehabSentences, hasAnyLlmKey } from "./llm.js";
 
 const $ = (s)=>document.querySelector(s);
 
@@ -66,9 +67,13 @@ function renderPicker(){
   picker.classList.remove("hidden");
   picker.innerHTML = `
     <h3>🎯 選一句來練</h3>
-    <p class="tiny muted">自己打一句，或點下面臨床常用題庫一鍵開始。</p>
+    <p class="tiny muted">自己打一句、用 AI 推薦情境句，或點臨床常用題庫一鍵開始。</p>
     <textarea id="rehabInput" rows="2" placeholder="例：我想喝水"></textarea>
     <button id="rehabStart" class="btn primary big">▶ 用這句開始練習</button>
+    <div style="margin-top:14px">
+      <button id="rehabAi" class="btn" style="width:100%;background:#ff9f0a;color:#fff">✨ AI 推薦情境句</button>
+      <div id="rehabAiList"></div>
+    </div>
     <div id="rehabBank" style="margin-top:14px"></div>`;
   const bank = $("#rehabBank");
   bank.innerHTML = Object.entries(BANK).map(([label,items])=>`
@@ -79,6 +84,20 @@ function renderPicker(){
     const v=$("#rehabInput").value.trim(); if(v) start(v);
   });
   bank.querySelectorAll(".rehab-pick").forEach(c=>c.addEventListener("click", ()=>start(c.dataset.w)));
+  // AI 推薦情境句
+  $("#rehabAi").addEventListener("click", async ()=>{
+    if(!hasAnyLlmKey()){ toastFn("需先到設定頁新增文字供應商金鑰才能用 AI 推薦"); return; }
+    const btn=$("#rehabAi"), old=btn.textContent; btn.disabled=true; btn.textContent="產生中…";
+    try{
+      const sents = await suggestRehabSentences();
+      const list=$("#rehabAiList");
+      list.innerHTML = sents.length
+        ? `<div class="chips" style="margin-top:8px">${sents.map(s=>`<span class="chip rehab-ai" data-w="${esc(s)}">${esc(s)}</span>`).join("")}</div>`
+        : '<p class="tiny muted" style="margin-top:8px">沒有產生結果，再試一次</p>';
+      list.querySelectorAll(".rehab-ai").forEach(c=>c.addEventListener("click", ()=>start(c.dataset.w)));
+    }catch(e){ toastFn("AI 推薦失敗："+(e.message||e)); }
+    finally{ btn.disabled=false; btn.textContent=old; }
+  });
   renderLogs();
 }
 

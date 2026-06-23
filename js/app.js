@@ -94,34 +94,43 @@ async function doCompose(){
   finally{ $("#btnCompose").disabled=false; $("#btnCompose").textContent="✨ 重組成自然句"; }
 }
 
-// ── 相機（拍照→雲端辨識）──
+// ── 相機（直接開鏡頭即拍即辨，不匯入相片）──
 function setupCamera(){
-  const inp = document.createElement("input");
-  inp.type="file"; inp.accept="image/*"; inp.capture="environment"; inp.style.display="none";
-  document.body.appendChild(inp);
-  $("#btnCam").addEventListener("click", ()=> inp.click());
-  inp.addEventListener("change", async ()=>{
-    const f = inp.files?.[0]; if(!f) return;
+  $("#btnCam").addEventListener("click", openCamera);
+}
+async function openCamera(){
+  if(!navigator.mediaDevices?.getUserMedia){ toast("此瀏覽器不支援相機（需 HTTPS）"); return; }
+  let stream;
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:"environment" } }, audio:false });
+  }catch(e){ toast("無法開啟相機："+(e.message||e)); return; }
+
+  const ov = document.createElement("div");
+  ov.style.cssText = "position:fixed;inset:0;z-index:100;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:16px";
+  const video = document.createElement("video");
+  video.autoplay = true; video.playsInline = true; video.muted = true; video.srcObject = stream;
+  video.style.cssText = "max-width:100%;max-height:74vh;border-radius:12px;background:#000";
+  const bar = document.createElement("div");
+  bar.style.cssText = "display:flex;gap:12px";
+  const shot = document.createElement("button"); shot.className="btn primary"; shot.textContent="📷 拍照辨識";
+  const close = document.createElement("button"); close.className="btn ghost"; close.style.color="#fff"; close.textContent="取消";
+  bar.append(shot, close); ov.append(video, bar); document.body.appendChild(ov);
+
+  const cleanup = ()=>{ try{ stream.getTracks().forEach(t=>t.stop()); }catch{} ov.remove(); };
+  close.addEventListener("click", cleanup);
+  shot.addEventListener("click", async ()=>{
+    const w = video.videoWidth||640, h = video.videoHeight||480;
+    const s = Math.min(1, 768/Math.max(w,h));
+    const c = document.createElement("canvas");
+    c.width = w*s|0; c.height = h*s|0;
+    c.getContext("2d").drawImage(video, 0, 0, c.width, c.height);
+    const b64 = c.toDataURL("image/jpeg", 0.8).split(",")[1];
+    cleanup();
     toast("辨識中…");
     try{
-      const b64 = await fileToJpegBase64(f, 768);
       const items = await recognizePhoto(b64);
       if(items){ ctxText = ("看到："+items); $("#ctx").textContent = "📷 "+items; toast("已加入辨識結果"); }
     }catch(e){ toast("辨識失敗："+(e.message||e)); }
-    inp.value="";
-  });
-}
-function fileToJpegBase64(file, max){
-  return new Promise((res,rej)=>{
-    const img = new Image();
-    img.onload = ()=>{
-      const s = Math.min(1, max/Math.max(img.width,img.height));
-      const c = document.createElement("canvas");
-      c.width = img.width*s|0; c.height = img.height*s|0;
-      c.getContext("2d").drawImage(img,0,0,c.width,c.height);
-      res(c.toDataURL("image/jpeg",0.8).split(",")[1]);
-    };
-    img.onerror = rej; img.src = URL.createObjectURL(file);
   });
 }
 
