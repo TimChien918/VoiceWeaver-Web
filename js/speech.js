@@ -51,6 +51,20 @@ export function speak(text){
   else speechSynthesis.addEventListener("voiceschanged", doSpeak, { once:true });
 }
 
+/** 多語朗讀：指定語言唸一句（重組結果一鍵中/英/日/韓）。 */
+export function speakIn(text, lang){
+  if(!text) return;
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = lang || "zh-TW";
+    u.rate = state.settings.rate || 0.95;
+    const v = speechSynthesis.getVoices().find(v=>v.lang?.startsWith(u.lang.split("-")[0]));
+    if(v) u.voice = v;
+    speechSynthesis.speak(u);
+  }catch(e){ console.warn("speakIn 失敗", e); }
+}
+
 export function sttSupported(){
   return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
 }

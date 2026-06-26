@@ -1,10 +1,11 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, watchHistory, refreshCloud } from "./store.js";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite } from "./store.js";
 import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js";
 import { reconstruct, composeAac, hasAnyLlmKey } from "./llm.js";
-import { speak, listen, sttSupported, listVoices } from "./speech.js";
+import { speak, speakIn, listen, sttSupported } from "./speech.js";
 import { AAC, AAC_CATS } from "./aac.js";
 import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js";
-import { setupRehab } from "./rehab.js";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js";
+import { setupReport, loadReport, setReportToast } from "./report.js";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -30,33 +31,14 @@ function fillSettings(){
   $("#s_lang").value = state.settings.lang;
   $("#s_rate").value = state.settings.rate; $("#rateVal").textContent = state.settings.rate+"x";
   $("#s_font").value = state.settings.font; $("#fontVal").textContent = state.settings.font+"x";
-  populateVoices();
   renderProviderList("#llmList", "llmApis", LLM_PROVIDERS);
   renderProviderList("#imgList", "imageApis", IMAGE_PROVIDERS);
 }
-// 朗讀嗓音下拉：最自然的排前面；voices 載入是非同步的，故也在 voiceschanged 時重填。
-function populateVoices(){
-  const sel = $("#s_voice"); if(!sel) return;
-  const vs = listVoices(state.settings.lang);
-  sel.innerHTML = '<option value="">自動（挑最自然）</option>' +
-    vs.map(v=>`<option value="${v.voiceURI}">${v.name} (${v.lang})${v.localService?"":" · 線上"}</option>`).join("");
-  sel.value = state.settings.voice || "";
-}
-if(typeof speechSynthesis !== "undefined")
-  speechSynthesis.addEventListener?.("voiceschanged", ()=>populateVoices());
 function bindSettings(){
   $("#k_tgtoken").addEventListener("input", e=>{ state.apiKeys.tgtoken=e.target.value.trim(); save(); });
   $("#k_tgchat").addEventListener("input", e=>{ state.apiKeys.tgchat=e.target.value.trim(); save(); });
   $("#s_theme").addEventListener("change", e=>{ state.settings.theme=e.target.value; applyTheme(); save(); });
-  $("#s_lang").addEventListener("change", e=>{ state.settings.lang=e.target.value; state.settings.voice=""; populateVoices(); save(); });
-  $("#s_voice").addEventListener("change", e=>{
-    state.settings.voice=e.target.value; save();
-    const lang=(state.settings.lang||"zh").toLowerCase();
-    speak(lang.startsWith("en")?"Hello, this is a voice test."
-        : lang.startsWith("ja")?"こんにちは、音声テストです。"
-        : lang.startsWith("ko")?"안녕하세요, 음성 테스트입니다."
-        : "你好，這是嗓音測試。");
-  });
+  $("#s_lang").addEventListener("change", e=>{ state.settings.lang=e.target.value; save(); });
   $("#s_rate").addEventListener("input", e=>{ state.settings.rate=+e.target.value; $("#rateVal").textContent=e.target.value+"x"; save(); });
   $("#s_font").addEventListener("input", e=>{ state.settings.font=+e.target.value; $("#fontVal").textContent=e.target.value+"x"; applyTheme(); save(); });
   $("#addLlm").addEventListener("click", ()=>{ state.llmApis.push({id:newId(),provider:Object.keys(LLM_PROVIDERS)[0],key:"",model:""}); save(); renderProviderList("#llmList","llmApis",LLM_PROVIDERS); });
@@ -93,6 +75,9 @@ function setupTabs(){
     t.classList.add("active");
     $$(".panel").forEach(p=>p.classList.add("hidden"));
     $("#tab-"+t.dataset.tab).classList.remove("hidden");
+    if(t.dataset.tab==="history") renderHistory();
+    if(t.dataset.tab==="rehab") renderRehabLogs();
+    if(t.dataset.tab==="report") loadReport();
   }));
 }
 
@@ -113,43 +98,34 @@ async function doCompose(){
   finally{ $("#btnCompose").disabled=false; $("#btnCompose").textContent="✨ 重組成自然句"; }
 }
 
-// ── 相機（直接開鏡頭即拍即辨，不匯入相片）──
+// ── 相機（拍照→雲端辨識）──
 function setupCamera(){
-  $("#btnCam").addEventListener("click", openCamera);
-}
-async function openCamera(){
-  if(!navigator.mediaDevices?.getUserMedia){ toast("此瀏覽器不支援相機（需 HTTPS）"); return; }
-  let stream;
-  try{
-    stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:{ ideal:"environment" } }, audio:false });
-  }catch(e){ toast("無法開啟相機："+(e.message||e)); return; }
-
-  const ov = document.createElement("div");
-  ov.style.cssText = "position:fixed;inset:0;z-index:100;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:16px";
-  const video = document.createElement("video");
-  video.autoplay = true; video.playsInline = true; video.muted = true; video.srcObject = stream;
-  video.style.cssText = "max-width:100%;max-height:74vh;border-radius:12px;background:#000";
-  const bar = document.createElement("div");
-  bar.style.cssText = "display:flex;gap:12px";
-  const shot = document.createElement("button"); shot.className="btn primary"; shot.textContent="📷 拍照辨識";
-  const close = document.createElement("button"); close.className="btn ghost"; close.style.color="#fff"; close.textContent="取消";
-  bar.append(shot, close); ov.append(video, bar); document.body.appendChild(ov);
-
-  const cleanup = ()=>{ try{ stream.getTracks().forEach(t=>t.stop()); }catch{} ov.remove(); };
-  close.addEventListener("click", cleanup);
-  shot.addEventListener("click", async ()=>{
-    const w = video.videoWidth||640, h = video.videoHeight||480;
-    const s = Math.min(1, 768/Math.max(w,h));
-    const c = document.createElement("canvas");
-    c.width = w*s|0; c.height = h*s|0;
-    c.getContext("2d").drawImage(video, 0, 0, c.width, c.height);
-    const b64 = c.toDataURL("image/jpeg", 0.8).split(",")[1];
-    cleanup();
+  const inp = document.createElement("input");
+  inp.type="file"; inp.accept="image/*"; inp.capture="environment"; inp.style.display="none";
+  document.body.appendChild(inp);
+  $("#btnCam").addEventListener("click", ()=> inp.click());
+  inp.addEventListener("change", async ()=>{
+    const f = inp.files?.[0]; if(!f) return;
     toast("辨識中…");
     try{
+      const b64 = await fileToJpegBase64(f, 768);
       const items = await recognizePhoto(b64);
       if(items){ ctxText = ("看到："+items); $("#ctx").textContent = "📷 "+items; toast("已加入辨識結果"); }
     }catch(e){ toast("辨識失敗："+(e.message||e)); }
+    inp.value="";
+  });
+}
+function fileToJpegBase64(file, max){
+  return new Promise((res,rej)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const s = Math.min(1, max/Math.max(img.width,img.height));
+      const c = document.createElement("canvas");
+      c.width = img.width*s|0; c.height = img.height*s|0;
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+      res(c.toDataURL("image/jpeg",0.8).split(",")[1]);
+    };
+    img.onerror = rej; img.src = URL.createObjectURL(file);
   });
 }
 
@@ -181,26 +157,14 @@ function setupAac(){
   });
 }
 
-// ── 歷史（使用紀錄）：即時同步 + 手動更新 ──
-let _histUnsub = null;
-function renderHistoryList(list){
-  const body = list.length ? list.map(h=>`
+// ── 歷史 ──
+async function renderHistory(){
+  const list = await listHistory();
+  $("#historyList").innerHTML = list.length ? list.map(h=>`
     <div class="hitem"><div class="h-main">${escapeHtml(h.reconstructed||"")}</div>
     <div class="h-sub">${escapeHtml(h.original||"")} · ${new Date(h.ts).toLocaleString()}</div></div>`).join("")
     : '<p class="tiny muted center">尚無紀錄</p>';
-  $("#historyList").innerHTML =
-    `<div class="row" style="margin:0 0 8px;align-items:center">
-       <span class="tiny muted" style="flex:1">使用紀錄 · 即時同步</span>
-       <button id="histRefresh" class="chip">🔄 更新</button>
-     </div>` + body;
   $$("#historyList .hitem").forEach((el,i)=>el.addEventListener("click",()=>speak(list[i].reconstructed||"")));
-  $("#histRefresh").addEventListener("click", async ()=>{
-    toast("更新中…"); await refreshCloud(); renderHistoryList(await listHistory()); toast("已更新");
-  });
-}
-function startHistoryWatch(){
-  if(_histUnsub){ _histUnsub(); _histUnsub=null; }
-  _histUnsub = watchHistory(list=>renderHistoryList(list));   // onSnapshot 訂閱後立即回呼一次
 }
 function escapeHtml(s){ return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 
@@ -214,6 +178,15 @@ function setupActions(){
     const img = $("#resultImg"); img.src = await generateImage(intentPrompt(lastResult));
     img.classList.remove("hidden");
   });
+  // 複製 / 分享 / 收藏 / 多語朗讀
+  $("#btnCopy")?.addEventListener("click", ()=>{ if(lastResult){ navigator.clipboard.writeText(lastResult); toast("已複製"); } });
+  $("#btnShare")?.addEventListener("click", async ()=>{
+    if(!lastResult) return;
+    if(navigator.share){ try{ await navigator.share({ text:lastResult }); }catch{} }
+    else { navigator.clipboard.writeText(lastResult); toast("已複製（此瀏覽器不支援分享）"); }
+  });
+  $("#btnFav")?.addEventListener("click", ()=>{ if(lastResult){ const added = toggleFavorite(lastResult); toast(added?"已加入最愛 ⭐":"已移除最愛"); renderFavorites(); } });
+  $$(".lang-btn").forEach(b=>b.addEventListener("click", ()=>{ if(lastResult) speakIn(lastResult, b.dataset.lang); }));
   $("#btnLoc").addEventListener("click", async ()=>{
     toast("定位中…");
     try{ const l = await detectLocation(); ctxText = (ctxText?ctxText+"；":"")+("地點："+l); $("#ctx").textContent="📍 "+l; }
@@ -245,25 +218,29 @@ function showLogin(){ $("#login").classList.remove("hidden"); $("#app").classLis
 function showApp(user){
   $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
   $("#who").textContent = user.name || "";
-  applyTheme(); fillSettings();
-  startHistoryWatch();   // 使用紀錄即時同步
+  applyTheme(); fillSettings(); renderFavorites();
+}
+
+function renderFavorites(){
+  const card = $("#favCard"), list = $("#favList");
+  if(!card || !list) return;
+  const favs = state.favorites || [];
+  if(!favs.length){ card.classList.add("hidden"); return; }
+  card.classList.remove("hidden");
+  list.innerHTML = favs.map(f=>`<span class="chip on">${f}</span>`).join("");
+  list.querySelectorAll(".chip").forEach((el,i)=>el.addEventListener("click",()=>speak(favs[i])));
 }
 
 function main(){
-  setupTabs(); setupActions(); setupAac(); setupCamera(); bindSettings(); setupRehab({ toast });
+  setupTabs(); setupActions(); setupAac(); setupCamera(); bindSettings();
+  setRehabToast(toast); setReportToast(toast);
+  setupRehab(); setupReport();
   $("#btnGoogle").addEventListener("click", async ()=>{ try{ await loginGoogle(); }catch(e){ $("#loginErr").textContent=e.message||e; } });
   $("#btnAnon").addEventListener("click", async ()=>{ try{ await loginAnon(); }catch(e){ $("#loginErr").textContent=e.message||e; } });
 
   initAuth({
     onUser:(u)=>{ if(u) showApp(u); else showLogin(); },
-    onSaved:(msg)=>{ const el=$("#saveState"); if(el) el.textContent=msg; },
-    // 其他裝置改了 API 金鑰／設定 → 即時套用；正在編輯設定欄位時先不重繪，避免打字跳掉
-    onRemote:()=>{
-      applyTheme();
-      const ae = document.activeElement;
-      const editing = ae && $("#tab-settings")?.contains(ae);
-      if(!editing) fillSettings();
-    }
+    onSaved:(msg)=>{ const el=$("#saveState"); if(el) el.textContent=msg; }
   });
 }
 main();

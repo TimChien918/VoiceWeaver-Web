@@ -56,6 +56,7 @@ input[type=range]{ padding:0; }
 
 .chips{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
 .chips .chip.on{ background:var(--accent); color:#fff; border-color:var(--accent); }
+.chips .chip.wrong{ background:rgba(255,59,48,.15); color:var(--danger); border-color:var(--danger); font-weight:700; }
 .cards-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(92px,1fr)); gap:8px; }
 .acard{ background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:12px 6px;
   text-align:center; cursor:pointer; font-size:.9rem; }
@@ -69,3 +70,25 @@ input[type=range]{ padding:0; }
 
 .toast{ position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
   background:rgba(0,0,0,.85); color:#fff; padding:10px 16px; border-radius:20px; font-size:.9rem; z-index:50; }
+
+/* 復健評分 */
+.scorebox{ display:flex; align-items:center; gap:14px; margin-top:12px; padding:14px;
+  border-radius:12px; border:1px solid var(--line); }
+.scorebox.good{ background:color-mix(in srgb,var(--accent2) 14%,transparent); border-color:var(--accent2); }
+.scorebox.mid{ background:color-mix(in srgb,#ff9500 16%,transparent); border-color:#ff9500; }
+.scorebox.low{ background:color-mix(in srgb,var(--danger) 14%,transparent); border-color:var(--danger); }
+.score-num{ font-size:44px; font-weight:800; line-height:1; min-width:64px; text-align:center; }
+.scorebox.good .score-num{ color:var(--accent2); }
+.scorebox.mid .score-num{ color:#ff9500; }
+.scorebox.low .score-num{ color:var(--danger); }
+.score-info{ flex:1; }
+.score-head{ font-weight:700; }
+.score-fb{ margin-top:3px; font-size:.92rem; }
+.score-pill{ min-width:38px; text-align:center; font-weight:800; border-radius:9px; padding:5px 6px; color:#fff; }
+.score-pill.good{ background:var(--accent2); } .score-pill.mid{ background:#ff9500; } .score-pill.low{ background:var(--danger); }
+
+/* 成績單 */
+.stats{ display:flex; gap:10px; }
+.stat{ flex:1; text-align:center; background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:12px 6px; }
+.stat-val{ font-size:26px; font-weight:800; color:var(--accent); }
+.stat-lbl{ font-size:.74rem; color:var(--muted); margin-top:2px; }

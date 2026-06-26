@@ -4,11 +4,11 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, doc, getDoc, setDoc, onSnapshot, collection, addDoc, getDocs, query, orderBy, limit
+  getFirestore, doc, getDoc, setDoc, collection, addDoc, getDocs, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const DEFAULTS = {
-  settings: { theme: "auto", lang: "zh-TW", rate: 0.95, font: 1.0, voice: "" },
+  settings: { theme: "auto", lang: "zh-TW", rate: 0.95, font: 1.0 },
   // 單一欄位的金鑰（通報用）
   apiKeys:  { tgtoken: "", tgchat: "" },
   // 多供應商、多金鑰清單（每筆 {id, provider, key, model}）→ 重組/生圖自動輪詢
@@ -25,7 +25,17 @@ export const state = {
   apiKeys: structuredClone(DEFAULTS.apiKeys),
   llmApis: [],
   imageApis: [],
+  favorites: [],   // 我的最愛常用句
 };
+
+/** 切換收藏一句（回傳是否為已加入）。 */
+export function toggleFavorite(sentence){
+  const s = (sentence||"").trim();
+  if(!s) return false;
+  const i = state.favorites.indexOf(s);
+  if(i>=0){ state.favorites.splice(i,1); save(); return false; }
+  state.favorites.unshift(s); state.favorites = state.favorites.slice(0,50); save(); return true;
+}
 
 // 舊版單一金鑰 → 自動轉成清單第一筆（相容升級）
 function migrate(d){
@@ -43,18 +53,16 @@ function applyLoaded(d){
   state.apiKeys  = { ...DEFAULTS.apiKeys,  ...(d.apiKeys||{}) };
   state.llmApis  = Array.isArray(d.llmApis) ? d.llmApis : [];
   state.imageApis= Array.isArray(d.imageApis) ? d.imageApis : [];
+  state.favorites= Array.isArray(d.favorites) ? d.favorites : [];
 }
 
 let _app=null, _auth=null, _db=null, _saveTimer=null, _onSaved=()=>{};
-let _userUnsub=null, _onRemote=()=>{};   // 使用者文件即時監聽
-let _loaded=false;                        // 雲端資料是否已載入完成；未完成前禁止寫回，避免空 DEFAULTS 覆蓋雲端
 const LS = "voiceweaver_web";
 
 export function hasFirebase(){ return !!window.__FIREBASE_CONFIG__?.apiKey && !window.__FIREBASE_CONFIG__.apiKey.startsWith("貼上"); }
 
-export function initAuth({ onUser, onSaved, onRemote }){
+export function initAuth({ onUser, onSaved }){
   _onSaved = onSaved || _onSaved;
-  _onRemote = onRemote || _onRemote;
   if(!hasFirebase()){
     // 純本機：直接「登入」成本機使用者，讀 localStorage
     loadLocal();
@@ -68,11 +76,9 @@ export function initAuth({ onUser, onSaved, onRemote }){
   onAuthStateChanged(_auth, async (u) => {
     if(u){
       state.uid = u.uid; state.online = true;
-      watchCloud(u.uid);   // 即時監聽：API 金鑰／模型／設定一改就同步
+      await loadCloud(u.uid);
       onUser({ uid:u.uid, anon:u.isAnonymous, name: u.displayName || (u.isAnonymous?"匿名使用者":u.email) });
     } else {
-      if(_userUnsub){ _userUnsub(); _userUnsub=null; }
-      _loaded = false;
       state.uid = null; state.online = false;
       onUser(null);
     }
@@ -94,39 +100,24 @@ export async function logout(){
 
 // ── 載入 ───────────────────────────────────────────
 function snapshot(){
-  return { settings:state.settings, apiKeys:state.apiKeys, llmApis:state.llmApis, imageApis:state.imageApis };
+  return { settings:state.settings, apiKeys:state.apiKeys, llmApis:state.llmApis, imageApis:state.imageApis, favorites:state.favorites };
 }
 function loadLocal(){
   try{ applyLoaded(migrate(JSON.parse(localStorage.getItem(LS) || "{}"))); }
   catch{ applyLoaded(migrate({})); }
 }
-// 即時監聽使用者文件：任一裝置改 API 金鑰／模型／設定，其他裝置立即更新。
-function watchCloud(uid){
-  if(_userUnsub){ _userUnsub(); _userUnsub=null; }
-  _userUnsub = onSnapshot(doc(_db,"users",uid), (snap)=>{
-    // 自己剛寫入的回聲（尚未落地）略過，避免覆蓋正在編輯的內容
-    if(snap.metadata.hasPendingWrites) return;
-    if(snap.exists()){ applyLoaded(migrate(snap.data())); _loaded=true; _onRemote("doc"); }
-    else { _loaded=true; applyLoaded(migrate({})); setDoc(doc(_db,"users",uid), { ...snapshot(), updatedAt:Date.now() }, { merge:true }); }
-  }, (e)=>{ console.warn("watchCloud failed", e); loadLocal(); _onRemote("doc"); });
-}
-
-// 手動更新：強制重抓一次使用者文件（給「🔄 更新」按鈕用）
-export async function refreshCloud(){
-  if(!_db || !state.uid || state.uid==="local") return false;
+async function loadCloud(uid){
   try{
-    const snap = await getDoc(doc(_db,"users",state.uid));
-    if(snap.exists()){ applyLoaded(migrate(snap.data())); _loaded=true; _onRemote("doc"); }
-    return true;
-  }catch(e){ console.warn("refreshCloud failed", e); return false; }
+    const snap = await getDoc(doc(_db,"users",uid));
+    if(snap.exists()){ applyLoaded(migrate(snap.data())); }
+    else { applyLoaded(migrate({})); await setDoc(doc(_db,"users",uid), { ...snapshot(), updatedAt:Date.now() }); }
+  }catch(e){ console.warn("loadCloud failed", e); loadLocal(); }
 }
 
 // ── 儲存（防抖：改動 800ms 後寫回；本機立即備份）──────
 export function save(){
   try{ localStorage.setItem(LS, JSON.stringify(snapshot())); }catch{}
   if(!_db || !state.uid || state.uid==="local"){ _onSaved("已存（本機）"); return; }
-  // 雲端資料還沒載入完成 → 只存本機，先不要寫回雲端（避免登入瞬間的空狀態把雲端蓋掉）
-  if(!_loaded){ _onSaved("雲端載入中…（已暫存本機）"); return; }
   clearTimeout(_saveTimer);
   _onSaved("儲存中…");
   _saveTimer = setTimeout(async ()=>{
@@ -153,14 +144,33 @@ export async function listHistory(){
   }
   return getLocalHistory();
 }
-// 即時監聽歷史（使用紀錄）：新紀錄一寫入立即推給回呼。回傳 unsubscribe()。
-export function watchHistory(cb){
-  if(!_db || !state.uid || state.uid==="local"){ cb(getLocalHistory()); return ()=>{}; }
-  const q = query(collection(_db,"users",state.uid,"history"), orderBy("ts","desc"), limit(100));
-  return onSnapshot(q, (snap)=>cb(snap.docs.map(d=>d.data())), (e)=>{ console.warn("watchHistory", e); cb(getLocalHistory()); });
-}
 function pushLocalHistory(rec){
   const h = getLocalHistory(); h.unshift(rec);
   localStorage.setItem(LS+"_hist", JSON.stringify(h.slice(0,100)));
 }
 function getLocalHistory(){ try{ return JSON.parse(localStorage.getItem(LS+"_hist")||"[]"); }catch{ return []; } }
+
+// ── 復健日誌（與手機 App 同結構：users/{uid}/rehabLogs）──
+export async function addRehabLog({ target, recognized, score, feedback }){
+  const rec = { timestamp: Date.now(), targetSentence: target, recognized: recognized||"",
+                score, feedback: feedback||"", locationTag: "網頁版" };
+  if(_db && state.uid && state.uid!=="local"){
+    try{ await addDoc(collection(_db,"users",state.uid,"rehabLogs"), rec); }catch(e){ pushLocalRehab(rec); }
+  } else pushLocalRehab(rec);
+  return rec;
+}
+export async function listRehabLogs(fromTs=0){
+  if(_db && state.uid && state.uid!=="local"){
+    try{
+      const q = query(collection(_db,"users",state.uid,"rehabLogs"),
+                      where("timestamp",">=",fromTs), orderBy("timestamp","desc"), limit(300));
+      return (await getDocs(q)).docs.map(d=>d.data());
+    }catch(e){ console.warn("listRehabLogs", e); return getLocalRehab().filter(r=>r.timestamp>=fromTs); }
+  }
+  return getLocalRehab().filter(r=>r.timestamp>=fromTs);
+}
+function pushLocalRehab(rec){
+  const h = getLocalRehab(); h.unshift(rec);
+  localStorage.setItem(LS+"_rehab", JSON.stringify(h.slice(0,300)));
+}
+function getLocalRehab(){ try{ return JSON.parse(localStorage.getItem(LS+"_rehab")||"[]"); }catch{ return []; } }

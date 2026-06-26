@@ -16,19 +16,48 @@ export function composeAac(items, context){
   return runLlm(sys, `圖卡序列：${items.join(" → ")}\n${context?("場景："+context):""}`.trim());
 }
 
-// 語音復健：請 LLM 產生「跟讀練習」情境句（易→難、貼近日常）。回傳字串陣列。
-export async function suggestRehabSentences(){
-  const sys =
-    "你是語言治療師，為失語症患者設計『跟讀練習句』。產生 6 句難度由易到難、"+
-    "貼近日常情境（用餐、就醫、購物、在家、外出、社交各一）的繁體中文短句，"+
-    "每句 4–14 字、口語、可直接朗讀。只輸出 JSON 字串陣列，"+
-    "例：[\"我想喝水\",\"請幫我開門\"]，不要任何其他文字或編號。";
-  const out = await runLlm(sys, "請產生 6 句。");
+const SYS_REHAB_EVAL =
+  "你是失語症語言治療師，評估患者的口語跟讀表現。不要用字元差異計算，要從語意傳達與流暢自然的角度判斷。\n"+
+  "評分細則：語意完整性（50%，核心意思有沒有傳達、關鍵詞有沒有說到，即使用詞稍異但意思相同可給高分）；"+
+  "流暢性（30%，有無重複、結巴、語氣是否連貫自然）；語氣語調（20%，是否符合句型如問句/請求/感謝）。\n"+
+  '只回傳 JSON：{"score":整數0到100,"feedback":"一句繁體中文鼓勵或指引（20字以內）","wrongChars":["說得不準或漏掉的字"]}';
+
+function extractJson(raw){
+  const c = raw.replace(/```json/g,"").replace(/```/g,"").trim();
+  const s = c.indexOf("{"), e = c.lastIndexOf("}");
+  return s>=0 && e>s ? c.slice(s,e+1) : null;
+}
+
+// AI 評分：回 { score, feedback, wrongChars }。失敗時退回字元相似度估算（不擲例外）。
+export async function scoreRehab(target, recognized){
+  const user = `目標句：${target}\n患者說出的：${recognized || "（未偵測到聲音）"}`;
   try{
-    const m = out.match(/\[[\s\S]*\]/);
-    const a = JSON.parse(m ? m[0] : out);
-    if(Array.isArray(a)) return a.map(String).map(s=>s.trim()).filter(Boolean).slice(0,8);
-  }catch{}
-  // 不是 JSON → 逐行切，去掉編號/標點/引號
-  return out.split(/\n+/).map(s=>s.replace(/^[\d.、)\-\s"「」']+/,"").trim()).filter(Boolean).slice(0,8);
+    const raw = await runLlm(SYS_REHAB_EVAL, user);
+    const j = JSON.parse(extractJson(raw) || "{}");
+    const score = Math.max(0, Math.min(100, Math.round(j.score)));
+    if(Number.isFinite(score)) return { score, feedback: (j.feedback||"").trim(), wrongChars: Array.isArray(j.wrongChars)?j.wrongChars:[] };
+    throw new Error("分數無效");
+  }catch(e){
+    // 備援：純中文字重疊比例 + 找出沒被辨識到的字
+    const t = (target||"").replace(/[^一-鿿]/g,"");
+    const r = (recognized||"").replace(/[^一-鿿]/g,"");
+    let m = 0; const wrong = [];
+    for(const ch of t){ if(r.includes(ch)) m++; else if(!wrong.includes(ch)) wrong.push(ch); }
+    const score = t.length ? Math.round(m/t.length*100) : 0;
+    return { score, feedback: "（AI 評分暫不可用，改用相似度估算）", wrongChars: wrong };
+  }
+}
+
+const SYS_REHAB_SUGGEST =
+  "你是失語症語言復健助理。產生 4 句適合跟讀練習的繁體中文短句（5-10 字、日常生活情境、實用）。"+
+  '只回傳 JSON：{"sentences":["...","...","...","..."]}';
+
+export async function suggestRehab(){
+  try{
+    const raw = await runLlm(SYS_REHAB_SUGGEST, "請給適合失語症患者的中等難度練習句。");
+    const j = JSON.parse(extractJson(raw) || "{}");
+    const arr = (j.sentences||[]).filter(s=>s && s.trim());
+    if(arr.length) return arr;
+  }catch(e){ console.warn("suggestRehab", e); }
+  return ["幫我倒一杯水","我想要去廁所","謝謝你的幫忙","可以開窗嗎"];
 }

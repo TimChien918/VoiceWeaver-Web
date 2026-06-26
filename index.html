@@ -31,8 +31,9 @@
 
     <nav class="tabs">
       <button class="tab active" data-tab="compose">語句重組</button>
-      <button class="tab" data-tab="aac">AAC 圖卡</button>
       <button class="tab" data-tab="rehab">語音復健</button>
+      <button class="tab" data-tab="aac">AAC 圖卡</button>
+      <button class="tab" data-tab="report">成績單</button>
       <button class="tab" data-tab="history">歷史</button>
       <button class="tab" data-tab="settings">設定</button>
     </nav>
@@ -53,12 +54,86 @@
         </div>
         <div id="result" class="card result hidden">
           <div id="resultText" class="result-text"></div>
-          <div class="row">
+          <div class="row wrap">
             <button id="btnSpeak" class="btn primary">🔊 朗讀</button>
             <button id="btnRegen" class="btn ghost">重組一次</button>
             <button id="btnImg" class="btn ghost">🖼 生成圖卡</button>
+            <button id="btnCopy" class="btn ghost">📋 複製</button>
+            <button id="btnShare" class="btn ghost">🔗 分享</button>
+            <button id="btnFav" class="btn ghost">⭐ 收藏</button>
+          </div>
+          <div class="row wrap" style="margin-top:6px">
+            <button class="btn ghost lang-btn" data-lang="zh-TW">🇹🇼 中</button>
+            <button class="btn ghost lang-btn" data-lang="en-US">🇺🇸 EN</button>
+            <button class="btn ghost lang-btn" data-lang="ja-JP">🇯🇵 日</button>
+            <button class="btn ghost lang-btn" data-lang="ko-KR">🇰🇷 한</button>
           </div>
           <img id="resultImg" class="result-img hidden" alt="意圖圖卡" />
+        </div>
+        <div id="favCard" class="card hidden">
+          <label class="lbl">⭐ 我的最愛（點一下朗讀）</label>
+          <div id="favList" class="chips"></div>
+        </div>
+      </section>
+
+      <!-- 語音復健 -->
+      <section id="tab-rehab" class="panel hidden">
+        <div class="card">
+          <label class="lbl">練習句子</label>
+          <div class="row">
+            <input id="rehabTarget" type="text" placeholder="輸入目標句，或讓 AI 推薦" />
+            <button id="rehabSuggest" class="btn ghost" style="white-space:nowrap">AI 推薦</button>
+          </div>
+          <div id="rehabSuggestions" class="chips hidden" style="margin-top:10px"></div>
+          <button id="rehabStart" class="btn primary big">開始練習</button>
+          <button id="rehabParagraph" class="btn ghost" style="width:100%;margin-top:8px">📖 整段練習（自動分句逐句練）</button>
+        </div>
+        <div id="rehabPractice" class="card hidden">
+          <div id="rehabQueueBar" class="hidden" style="font-size:.85rem;font-weight:600;color:var(--accent);margin-bottom:8px"></div>
+          <label class="lbl">目標句（點字卡可單獨發音）</label>
+          <div id="rehabTargetDisplay" class="result-text" style="padding-bottom:6px"></div>
+          <div id="rehabChips" class="chips"></div>
+          <div class="row">
+            <button id="rehabListen" class="btn ghost">🔊 聽整句</button>
+            <button id="rehabRecord" class="btn primary">🎤 開始跟讀</button>
+            <button id="rehabNext" class="btn ghost hidden">下一句 ▶</button>
+          </div>
+          <div id="rehabScore"></div>
+        </div>
+        <div class="card">
+          <label class="lbl">最近練習</label>
+          <div id="rehabLogs"></div>
+        </div>
+      </section>
+
+      <!-- 成績單 -->
+      <section id="tab-report" class="panel hidden">
+        <div class="card">
+          <div class="row" style="margin:0;justify-content:space-between">
+            <div id="reportRange" class="chips" style="margin:0">
+              <span class="chip" data-r="today">今日</span>
+              <span class="chip on" data-r="month">本月</span>
+              <span class="chip" data-r="year">本年度</span>
+            </div>
+            <button id="reportCsv" class="btn ghost" style="white-space:nowrap">📄 CSV</button>
+            <button id="reportTg" class="btn ghost" style="white-space:nowrap">📤 Telegram</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="stats">
+            <div class="stat"><div class="stat-val" id="statSessions">—</div><div class="stat-lbl">練習次數</div></div>
+            <div class="stat"><div class="stat-val" id="statAvg">—</div><div class="stat-lbl">平均分</div></div>
+            <div class="stat"><div class="stat-val" id="statStreak">—</div><div class="stat-lbl">連續天數</div></div>
+            <div class="stat"><div class="stat-val" id="statPositive">—</div><div class="stat-lbl">正向字眼</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <label class="lbl">分數趨勢</label>
+          <canvas id="reportChart" style="width:100%;height:150px"></canvas>
+        </div>
+        <div class="card">
+          <label class="lbl">最近 10 筆練習</label>
+          <div id="reportLogs"></div>
         </div>
       </section>
 
@@ -77,13 +152,6 @@
             <button id="aacClear" class="btn ghost">清空</button>
           </div>
         </div>
-      </section>
-
-      <!-- 語音復健 -->
-      <section id="tab-rehab" class="panel hidden">
-        <div id="rehabPicker" class="card"></div>
-        <div id="rehabPractice" class="card hidden"></div>
-        <div id="rehabLogs" class="card hidden"></div>
       </section>
 
       <!-- 歷史 -->
@@ -118,8 +186,6 @@
           <select id="s_theme"><option value="auto">跟隨系統</option><option value="light">淺色</option><option value="dark">深色</option></select>
           <label class="lbl">朗讀語言</label>
           <select id="s_lang"><option value="zh-TW">中文</option><option value="en-US">English</option><option value="ja-JP">日本語</option><option value="ko-KR">한국어</option></select>
-          <label class="lbl">朗讀嗓音（選最自然的）</label>
-          <select id="s_voice"><option value="">自動（挑最自然）</option></select>
           <label class="lbl">朗讀語速 <span id="rateVal" class="muted"></span></label>
           <input id="s_rate" type="range" min="0.5" max="1.5" step="0.05" />
           <label class="lbl">字體大小 <span id="fontVal" class="muted"></span></label>
