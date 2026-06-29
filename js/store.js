@@ -119,14 +119,15 @@ async function loadCloud(uid){
 // ── 儲存（防抖：改動 800ms 後寫回；本機立即備份）──────
 export function save(){
   try{ localStorage.setItem(LS, JSON.stringify(snapshot())); }catch{}
-  if(!_db || !state.uid || state.uid==="local"){ _onSaved("已存（本機）"); return; }
+  // 送「翻譯鍵」而非寫死文字，由 app.js 用 t() 翻成目前語言
+  if(!_db || !state.uid || state.uid==="local"){ _onSaved("save.local"); return; }
   clearTimeout(_saveTimer);
-  _onSaved("儲存中…");
+  _onSaved("save.saving");
   _saveTimer = setTimeout(async ()=>{
     try{
       await setDoc(doc(_db,"users",state.uid), { ...snapshot(), updatedAt:Date.now() }, { merge:true });
-      _onSaved("已雲端同步 ✓");
-    }catch(e){ _onSaved("雲端儲存失敗（已存本機）"); }
+      _onSaved("save.synced");
+    }catch(e){ _onSaved("save.failed"); }
   }, 800);
 }
 

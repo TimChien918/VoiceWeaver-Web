@@ -87,6 +87,11 @@ export const STRINGS = {
     "en":'• <b>Same computer</b>: the computer showing this page = the one running the voice center → leave the address blank and just detect.<br>• <b>Tailscale</b>: run <code>tailscale serve --bg 9879</code> on the computer (expose the bridge over HTTPS), then put your <code>https://host.xxx.ts.net</code> above (the bridge calls local GPT-SoVITS for you; no need to expose 9880).',
     "ja":'• <b>同じ PC</b>：このページを開く PC ＝ボイスセンターを動かす PC → アドレスは空欄で検出するだけ。<br>• <b>Tailscale</b>：PC で <code>tailscale serve --bg 9879</code> を実行（ブリッジを HTTPS で公開）し、上に <code>https://host.xxx.ts.net</code> を入力（ブリッジが自動でローカル GPT-SoVITS を呼ぶので 9880 の公開は不要）。',
     "ko":'• <b>같은 컴퓨터</b>: 이 페이지를 여는 컴퓨터 ＝ 보이스 센터 실행 컴퓨터 → 주소 비우고 감지만.<br>• <b>Tailscale</b>: 컴퓨터에서 <code>tailscale serve --bg 9879</code> 실행(브리지를 HTTPS로 공개) 후 위에 <code>https://host.xxx.ts.net</code> 입력(브리지가 로컬 GPT-SoVITS를 호출하므로 9880 공개 불필요).' },
+  // 儲存狀態
+  "save.local":  { "zh-TW":"已存（本機）", "en":"Saved (local)", "ja":"保存しました（端末）", "ko":"저장됨 (로컬)" },
+  "save.saving": { "zh-TW":"儲存中…", "en":"Saving…", "ja":"保存中…", "ko":"저장 중…" },
+  "save.synced": { "zh-TW":"已雲端同步 ✓", "en":"Synced to cloud ✓", "ja":"クラウド同期済み ✓", "ko":"클라우드 동기화됨 ✓" },
+  "save.failed": { "zh-TW":"雲端儲存失敗（已存本機）", "en":"Cloud save failed (saved locally)", "ja":"クラウド保存失敗（端末に保存）", "ko":"클라우드 저장 실패 (로컬 저장됨)" },
   "footer": { "zh-TW":"VoiceWeaver 網頁輕量版 · 純 API/瀏覽器、無本地運算", "en":"VoiceWeaver web lite · API/browser only, no on-device compute", "ja":"VoiceWeaver ウェブ軽量版 · API/ブラウザのみ、端末計算なし", "ko":"VoiceWeaver 웹 라이트 · API/브라우저 전용, 기기 연산 없음" },
 };
 

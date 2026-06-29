@@ -101,9 +101,10 @@ function bindSettings(){
   $("#k_tgtoken").addEventListener("input", e=>{ state.apiKeys.tgtoken=e.target.value.trim(); save(); });
   $("#k_tgchat").addEventListener("input", e=>{ state.apiKeys.tgchat=e.target.value.trim(); save(); });
   $("#s_theme").addEventListener("change", e=>{ state.settings.theme=e.target.value; applyTheme(); save(); });
-  $("#s_lang").addEventListener("change", e=>{ state.settings.lang=e.target.value; save();
-    applyI18n(state.settings.lang);          // 整個介面跟著翻譯
-    populateVoiceDropdown(); });             // 角色語音清單即時用快取重新篩選
+  $("#s_lang").addEventListener("change", e=>{ state.settings.lang=e.target.value;
+    applyI18n(state.settings.lang);          // 先翻譯整個介面（含儲存狀態用的語言）
+    populateVoiceDropdown();                  // 角色語音清單即時用快取重新篩選
+    save(); });
   $("#s_rate").addEventListener("input", e=>{ state.settings.rate=+e.target.value; $("#rateVal").textContent=e.target.value+"x"; save(); });
   $("#s_font").addEventListener("input", e=>{ state.settings.font=+e.target.value; $("#fontVal").textContent=e.target.value+"x"; applyTheme(); save(); });
   $("#addLlm").addEventListener("click", ()=>{ state.llmApis.push({id:newId(),provider:Object.keys(LLM_PROVIDERS)[0],key:"",model:""}); save(); renderProviderList("#llmList","llmApis",LLM_PROVIDERS); });
@@ -323,7 +324,7 @@ function main(){
 
   initAuth({
     onUser:(u)=>{ if(u) showApp(u); else showLogin(); },
-    onSaved:(msg)=>{ const el=$("#saveState"); if(el) el.textContent=msg; }
+    onSaved:(msg)=>{ const el=$("#saveState"); if(el) el.textContent=t(msg); }
   });
 }
 main();
