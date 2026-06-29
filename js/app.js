@@ -42,26 +42,36 @@ function fillSettings(){
   }
 }
 
-// 偵測語音中心並把角色語音填進下拉
+// 偵測語音中心、回報三項運算可用性、把角色語音填進下拉
 async function refreshLocalVoices(){
   const status = $("#lt_status"), sel = $("#lt_voice");
   status.textContent = "偵測中…";
   const d = await detectLocalTts();
-  if(!d){ status.textContent = "❌ 連不上語音中心（同機請開語音中心；遠端請填 Tailscale 網址）"; return; }
-  const voices = await localVoices();
-  if(!voices.length){ status.textContent = "✅ 已連線，但電腦上沒有語音模型"; return; }
-  const cur = `${state.settings.localVoiceName}|${state.settings.localVoiceLang}`;
-  sel.innerHTML = voices.map(v=>{
-    const val = `${v.name}|${v.lang}`;
-    return `<option value="${val}" ${val===cur?"selected":""}>${v.name}（${v.lang||"?"}）</option>`;
-  }).join("");
-  status.textContent = `✅ 已連線（${d.base.replace(/^https?:\/\//,"")}）· ${voices.length} 個語音`;
-  // 沒選過就預設第一個
-  if(!state.settings.localVoiceName && voices[0]){
-    state.settings.localVoiceName = voices[0].name;
-    state.settings.localVoiceLang = voices[0].lang;
-    save();
+  if(!d){ status.textContent = "❌ 連不上電腦（同機請開語音中心；遠端請填 Tailscale 網址）"; return; }
+  const h = d.health || {};
+  const caps = [h.voice?"語音✓":"語音✗", h.image?"生圖✓":"生圖✗", h.text?"文字✓":"文字✗"].join(" · ");
+  const host = d.base.replace(/^https?:\/\//,"");
+  // 角色語音下拉（僅在語音可用時填）
+  if(h.voice){
+    const voices = await localVoices();
+    if(voices.length){
+      const cur = `${state.settings.localVoiceName}|${state.settings.localVoiceLang}`;
+      sel.innerHTML = voices.map(v=>{
+        const val = `${v.name}|${v.lang}`;
+        return `<option value="${val}" ${val===cur?"selected":""}>${v.name}（${v.lang||"?"}）</option>`;
+      }).join("");
+      if(!state.settings.localVoiceName && voices[0]){
+        state.settings.localVoiceName = voices[0].name;
+        state.settings.localVoiceLang = voices[0].lang;
+        save();
+      }
+    } else {
+      sel.innerHTML = `<option value="">（電腦上沒有語音模型）</option>`;
+    }
+  } else {
+    sel.innerHTML = `<option value="">（語音服務未啟動）</option>`;
   }
+  status.textContent = `✅ 已連線（${host}）· ${caps}`;
 }
 
 function bindSettings(){

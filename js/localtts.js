@@ -7,6 +7,7 @@
 import { state } from "./store.js";
 
 let _base = null;   // 已確認可用的橋接 base URL
+let _health = { voice: false, image: false, text: false };  // 電腦端三項運算可用性
 
 // 候選位址：使用者手填（Tailscale https）優先，再試同機 localhost。
 function candidates() {
@@ -17,10 +18,18 @@ function candidates() {
   return [...new Set(list)];
 }
 
-export function localTtsEnabled() {
+// 「讓電腦幫忙跑運算」總開關（語音／生圖／文字共用）
+export function localComputeEnabled() {
   return !!state.settings.localTtsEnabled;
 }
+// 向後相容：語音是否走電腦
+export function localTtsEnabled() {
+  return localComputeEnabled() && _health.voice !== false;
+}
 export function localBase() { return _base; }
+// 各項運算電腦端是否可用（需先 detectLocalTts 過一次）
+export function localHas(kind) { return localComputeEnabled() && !!_health[kind]; }
+export function localHealth() { return { ..._health }; }
 
 async function _fetch(path, opts = {}, timeoutMs = 4000) {
   const ctrl = new AbortController();
@@ -40,11 +49,16 @@ export async function detectLocalTts(timeoutMs = 2500) {
       clearTimeout(t);
       if (r.ok) {
         const j = await r.json();
-        if (j && j.ok) { _base = base; return { base, current: j.current || "" }; }
+        if (j && j.ok) {
+          _base = base;
+          _health = { voice: !!j.voice, image: !!j.image, text: !!j.text };
+          return { base, current: j.current || "", health: { ..._health } };
+        }
       }
     } catch (e) { /* 試下一個 */ }
   }
   _base = null;
+  _health = { voice: false, image: false, text: false };
   return null;
 }
 
@@ -93,4 +107,27 @@ export async function localSpeak(text) {
 
 export function stopLocalSpeak() {
   if (_audio) { try { _audio.pause(); } catch {} }
+}
+
+// 電腦端生圖（SD-Turbo）→ 回 object URL
+export async function localImage(prompt, steps = 2) {
+  if (!_base && !(await detectLocalTts())) throw new Error("未連線到語音中心");
+  const r = await _fetch("/image", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ prompt, steps }),
+  }, 180000);
+  if (!r.ok) { let e = ""; try { e = (await r.json()).error; } catch {} throw new Error(e || ("image " + r.status)); }
+  return URL.createObjectURL(await r.blob());
+}
+
+// 電腦端文字推論（Qwen）→ 回字串
+export async function localText(system, user) {
+  if (!_base && !(await detectLocalTts())) throw new Error("未連線到語音中心");
+  const r = await _fetch("/text", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ system, user }),
+  }, 120000);
+  const j = await r.json();
+  if (!j.ok) throw new Error(j.error || "文字推論失敗");
+  return (j.text || "").trim();
 }

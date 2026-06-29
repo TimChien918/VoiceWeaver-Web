@@ -1,5 +1,6 @@
 // 供應商目錄 + 呼叫器（同供應商可多把金鑰、可多選供應商，自動輪詢+備援）。
 import { state } from "./store.js";
+import { localHas, localText, localImage } from "./localtts.js";
 
 // 文字 LLM 供應商（標 cors 者較可能可在瀏覽器直接呼叫）
 export const LLM_PROVIDERS = {
@@ -60,11 +61,18 @@ function llmEntries(){
   // 只留 web 支援的供應商（手機可能同步來 web 沒有的，如 cerebras → 跳過不報錯）
   return (state.llmApis||[]).filter(e=>e.provider && LLM_PROVIDERS[e.provider] && (e.key || !LLM_PROVIDERS[e.provider].needsKey));
 }
-export function hasLlm(){ return llmEntries().length>0; }
+// 有金鑰，或「電腦幫跑文字」可用 → 都算有文字能力
+export function hasLlm(){ return llmEntries().length>0 || localHas("text"); }
 export async function runLlm(sys, user){
-  const list = rotate(llmEntries());
-  if(!list.length) throw new Error("尚未新增任何文字供應商（設定頁）");
   let err;
+  // ① 電腦幫忙跑（Qwen, 9882）優先
+  if(localHas("text")){
+    try{ const out = await localText(sys, user); if(out) return out.replace(/^[「"']|[」"']$/g,"").trim(); }
+    catch(x){ err=x; console.warn("local text", x); }
+  }
+  // ② 雲端供應商輪詢備援
+  const list = rotate(llmEntries());
+  if(!list.length){ if(err) throw err; throw new Error("尚未新增任何文字供應商（設定頁），且電腦未連線"); }
   for(const e of list){
     try{
       const fn = e.provider==="gemini"?geminiText : e.provider==="cohere"?cohereText : openaiText;
@@ -83,6 +91,11 @@ function imageEntries(){
   return list;
 }
 export async function runImage(prompt){
+  // ① 電腦幫忙跑（SD-Turbo, 9881）優先
+  if(localHas("image")){
+    try{ return await localImage(prompt); }
+    catch(x){ console.warn("local image", x); }
+  }
   for(const e of rotate(imageEntries())){
     try{
       if(e.provider==="pollinations")
