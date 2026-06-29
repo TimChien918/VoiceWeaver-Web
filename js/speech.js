@@ -1,5 +1,7 @@
-// TTS / STT 全用瀏覽器原生 Web Speech API（免金鑰、無本地模型運算）。
+// TTS / STT：預設用瀏覽器原生 Web Speech API（免金鑰）；
+// 若開啟「本地語音引擎」且連得上語音中心，則改用 GPT-SoVITS 角色語音。
 import { state } from "./store.js";
+import { localTtsEnabled, localSpeak } from "./localtts.js";
 
 // 自然嗓音關鍵字：神經網路／線上嗓音通常比預設機械音「有人味」得多。
 const _NATURAL_HINTS = ["natural","neural","wavenet","journey","online","premium","enhanced","google","siri","自然","線上"];
@@ -30,6 +32,16 @@ export function listVoices(lang){
 }
 
 export function speak(text){
+  if(!text) return;
+  // 本地 GPT-SoVITS 角色語音優先；失敗則自動退回瀏覽器原生語音。
+  if(localTtsEnabled()){
+    localSpeak(text).catch(e=>{ console.warn("本地語音失敗，改用瀏覽器語音", e); _webSpeak(text); });
+    return;
+  }
+  _webSpeak(text);
+}
+
+function _webSpeak(text){
   if(!text) return;
   const doSpeak = () => {
     try{

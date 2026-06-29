@@ -6,6 +6,7 @@ import { AAC, AAC_CATS } from "./aac.js";
 import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js";
 import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js";
 import { setupReport, loadReport, setReportToast } from "./report.js";
+import { detectLocalTts, localVoices, localSwitch } from "./localtts.js";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -33,7 +34,36 @@ function fillSettings(){
   $("#s_font").value = state.settings.font; $("#fontVal").textContent = state.settings.font+"x";
   renderProviderList("#llmList", "llmApis", LLM_PROVIDERS);
   renderProviderList("#imgList", "imageApis", IMAGE_PROVIDERS);
+  // 本地語音引擎
+  $("#lt_enabled").checked = !!state.settings.localTtsEnabled;
+  $("#lt_url").value = state.settings.localTtsUrl || "";
+  if(state.settings.localVoiceName){
+    $("#lt_voice").innerHTML = `<option value="${state.settings.localVoiceName}|${state.settings.localVoiceLang}">${state.settings.localVoiceName}（${state.settings.localVoiceLang||"?"}）</option>`;
+  }
 }
+
+// 偵測語音中心並把角色語音填進下拉
+async function refreshLocalVoices(){
+  const status = $("#lt_status"), sel = $("#lt_voice");
+  status.textContent = "偵測中…";
+  const d = await detectLocalTts();
+  if(!d){ status.textContent = "❌ 連不上語音中心（同機請開語音中心；遠端請填 Tailscale 網址）"; return; }
+  const voices = await localVoices();
+  if(!voices.length){ status.textContent = "✅ 已連線，但電腦上沒有語音模型"; return; }
+  const cur = `${state.settings.localVoiceName}|${state.settings.localVoiceLang}`;
+  sel.innerHTML = voices.map(v=>{
+    const val = `${v.name}|${v.lang}`;
+    return `<option value="${val}" ${val===cur?"selected":""}>${v.name}（${v.lang||"?"}）</option>`;
+  }).join("");
+  status.textContent = `✅ 已連線（${d.base.replace(/^https?:\/\//,"")}）· ${voices.length} 個語音`;
+  // 沒選過就預設第一個
+  if(!state.settings.localVoiceName && voices[0]){
+    state.settings.localVoiceName = voices[0].name;
+    state.settings.localVoiceLang = voices[0].lang;
+    save();
+  }
+}
+
 function bindSettings(){
   $("#k_tgtoken").addEventListener("input", e=>{ state.apiKeys.tgtoken=e.target.value.trim(); save(); });
   $("#k_tgchat").addEventListener("input", e=>{ state.apiKeys.tgchat=e.target.value.trim(); save(); });
@@ -43,6 +73,21 @@ function bindSettings(){
   $("#s_font").addEventListener("input", e=>{ state.settings.font=+e.target.value; $("#fontVal").textContent=e.target.value+"x"; applyTheme(); save(); });
   $("#addLlm").addEventListener("click", ()=>{ state.llmApis.push({id:newId(),provider:Object.keys(LLM_PROVIDERS)[0],key:"",model:""}); save(); renderProviderList("#llmList","llmApis",LLM_PROVIDERS); });
   $("#addImg").addEventListener("click", ()=>{ state.imageApis.push({id:newId(),provider:"pollinations",key:"",model:""}); save(); renderProviderList("#imgList","imageApis",IMAGE_PROVIDERS); });
+  // 本地語音引擎
+  $("#lt_enabled").addEventListener("change", async e=>{
+    state.settings.localTtsEnabled = e.target.checked; save();
+    if(e.target.checked) await refreshLocalVoices();
+  });
+  $("#lt_url").addEventListener("input", e=>{ state.settings.localTtsUrl = e.target.value.trim(); save(); });
+  $("#lt_detect").addEventListener("click", refreshLocalVoices);
+  $("#lt_voice").addEventListener("change", async e=>{
+    const [name, lang] = (e.target.value||"").split("|");
+    if(!name) return;
+    state.settings.localVoiceName = name; state.settings.localVoiceLang = lang||""; save();
+    toast(`切換語音到 ${name}（載入中，需數十秒）…`);
+    try{ await localSwitch(name, lang); toast(`已切換到 ${name}`); }
+    catch(x){ toast("切換失敗："+(x.message||x)); }
+  });
 }
 
 // 多供應商/多金鑰清單：供應商下拉 + 金鑰欄 + 刪除
@@ -235,6 +280,8 @@ function main(){
   setupTabs(); setupActions(); setupAac(); setupCamera(); bindSettings();
   setRehabToast(toast); setReportToast(toast);
   setupRehab(); setupReport();
+  // 已啟用本地語音 → 背景偵測一次，讓引擎就緒（連不上不影響其他功能）
+  if(state.settings.localTtsEnabled) refreshLocalVoices().catch(()=>{});
   $("#btnGoogle").addEventListener("click", async ()=>{ try{ await loginGoogle(); }catch(e){ $("#loginErr").textContent=e.message||e; } });
   $("#btnAnon").addEventListener("click", async ()=>{ try{ await loginAnon(); }catch(e){ $("#loginErr").textContent=e.message||e; } });
 

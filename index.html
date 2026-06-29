@@ -191,6 +191,25 @@
           <label class="lbl">字體大小 <span id="fontVal" class="muted"></span></label>
           <input id="s_font" type="range" min="0.9" max="1.6" step="0.05" />
         </div>
+        <div class="card">
+          <h3>🎙 本地語音引擎（GPT-SoVITS 角色語音）</h3>
+          <p class="tiny muted">用你電腦上「語音中心」的角色語音來朗讀（取代瀏覽器機械音）。連得上才會啟用，連不上自動退回瀏覽器語音。</p>
+          <label class="row" style="gap:8px;align-items:center;margin:6px 0">
+            <input id="lt_enabled" type="checkbox" /> <span>啟用本地語音引擎</span>
+          </label>
+          <div class="row" style="gap:8px;align-items:center;margin:6px 0">
+            <button id="lt_detect" class="btn ghost">🔍 偵測連線</button>
+            <span id="lt_status" class="tiny muted">尚未偵測</span>
+          </div>
+          <label class="lbl">語音中心位址（選填）</label>
+          <input id="lt_url" type="text" placeholder="同一台電腦免填；遠端填 Tailscale 網址，例 https://mac.xxx.ts.net" autocomplete="off" />
+          <label class="lbl">角色語音</label>
+          <select id="lt_voice"><option value="">（先偵測連線）</option></select>
+          <p class="tiny muted" style="margin-top:8px">
+            • <b>同一台電腦</b>：開網頁的電腦＝跑語音中心的電腦 → 免填位址，直接偵測即可。<br>
+            • <b>Tailscale</b>：電腦先跑 <code>tailscale serve --bg 9879</code>（把橋接埠對外成 HTTPS），上面位址填你的 <code>https://主機.xxx.ts.net</code>（橋接會自動轉呼叫本機的 GPT-SoVITS，不必另外開 9880）。
+          </p>
+        </div>
         <p id="saveState" class="tiny muted center">—</p>
         <p class="tiny muted center">VoiceWeaver 網頁輕量版 · 純 API/瀏覽器、無本地運算</p>
       </section>
