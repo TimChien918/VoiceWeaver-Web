@@ -41,6 +41,10 @@ textarea,input,select{ width:100%; font:inherit; color:var(--fg); background:var
   border:1px solid var(--line); border-radius:10px; padding:10px; }
 textarea{ resize:vertical; }
 input[type=range]{ padding:0; }
+/* checkbox 不要被上面的 width:100% 撐滿，否則會把後面的文字擠到右邊換行 */
+input[type=checkbox]{ width:auto; flex:none; margin:0; padding:0; border-radius:4px; }
+/* 勾選＋文字成一列、靠左對齊 */
+label.row{ margin-top:0; cursor:pointer; }
 
 .row{ display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:nowrap; }
 .row.wrap{ flex-wrap:wrap; }
