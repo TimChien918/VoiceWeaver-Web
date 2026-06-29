@@ -42,7 +42,13 @@ function fillSettings(){
   }
 }
 
-// 偵測語音中心、回報三項運算可用性、把角色語音填進下拉
+// 介面語言（zh-TW/en-US/ja-JP/ko-KR）→ 語音標籤（ZH/EN/JA/KO）
+function appLangToVoiceTag(l){
+  const b = (l||"").toLowerCase().split("-")[0];
+  return { zh:"ZH", en:"EN", ja:"JA", ko:"KO" }[b] || "ZH";
+}
+
+// 偵測語音中心、回報三項運算可用性、把「符合目前介面語言」的角色語音填進下拉
 async function refreshLocalVoices(){
   const status = $("#lt_status"), sel = $("#lt_voice");
   status.textContent = "偵測中…";
@@ -51,34 +57,41 @@ async function refreshLocalVoices(){
   const h = d.health || {};
   const caps = [h.voice?"語音✓":"語音✗", h.image?"生圖✓":"生圖✗", h.text?"文字✓":"文字✗"].join(" · ");
   const host = d.base.replace(/^https?:\/\//,"");
-  // 角色語音下拉（僅在語音可用時填）
+  // 角色語音下拉（僅在語音可用時填，且只列出與介面語言相同的）
   if(h.voice){
-    const voices = await localVoices();
+    const want = appLangToVoiceTag(state.settings.lang);
+    const all = await localVoices();
+    const voices = all.filter(v => (v.lang||"").toUpperCase() === want);
     if(voices.length){
-      const cur = `${state.settings.localVoiceName}|${state.settings.localVoiceLang}`;
+      // 目前選的若不在此語言清單 → 改選第一個
+      let cur = `${state.settings.localVoiceName}|${state.settings.localVoiceLang}`;
+      if(!voices.some(v => `${v.name}|${v.lang}` === cur)){
+        state.settings.localVoiceName = voices[0].name;
+        state.settings.localVoiceLang = voices[0].lang;
+        save();
+        cur = `${voices[0].name}|${voices[0].lang}`;
+      }
       sel.innerHTML = voices.map(v=>{
         const val = `${v.name}|${v.lang}`;
         return `<option value="${val}" ${val===cur?"selected":""}>${v.name}（${v.lang||"?"}）</option>`;
       }).join("");
-      if(!state.settings.localVoiceName && voices[0]){
-        state.settings.localVoiceName = voices[0].name;
-        state.settings.localVoiceLang = voices[0].lang;
-        save();
-      }
     } else {
-      sel.innerHTML = `<option value="">（電腦上沒有語音模型）</option>`;
+      sel.innerHTML = `<option value="">（電腦上沒有「${want}」語言的語音）</option>`;
     }
+    status.textContent = `✅ 已連線（${host}）· ${caps} · 語言：${want}`;
   } else {
     sel.innerHTML = `<option value="">（語音服務未啟動）</option>`;
+    status.textContent = `✅ 已連線（${host}）· ${caps}`;
   }
-  status.textContent = `✅ 已連線（${host}）· ${caps}`;
 }
 
 function bindSettings(){
   $("#k_tgtoken").addEventListener("input", e=>{ state.apiKeys.tgtoken=e.target.value.trim(); save(); });
   $("#k_tgchat").addEventListener("input", e=>{ state.apiKeys.tgchat=e.target.value.trim(); save(); });
   $("#s_theme").addEventListener("change", e=>{ state.settings.theme=e.target.value; applyTheme(); save(); });
-  $("#s_lang").addEventListener("change", e=>{ state.settings.lang=e.target.value; save(); });
+  $("#s_lang").addEventListener("change", e=>{ state.settings.lang=e.target.value; save();
+    // 介面語言改了 → 角色語音清單跟著只顯示對應語言
+    if(state.settings.localTtsEnabled) refreshLocalVoices().catch(()=>{}); });
   $("#s_rate").addEventListener("input", e=>{ state.settings.rate=+e.target.value; $("#rateVal").textContent=e.target.value+"x"; save(); });
   $("#s_font").addEventListener("input", e=>{ state.settings.font=+e.target.value; $("#fontVal").textContent=e.target.value+"x"; applyTheme(); save(); });
   $("#addLlm").addEventListener("click", ()=>{ state.llmApis.push({id:newId(),provider:Object.keys(LLM_PROVIDERS)[0],key:"",model:""}); save(); renderProviderList("#llmList","llmApis",LLM_PROVIDERS); });

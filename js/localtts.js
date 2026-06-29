@@ -85,13 +85,18 @@ export async function localSwitch(name, lang) {
 }
 
 let _audio = null;
-// 用目前載入的語音合成並播放（語言由載入的模型決定，不從 UI 帶）
+// 合成並播放：帶上目前選定的角色語音，橋接若發現和已載入的不同會自動切換
 export async function localSpeak(text) {
   if (!text) return;
   if (!_base && !(await detectLocalTts())) throw new Error("未連線到語音中心");
+  const body = { text };
+  if (state.settings.localVoiceName) {
+    body.name = state.settings.localVoiceName;
+    body.lang = state.settings.localVoiceLang || "";
+  }
   const r = await _fetch("/speak", {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify(body),
   }, 120000);
   if (!r.ok) {
     let e = ""; try { e = (await r.json()).error; } catch {}
