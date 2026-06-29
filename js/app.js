@@ -7,6 +7,7 @@ import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNo
 import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js";
 import { setupReport, loadReport, setReportToast } from "./report.js";
 import { detectLocalTts, localVoices, localSwitch } from "./localtts.js";
+import { applyI18n, t } from "./i18n.js";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -101,8 +102,8 @@ function bindSettings(){
   $("#k_tgchat").addEventListener("input", e=>{ state.apiKeys.tgchat=e.target.value.trim(); save(); });
   $("#s_theme").addEventListener("change", e=>{ state.settings.theme=e.target.value; applyTheme(); save(); });
   $("#s_lang").addEventListener("change", e=>{ state.settings.lang=e.target.value; save();
-    // 介面語言改了 → 角色語音清單即時用快取重新篩選（偵測過就會更新，不必再連網）
-    populateVoiceDropdown(); });
+    applyI18n(state.settings.lang);          // 整個介面跟著翻譯
+    populateVoiceDropdown(); });             // 角色語音清單即時用快取重新篩選
   $("#s_rate").addEventListener("input", e=>{ state.settings.rate=+e.target.value; $("#rateVal").textContent=e.target.value+"x"; save(); });
   $("#s_font").addEventListener("input", e=>{ state.settings.font=+e.target.value; $("#fontVal").textContent=e.target.value+"x"; applyTheme(); save(); });
   $("#addLlm").addEventListener("click", ()=>{ state.llmApis.push({id:newId(),provider:Object.keys(LLM_PROVIDERS)[0],key:"",model:""}); save(); renderProviderList("#llmList","llmApis",LLM_PROVIDERS); });
@@ -165,7 +166,7 @@ async function doCompose(){
   const frag = $("#fragments").value.trim();
   if(!frag){ toast("請先輸入碎詞"); return; }
   if(!hasAnyLlmKey()){ toast("請先到設定頁填 LLM 金鑰（建議 Gemini）"); return; }
-  $("#btnCompose").disabled = true; $("#btnCompose").textContent = "重組中…";
+  $("#btnCompose").disabled = true; $("#btnCompose").textContent = t("btn.composing");
   try{
     lastResult = await reconstruct(frag, ctxText);
     $("#resultText").textContent = lastResult;
@@ -174,7 +175,7 @@ async function doCompose(){
     speak(lastResult);
     addHistory({ original: frag + (ctxText?(" | "+ctxText):""), reconstructed: lastResult });
   }catch(e){ toast("重組失敗：" + (e.message||e)); }
-  finally{ $("#btnCompose").disabled=false; $("#btnCompose").textContent="✨ 重組成自然句"; }
+  finally{ $("#btnCompose").disabled=false; $("#btnCompose").textContent=t("btn.compose"); }
 }
 
 // ── 相機（拍照→雲端辨識）──
@@ -297,7 +298,7 @@ function showLogin(){ $("#login").classList.remove("hidden"); $("#app").classLis
 function showApp(user){
   $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
   $("#who").textContent = user.name || "";
-  applyTheme(); fillSettings(); renderFavorites();
+  applyTheme(); applyI18n(state.settings.lang); fillSettings(); renderFavorites();
 }
 
 function renderFavorites(){
@@ -311,6 +312,7 @@ function renderFavorites(){
 }
 
 function main(){
+  applyI18n(state.settings.lang);   // 登入畫面也先翻譯
   setupTabs(); setupActions(); setupAac(); setupCamera(); bindSettings();
   setRehabToast(toast); setReportToast(toast);
   setupRehab(); setupReport();

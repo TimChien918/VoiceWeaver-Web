@@ -12,10 +12,10 @@
     <div class="login-card">
       <div class="logo">🗣️</div>
       <h1>VoiceWeaver</h1>
-      <p class="muted">輕量網頁版 · 失語溝通輔助</p>
-      <button id="btnGoogle" class="btn primary">使用 Google 登入</button>
-      <button id="btnAnon" class="btn ghost">匿名試用</button>
-      <p class="tiny muted">登入後會自動記住你的 API 金鑰與設定，換裝置也能還原。</p>
+      <p class="muted" data-i18n="login.tagline">輕量網頁版 · 失語溝通輔助</p>
+      <button id="btnGoogle" class="btn primary" data-i18n="login.google">使用 Google 登入</button>
+      <button id="btnAnon" class="btn ghost" data-i18n="login.anon">匿名試用</button>
+      <p class="tiny muted" data-i18n="login.note">登入後會自動記住你的 API 金鑰與設定，換裝置也能還原。</p>
       <p id="loginErr" class="tiny err"></p>
     </div>
   </div>
@@ -26,41 +26,41 @@
       <span class="title">VoiceWeaver</span>
       <span class="spacer"></span>
       <span id="who" class="tiny muted"></span>
-      <button id="btnLogout" class="chip">登出</button>
+      <button id="btnLogout" class="chip" data-i18n="logout">登出</button>
     </header>
 
     <nav class="tabs">
-      <button class="tab active" data-tab="compose">語句重組</button>
-      <button class="tab" data-tab="rehab">語音復健</button>
-      <button class="tab" data-tab="aac">AAC 圖卡</button>
-      <button class="tab" data-tab="report">成績單</button>
-      <button class="tab" data-tab="history">歷史</button>
-      <button class="tab" data-tab="settings">設定</button>
+      <button class="tab active" data-tab="compose" data-i18n="nav.compose">語句重組</button>
+      <button class="tab" data-tab="rehab" data-i18n="nav.rehab">語音復健</button>
+      <button class="tab" data-tab="aac" data-i18n="nav.aac">AAC 圖卡</button>
+      <button class="tab" data-tab="report" data-i18n="nav.report">成績單</button>
+      <button class="tab" data-tab="history" data-i18n="nav.history">歷史</button>
+      <button class="tab" data-tab="settings" data-i18n="nav.settings">設定</button>
     </nav>
 
     <main>
       <!-- 重組 -->
       <section id="tab-compose" class="panel">
         <div class="card">
-          <label class="lbl">碎詞／想說的（可用語音輸入）</label>
-          <textarea id="fragments" rows="3" placeholder="例：水 休息 現在"></textarea>
+          <label class="lbl" data-i18n="compose.label">碎詞／想說的（可用語音輸入）</label>
+          <textarea id="fragments" rows="3" placeholder="例：水 休息 現在" data-i18n-ph="compose.ph"></textarea>
           <div class="row wrap">
-            <button id="btnMic" class="btn ghost">🎤 語音輸入</button>
-            <button id="btnLoc" class="btn ghost">📍 加入地點</button>
-            <button id="btnCam" class="btn ghost">📷 拍照辨識</button>
+            <button id="btnMic" class="btn ghost" data-i18n="btn.mic">🎤 語音輸入</button>
+            <button id="btnLoc" class="btn ghost" data-i18n="btn.loc">📍 加入地點</button>
+            <button id="btnCam" class="btn ghost" data-i18n="btn.cam">📷 拍照辨識</button>
             <span id="ctx" class="tiny muted"></span>
           </div>
-          <button id="btnCompose" class="btn primary big">✨ 重組成自然句</button>
+          <button id="btnCompose" class="btn primary big" data-i18n="btn.compose">✨ 重組成自然句</button>
         </div>
         <div id="result" class="card result hidden">
           <div id="resultText" class="result-text"></div>
           <div class="row wrap">
-            <button id="btnSpeak" class="btn primary">🔊 朗讀</button>
-            <button id="btnRegen" class="btn ghost">重組一次</button>
-            <button id="btnImg" class="btn ghost">🖼 生成圖卡</button>
-            <button id="btnCopy" class="btn ghost">📋 複製</button>
-            <button id="btnShare" class="btn ghost">🔗 分享</button>
-            <button id="btnFav" class="btn ghost">⭐ 收藏</button>
+            <button id="btnSpeak" class="btn primary" data-i18n="btn.speak">🔊 朗讀</button>
+            <button id="btnRegen" class="btn ghost" data-i18n="btn.regen">重組一次</button>
+            <button id="btnImg" class="btn ghost" data-i18n="btn.img">🖼 生成圖卡</button>
+            <button id="btnCopy" class="btn ghost" data-i18n="btn.copy">📋 複製</button>
+            <button id="btnShare" class="btn ghost" data-i18n="btn.share">🔗 分享</button>
+            <button id="btnFav" class="btn ghost" data-i18n="btn.fav">⭐ 收藏</button>
           </div>
           <div class="row wrap" style="margin-top:6px">
             <button class="btn ghost lang-btn" data-lang="zh-TW">🇹🇼 中</button>
@@ -71,7 +71,7 @@
           <img id="resultImg" class="result-img hidden" alt="意圖圖卡" />
         </div>
         <div id="favCard" class="card hidden">
-          <label class="lbl">⭐ 我的最愛（點一下朗讀）</label>
+          <label class="lbl" data-i18n="fav.label">⭐ 我的最愛（點一下朗讀）</label>
           <div id="favList" class="chips"></div>
         </div>
       </section>
@@ -79,29 +79,29 @@
       <!-- 語音復健 -->
       <section id="tab-rehab" class="panel hidden">
         <div class="card">
-          <label class="lbl">練習句子</label>
+          <label class="lbl" data-i18n="rehab.targetLabel">練習句子</label>
           <div class="row">
-            <input id="rehabTarget" type="text" placeholder="輸入目標句，或讓 AI 推薦" />
-            <button id="rehabSuggest" class="btn ghost" style="white-space:nowrap">AI 推薦</button>
+            <input id="rehabTarget" type="text" placeholder="輸入目標句，或讓 AI 推薦" data-i18n-ph="rehab.targetPh" />
+            <button id="rehabSuggest" class="btn ghost" style="white-space:nowrap" data-i18n="rehab.suggest">AI 推薦</button>
           </div>
           <div id="rehabSuggestions" class="chips hidden" style="margin-top:10px"></div>
-          <button id="rehabStart" class="btn primary big">開始練習</button>
-          <button id="rehabParagraph" class="btn ghost" style="width:100%;margin-top:8px">📖 整段練習（自動分句逐句練）</button>
+          <button id="rehabStart" class="btn primary big" data-i18n="rehab.start">開始練習</button>
+          <button id="rehabParagraph" class="btn ghost" style="width:100%;margin-top:8px" data-i18n="rehab.paragraph">📖 整段練習（自動分句逐句練）</button>
         </div>
         <div id="rehabPractice" class="card hidden">
           <div id="rehabQueueBar" class="hidden" style="font-size:.85rem;font-weight:600;color:var(--accent);margin-bottom:8px"></div>
-          <label class="lbl">目標句（點字卡可單獨發音）</label>
+          <label class="lbl" data-i18n="rehab.targetDisplay">目標句（點字卡可單獨發音）</label>
           <div id="rehabTargetDisplay" class="result-text" style="padding-bottom:6px"></div>
           <div id="rehabChips" class="chips"></div>
           <div class="row">
-            <button id="rehabListen" class="btn ghost">🔊 聽整句</button>
-            <button id="rehabRecord" class="btn primary">🎤 開始跟讀</button>
-            <button id="rehabNext" class="btn ghost hidden">下一句 ▶</button>
+            <button id="rehabListen" class="btn ghost" data-i18n="rehab.listen">🔊 聽整句</button>
+            <button id="rehabRecord" class="btn primary" data-i18n="rehab.record">🎤 開始跟讀</button>
+            <button id="rehabNext" class="btn ghost hidden" data-i18n="rehab.next">下一句 ▶</button>
           </div>
           <div id="rehabScore"></div>
         </div>
         <div class="card">
-          <label class="lbl">最近練習</label>
+          <label class="lbl" data-i18n="rehab.recent">最近練習</label>
           <div id="rehabLogs"></div>
         </div>
       </section>
@@ -111,9 +111,9 @@
         <div class="card">
           <div class="row" style="margin:0;justify-content:space-between">
             <div id="reportRange" class="chips" style="margin:0">
-              <span class="chip" data-r="today">今日</span>
-              <span class="chip on" data-r="month">本月</span>
-              <span class="chip" data-r="year">本年度</span>
+              <span class="chip" data-r="today" data-i18n="report.today">今日</span>
+              <span class="chip on" data-r="month" data-i18n="report.month">本月</span>
+              <span class="chip" data-r="year" data-i18n="report.year">本年度</span>
             </div>
             <button id="reportCsv" class="btn ghost" style="white-space:nowrap">📄 CSV</button>
             <button id="reportTg" class="btn ghost" style="white-space:nowrap">📤 Telegram</button>
@@ -121,18 +121,18 @@
         </div>
         <div class="card">
           <div class="stats">
-            <div class="stat"><div class="stat-val" id="statSessions">—</div><div class="stat-lbl">練習次數</div></div>
-            <div class="stat"><div class="stat-val" id="statAvg">—</div><div class="stat-lbl">平均分</div></div>
-            <div class="stat"><div class="stat-val" id="statStreak">—</div><div class="stat-lbl">連續天數</div></div>
-            <div class="stat"><div class="stat-val" id="statPositive">—</div><div class="stat-lbl">正向字眼</div></div>
+            <div class="stat"><div class="stat-val" id="statSessions">—</div><div class="stat-lbl" data-i18n="report.sessions">練習次數</div></div>
+            <div class="stat"><div class="stat-val" id="statAvg">—</div><div class="stat-lbl" data-i18n="report.avg">平均分</div></div>
+            <div class="stat"><div class="stat-val" id="statStreak">—</div><div class="stat-lbl" data-i18n="report.streak">連續天數</div></div>
+            <div class="stat"><div class="stat-val" id="statPositive">—</div><div class="stat-lbl" data-i18n="report.positive">正向字眼</div></div>
           </div>
         </div>
         <div class="card">
-          <label class="lbl">分數趨勢</label>
+          <label class="lbl" data-i18n="report.trend">分數趨勢</label>
           <canvas id="reportChart" style="width:100%;height:150px"></canvas>
         </div>
         <div class="card">
-          <label class="lbl">最近 10 筆練習</label>
+          <label class="lbl" data-i18n="report.recent10">最近 10 筆練習</label>
           <div id="reportLogs"></div>
         </div>
       </section>
@@ -144,12 +144,12 @@
           <div id="aacItems" class="cards-grid"></div>
         </div>
         <div class="card">
-          <label class="lbl">已選</label>
+          <label class="lbl" data-i18n="aac.selected">已選</label>
           <div id="aacCombo" class="combo"></div>
           <div class="row">
-            <button id="aacSpeak" class="btn primary">🔊 朗讀</button>
-            <button id="aacCompose" class="btn ghost">✨ 組成句子</button>
-            <button id="aacClear" class="btn ghost">清空</button>
+            <button id="aacSpeak" class="btn primary" data-i18n="aac.speak">🔊 朗讀</button>
+            <button id="aacCompose" class="btn ghost" data-i18n="aac.compose">✨ 組成句子</button>
+            <button id="aacClear" class="btn ghost" data-i18n="aac.clear">清空</button>
           </div>
         </div>
       </section>
@@ -162,56 +162,56 @@
       <!-- 設定 -->
       <section id="tab-settings" class="panel hidden">
         <div class="card">
-          <h3>💬 文字供應商（重組／組句）</h3>
-          <p class="tiny muted">可加多個供應商、同一家也能放多把金鑰；使用時自動輪詢＋失敗備援。</p>
+          <h3 data-i18n="set.llmTitle">💬 文字供應商（重組／組句）</h3>
+          <p class="tiny muted" data-i18n="set.llmDesc">可加多個供應商、同一家也能放多把金鑰；使用時自動輪詢＋失敗備援。</p>
           <div id="llmList"></div>
-          <button id="addLlm" class="btn ghost" style="margin-top:8px">＋ 新增文字供應商</button>
+          <button id="addLlm" class="btn ghost" style="margin-top:8px" data-i18n="set.addLlm">＋ 新增文字供應商</button>
         </div>
         <div class="card">
-          <h3>🖼 生圖供應商</h3>
-          <p class="tiny muted">Pollinations 免金鑰、永遠保底；可再加 Gemini／HuggingFace／OpenAI。</p>
+          <h3 data-i18n="set.imgTitle">🖼 生圖供應商</h3>
+          <p class="tiny muted" data-i18n="set.imgDesc">Pollinations 免金鑰、永遠保底；可再加 Gemini／HuggingFace／OpenAI。</p>
           <div id="imgList"></div>
-          <button id="addImg" class="btn ghost" style="margin-top:8px">＋ 新增生圖供應商</button>
+          <button id="addImg" class="btn ghost" style="margin-top:8px" data-i18n="set.addImg">＋ 新增生圖供應商</button>
         </div>
         <div class="card">
-          <h3>🆘 緊急通報（Telegram，選用）</h3>
+          <h3 data-i18n="set.tgTitle">🆘 緊急通報（Telegram，選用）</h3>
           <label class="lbl">Bot Token</label>
           <input id="k_tgtoken" type="password" autocomplete="off" />
-          <label class="lbl">Chat ID（接收者）</label>
+          <label class="lbl" data-i18n="set.tgChat">Chat ID（接收者）</label>
           <input id="k_tgchat" type="text" autocomplete="off" />
         </div>
         <div class="card">
-          <h3>偏好</h3>
-          <label class="lbl">介面主題</label>
-          <select id="s_theme"><option value="auto">跟隨系統</option><option value="light">淺色</option><option value="dark">深色</option></select>
-          <label class="lbl">朗讀語言</label>
+          <h3 data-i18n="set.prefs">偏好</h3>
+          <label class="lbl" data-i18n="set.theme">介面主題</label>
+          <select id="s_theme"><option value="auto" data-i18n="theme.auto">跟隨系統</option><option value="light" data-i18n="theme.light">淺色</option><option value="dark" data-i18n="theme.dark">深色</option></select>
+          <label class="lbl" data-i18n="set.lang">語言（介面＋朗讀）</label>
           <select id="s_lang"><option value="zh-TW">中文</option><option value="en-US">English</option><option value="ja-JP">日本語</option><option value="ko-KR">한국어</option></select>
-          <label class="lbl">朗讀語速 <span id="rateVal" class="muted"></span></label>
+          <label class="lbl"><span data-i18n="set.rate">朗讀語速</span> <span id="rateVal" class="muted"></span></label>
           <input id="s_rate" type="range" min="0.5" max="1.5" step="0.05" />
-          <label class="lbl">字體大小 <span id="fontVal" class="muted"></span></label>
+          <label class="lbl"><span data-i18n="set.font">字體大小</span> <span id="fontVal" class="muted"></span></label>
           <input id="s_font" type="range" min="0.9" max="1.6" step="0.05" />
         </div>
         <div class="card">
-          <h3>🖥 讓電腦幫忙跑運算（語音／生圖／文字）</h3>
-          <p class="tiny muted">像手機一樣把運算丟給電腦：語音用 GPT-SoVITS 角色聲音、生圖用 SD-Turbo、文字用本機 Qwen。連得上才會用，連不上自動退回雲端／瀏覽器。</p>
+          <h3 data-i18n="set.computeTitle">🖥 讓電腦幫忙跑運算（語音／生圖／文字）</h3>
+          <p class="tiny muted" data-i18n="set.computeDesc">像手機一樣把運算丟給電腦：語音用 GPT-SoVITS 角色聲音、生圖用 SD-Turbo、文字用本機 Qwen。連得上才會用，連不上自動退回雲端／瀏覽器。</p>
           <label class="row" style="gap:8px;align-items:center;margin:6px 0">
-            <input id="lt_enabled" type="checkbox" /> <span>啟用電腦運算</span>
+            <input id="lt_enabled" type="checkbox" /> <span data-i18n="set.computeEnable">啟用電腦運算</span>
           </label>
           <div class="row" style="gap:8px;align-items:center;margin:6px 0">
-            <button id="lt_detect" class="btn ghost">🔍 偵測連線</button>
-            <span id="lt_status" class="tiny muted">尚未偵測</span>
+            <button id="lt_detect" class="btn ghost" data-i18n="set.detect">🔍 偵測連線</button>
+            <span id="lt_status" class="tiny muted" data-i18n="set.detectNot">尚未偵測</span>
           </div>
-          <label class="lbl">語音中心位址（選填）</label>
-          <input id="lt_url" type="text" placeholder="同一台電腦免填；遠端填 Tailscale 網址，例 https://mac.xxx.ts.net" autocomplete="off" />
-          <label class="lbl">角色語音</label>
-          <select id="lt_voice"><option value="">（先偵測連線）</option></select>
-          <p class="tiny muted" style="margin-top:8px">
+          <label class="lbl" data-i18n="set.urlLabel">語音中心位址（選填）</label>
+          <input id="lt_url" type="text" placeholder="同一台電腦免填；遠端填 Tailscale 網址，例 https://mac.xxx.ts.net" data-i18n-ph="set.urlPh" autocomplete="off" />
+          <label class="lbl" data-i18n="set.voiceLabel">角色語音</label>
+          <select id="lt_voice"><option value="" data-i18n="set.voiceFirst">（先偵測連線）</option></select>
+          <p class="tiny muted" style="margin-top:8px" data-i18n-html="set.computeHint">
             • <b>同一台電腦</b>：開網頁的電腦＝跑語音中心的電腦 → 免填位址，直接偵測即可。<br>
             • <b>Tailscale</b>：電腦先跑 <code>tailscale serve --bg 9879</code>（把橋接埠對外成 HTTPS），上面位址填你的 <code>https://主機.xxx.ts.net</code>（橋接會自動轉呼叫本機的 GPT-SoVITS，不必另外開 9880）。
           </p>
         </div>
         <p id="saveState" class="tiny muted center">—</p>
-        <p class="tiny muted center">VoiceWeaver 網頁輕量版 · 純 API/瀏覽器、無本地運算</p>
+        <p class="tiny muted center" data-i18n="footer">VoiceWeaver 網頁輕量版 · 純 API/瀏覽器、無本地運算</p>
       </section>
     </main>
     <div id="toast" class="toast hidden"></div>
