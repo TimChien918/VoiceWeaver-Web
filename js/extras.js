@@ -1,6 +1,7 @@
 // 進階功能（全部純 API / 瀏覽器）：生圖、定位、相機雲端辨識、Telegram 通報。
 import { state } from "./store.js";
 import { runImage } from "./providers.js";
+import { t } from "./i18n.js";
 
 // ── AI 生圖：走多供應商輪詢（pollinations 免金鑰保底）──
 export async function generateImage(prompt){ return runImage(prompt); }
@@ -30,7 +31,7 @@ export async function detectLocation(){
 // ── 相機雲端辨識：拍一張 → Gemini Vision 回傳看到的物品（中文，逗號分隔）──
 export async function recognizePhoto(base64Jpeg){
   const key = geminiKey();
-  if(!key) throw new Error("需要 Gemini 金鑰才能用相機辨識（請在設定頁新增一個 Gemini 供應商）");
+  if(!key) throw new Error(t("err.needGeminiVision"));
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(key)}`;
   const r = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ contents:[{ role:"user", parts:[
@@ -49,7 +50,7 @@ export async function recognizePhoto(base64Jpeg){
 // ── Telegram 緊急通報 ──
 export async function telegramNotify(text){
   const { tgtoken, tgchat } = state.apiKeys;
-  if(!tgtoken || !tgchat) throw new Error("需先在設定頁填 Telegram Bot Token 與 Chat ID");
+  if(!tgtoken || !tgchat) throw new Error(t("err.needTg"));
   let loc = "";
   try{
     const pos = await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{timeout:6000}));

@@ -39,7 +39,7 @@ function fillSettings(){
   $("#lt_enabled").checked = !!state.settings.localTtsEnabled;
   $("#lt_url").value = state.settings.localTtsUrl || "";
   if(state.settings.localVoiceName){
-    $("#lt_voice").innerHTML = `<option value="${state.settings.localVoiceName}|${state.settings.localVoiceLang}">${state.settings.localVoiceName}（${state.settings.localVoiceLang||"?"}）</option>`;
+    $("#lt_voice").innerHTML = `<option value="${escapeHtml(state.settings.localVoiceName+"|"+state.settings.localVoiceLang)}">${escapeHtml(state.settings.localVoiceName)}（${escapeHtml(state.settings.localVoiceLang||"?")}）</option>`;
   }
 }
 
@@ -59,7 +59,7 @@ function populateVoiceDropdown(){
   const want = appLangToVoiceTag(state.settings.lang);
   const voices = _cachedVoices.filter(v => (v.lang||"").toUpperCase() === want);
   if(!voices.length){
-    sel.innerHTML = `<option value="">（電腦上沒有「${want}」語言的語音）</option>`;
+    sel.innerHTML = `<option value="">${t("lt.noVoiceForLang").replace("{lang}",want)}</option>`;
     state.settings.localVoiceName = ""; state.settings.localVoiceLang = ""; save();
     return;
   }
@@ -73,27 +73,27 @@ function populateVoiceDropdown(){
   }
   sel.innerHTML = voices.map(v=>{
     const val = `${v.name}|${v.lang}`;
-    return `<option value="${val}" ${val===cur?"selected":""}>${v.name}（${v.lang||"?"}）</option>`;
+    return `<option value="${escapeHtml(val)}" ${val===cur?"selected":""}>${escapeHtml(v.name)}（${escapeHtml(v.lang||"?")}）</option>`;
   }).join("");
 }
 
 // 偵測語音中心、回報三項運算可用性、把「符合目前介面語言」的角色語音填進下拉
 async function refreshLocalVoices(){
   const status = $("#lt_status"), sel = $("#lt_voice");
-  status.textContent = "偵測中…";
+  status.textContent = t("lt.detecting");
   const d = await detectLocalTts();
-  if(!d){ status.textContent = "❌ 連不上電腦（同機請開語音中心；遠端請填 Tailscale 網址）"; return; }
+  if(!d){ status.textContent = t("lt.cantConnect"); return; }
   const h = d.health || {};
-  const caps = [h.voice?"語音✓":"語音✗", h.image?"生圖✓":"生圖✗", h.text?"文字✓":"文字✗"].join(" · ");
+  const caps = [t("cap.voice")+(h.voice?"✓":"✗"), t("cap.image")+(h.image?"✓":"✗"), t("cap.text")+(h.text?"✓":"✗")].join(" · ");
   const host = d.base.replace(/^https?:\/\//,"");
   if(h.voice){
     _cachedVoices = await localVoices();
     populateVoiceDropdown();
-    status.textContent = `✅ 已連線（${host}）· ${caps} · 語言：${appLangToVoiceTag(state.settings.lang)}`;
+    status.textContent = t("lt.connected").replace("{host}",host).replace("{caps}",caps).replace("{lang}",appLangToVoiceTag(state.settings.lang));
   } else {
     _cachedVoices = null;
-    sel.innerHTML = `<option value="">（語音服務未啟動）</option>`;
-    status.textContent = `✅ 已連線（${host}）· ${caps}`;
+    sel.innerHTML = `<option value="">${t("lt.voiceSvcDown")}</option>`;
+    status.textContent = t("lt.connectedNoVoice").replace("{host}",host).replace("{caps}",caps);
   }
 }
 
@@ -104,6 +104,7 @@ function bindSettings(){
   $("#s_lang").addEventListener("change", e=>{ state.settings.lang=e.target.value;
     applyI18n(state.settings.lang);          // 先翻譯整個介面（含儲存狀態用的語言）
     populateVoiceDropdown();                  // 角色語音清單即時用快取重新篩選
+    renderCombo();                            // AAC 組合區空狀態文字跟著新語言重繪
     save(); });
   $("#s_rate").addEventListener("input", e=>{ state.settings.rate=+e.target.value; $("#rateVal").textContent=e.target.value+"x"; save(); });
   $("#s_font").addEventListener("input", e=>{ state.settings.font=+e.target.value; $("#fontVal").textContent=e.target.value+"x"; applyTheme(); save(); });
@@ -120,25 +121,25 @@ function bindSettings(){
     const [name, lang] = (e.target.value||"").split("|");
     if(!name) return;
     state.settings.localVoiceName = name; state.settings.localVoiceLang = lang||""; save();
-    toast(`切換語音到 ${name}（載入中，需數十秒）…`);
-    try{ await localSwitch(name, lang); toast(`已切換到 ${name}`); }
-    catch(x){ toast("切換失敗："+(x.message||x)); }
+    toast(t("toast.voiceSwitching").replace("{name}", name));
+    try{ await localSwitch(name, lang); toast(t("toast.voiceSwitched").replace("{name}", name)); }
+    catch(x){ toast(t("toast.voiceSwitchFail")+(x.message||x)); }
   });
 }
 
 // 多供應商/多金鑰清單：供應商下拉 + 金鑰欄 + 刪除
 function renderProviderList(containerId, listKey, catalog){
   const box = $(containerId); const list = state[listKey] || [];
-  if(!list.length){ box.innerHTML = '<p class="tiny muted">尚未新增，點下方按鈕加入。</p>'; return; }
+  if(!list.length){ box.innerHTML = `<p class="tiny muted">${t("providers.none")}</p>`; return; }
   const opts = (sel)=>Object.entries(catalog).map(([k,v])=>`<option value="${k}" ${k===sel?'selected':''}>${v.label}</option>`).join("");
   box.innerHTML = list.map((e,i)=>{
     const needsKey = catalog[e.provider]?.needsKey !== false;
     return `<div class="prow" data-i="${i}" style="border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px">
       <div class="row" style="margin:0;gap:6px">
         <select class="p-prov" style="flex:1">${opts(e.provider)}</select>
-        <span class="chip p-del" title="刪除">🗑</span>
+        <span class="chip p-del" title="${t("providers.del")}">🗑</span>
       </div>
-      ${needsKey?`<input class="p-key" type="password" placeholder="API 金鑰" value="${e.key||''}" autocomplete="off" style="margin-top:6px"/>`:'<p class="tiny muted" style="margin:6px 0 0">免金鑰</p>'}
+      ${needsKey?`<input class="p-key" type="password" placeholder="${t("providers.keyPh")}" value="${escapeHtml(e.key||"")}" autocomplete="off" style="margin-top:6px"/>`:`<p class="tiny muted" style="margin:6px 0 0">${t("providers.keyFree")}</p>`}
     </div>`;
   }).join("");
   box.querySelectorAll(".prow").forEach(row=>{
@@ -165,17 +166,17 @@ function setupTabs(){
 // ── 重組 ──
 async function doCompose(){
   const frag = $("#fragments").value.trim();
-  if(!frag){ toast("請先輸入碎詞"); return; }
-  if(!hasAnyLlmKey()){ toast("請先到設定頁填 LLM 金鑰（建議 Gemini）"); return; }
+  if(!frag){ toast(t("toast.enterFragments")); return; }
+  if(!hasAnyLlmKey()){ toast(t("toast.needLlm")); return; }
   $("#btnCompose").disabled = true; $("#btnCompose").textContent = t("btn.composing");
   try{
     lastResult = await reconstruct(frag, ctxText);
     $("#resultText").textContent = lastResult;
     $("#result").classList.remove("hidden");
     $("#resultImg").classList.add("hidden");
-    speak(lastResult);
     addHistory({ original: frag + (ctxText?(" | "+ctxText):""), reconstructed: lastResult });
-  }catch(e){ toast("重組失敗：" + (e.message||e)); }
+    speak(lastResult);
+  }catch(e){ toast(t("toast.composeFail") + (e.message||e)); }
   finally{ $("#btnCompose").disabled=false; $("#btnCompose").textContent=t("btn.compose"); }
 }
 
@@ -187,12 +188,12 @@ function setupCamera(){
   $("#btnCam").addEventListener("click", ()=> inp.click());
   inp.addEventListener("change", async ()=>{
     const f = inp.files?.[0]; if(!f) return;
-    toast("辨識中…");
+    toast(t("toast.recognizing"));
     try{
       const b64 = await fileToJpegBase64(f, 768);
       const items = await recognizePhoto(b64);
-      if(items){ ctxText = ("看到："+items); $("#ctx").textContent = "📷 "+items; toast("已加入辨識結果"); }
-    }catch(e){ toast("辨識失敗："+(e.message||e)); }
+      if(items){ ctxText = ("看到："+items); $("#ctx").textContent = "📷 "+items; toast(t("toast.recognized")); }
+    }catch(e){ toast(t("toast.recognizeFail")+(e.message||e)); }
     inp.value="";
   });
 }
@@ -220,7 +221,7 @@ function renderAac(){
   $$("#aacItems .acard").forEach(a=>a.addEventListener("click",()=>{ combo.push(a.dataset.w); renderCombo(); speak(a.dataset.w); }));
 }
 function renderCombo(){
-  $("#aacCombo").innerHTML = combo.map((w,i)=>`<span class="chip on" data-i="${i}">${w} ✕</span>`).join("") || '<span class="tiny muted">點上面的圖卡加入</span>';
+  $("#aacCombo").innerHTML = combo.map((w,i)=>`<span class="chip on" data-i="${i}">${w} ✕</span>`).join("") || `<span class="tiny muted">${t("combo.empty")}</span>`;
   $$("#aacCombo .chip").forEach(c=>c.addEventListener("click",()=>{ combo.splice(+c.dataset.i,1); renderCombo(); }));
 }
 function setupAac(){
@@ -228,13 +229,13 @@ function setupAac(){
   $("#aacSpeak").addEventListener("click", ()=>{ if(combo.length) speak(combo.join("，")); });
   $("#aacClear").addEventListener("click", ()=>{ combo.length=0; renderCombo(); });
   $("#aacCompose").addEventListener("click", async ()=>{
-    if(!combo.length){ toast("請先選圖卡"); return; }
-    if(!hasAnyLlmKey()){ toast("需要 LLM 金鑰才能組句（設定頁）"); return; }
-    toast("組句中…");
+    if(!combo.length){ toast(t("toast.pickCards")); return; }
+    if(!hasAnyLlmKey()){ toast(t("toast.needLlmCompose")); return; }
+    toast(t("toast.composing"));
     try{ const s = await composeAac(combo, ctxText); speak(s);
-      $("#fragments").value = s; toast("已組成：點「重組分頁」可再潤飾");
+      $("#fragments").value = s; toast(t("toast.composed"));
       addHistory({ original:"AAC: "+combo.join("+"), reconstructed:s });
-    }catch(e){ toast("組句失敗："+(e.message||e)); }
+    }catch(e){ toast(t("toast.aacFail")+(e.message||e)); }
   });
 }
 
@@ -244,10 +245,10 @@ async function renderHistory(){
   $("#historyList").innerHTML = list.length ? list.map(h=>`
     <div class="hitem"><div class="h-main">${escapeHtml(h.reconstructed||"")}</div>
     <div class="h-sub">${escapeHtml(h.original||"")} · ${new Date(h.ts).toLocaleString()}</div></div>`).join("")
-    : '<p class="tiny muted center">尚無紀錄</p>';
+    : `<p class="tiny muted center">${t("history.empty")}</p>`;
   $$("#historyList .hitem").forEach((el,i)=>el.addEventListener("click",()=>speak(list[i].reconstructed||"")));
 }
-function escapeHtml(s){ return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function escapeHtml(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
 // ── 其他按鈕 ──
 function setupActions(){
@@ -260,45 +261,52 @@ function setupActions(){
     img.classList.remove("hidden");
   });
   // 複製 / 分享 / 收藏 / 多語朗讀
-  $("#btnCopy")?.addEventListener("click", ()=>{ if(lastResult){ navigator.clipboard.writeText(lastResult); toast("已複製"); } });
+  $("#btnCopy")?.addEventListener("click", ()=>{ if(lastResult){ navigator.clipboard.writeText(lastResult); toast(t("toast.copied")); } });
   $("#btnShare")?.addEventListener("click", async ()=>{
     if(!lastResult) return;
     if(navigator.share){ try{ await navigator.share({ text:lastResult }); }catch{} }
-    else { navigator.clipboard.writeText(lastResult); toast("已複製（此瀏覽器不支援分享）"); }
+    else { navigator.clipboard.writeText(lastResult); toast(t("toast.copiedNoShare")); }
   });
-  $("#btnFav")?.addEventListener("click", ()=>{ if(lastResult){ const added = toggleFavorite(lastResult); toast(added?"已加入最愛 ⭐":"已移除最愛"); renderFavorites(); } });
+  $("#btnFav")?.addEventListener("click", ()=>{ if(lastResult){ const added = toggleFavorite(lastResult); toast(added?t("toast.favAdded"):t("toast.favRemoved")); renderFavorites(); } });
   $$(".lang-btn").forEach(b=>b.addEventListener("click", ()=>{ if(lastResult) speakIn(lastResult, b.dataset.lang); }));
   $("#btnLoc").addEventListener("click", async ()=>{
-    toast("定位中…");
+    toast(t("toast.locating"));
     try{ const l = await detectLocation(); ctxText = (ctxText?ctxText+"；":"")+("地點："+l); $("#ctx").textContent="📍 "+l; }
-    catch(e){ toast("定位失敗："+(e.message||e)); }
+    catch(e){ toast(t("toast.locateFail")+(e.message||e)); }
   });
   // 麥克風
   let mic=null;
   $("#btnMic").addEventListener("click", ()=>{
-    if(mic){ mic.stop(); mic=null; $("#btnMic").textContent="🎤 語音輸入"; return; }
-    if(!sttSupported()){ toast("此瀏覽器不支援語音輸入（建議 Chrome）"); return; }
-    $("#btnMic").textContent="● 收音中…點此停止";
+    if(mic){ mic.stop(); mic=null; $("#btnMic").textContent=t("btn.mic"); return; }
+    if(!sttSupported()){ toast(t("toast.sttUnsupported")); return; }
+    $("#btnMic").textContent=t("mic.recording");
     mic = listen({
       onResult:(t)=>{ $("#fragments").value = t; },
-      onEnd:()=>{ mic=null; $("#btnMic").textContent="🎤 語音輸入"; },
-      onError:(e)=>{ toast("語音："+e); mic=null; $("#btnMic").textContent="🎤 語音輸入"; }
+      onEnd:()=>{ mic=null; $("#btnMic").textContent=t("btn.mic"); },
+      onError:(e)=>{ toast(t("toast.sttPrefix")+e); mic=null; $("#btnMic").textContent=t("btn.mic"); }
     });
   });
   $("#btnLogout").addEventListener("click", logout);
-  // SOS（topbar 沒有，掛在登出旁；用鍵盤無法時可用 AAC 救命卡）—改用 AAC「救命」+ 此快捷
-  document.addEventListener("keydown", e=>{ if(e.key==="Escape") sos(); });
+  // SOS 快捷：1.5 秒內連按 3 次 Escape 才觸發（單按太容易誤觸——關對話框/退全螢幕都會誤發通報）
+  let escPresses = [];
+  document.addEventListener("keydown", e=>{
+    if(e.key!=="Escape") return;
+    const now = Date.now();
+    escPresses = escPresses.filter(ts=>now-ts<1500);
+    escPresses.push(now);
+    if(escPresses.length>=3){ escPresses=[]; sos(); }
+  });
 }
 async function sos(){
-  try{ await telegramNotify(lastResult || "我需要協助"); toast("已送出緊急通報"); }
-  catch(e){ toast("通報失敗："+(e.message||e)); }
+  try{ await telegramNotify(lastResult || "我需要協助"); toast(t("toast.sosSent")); }
+  catch(e){ toast(t("toast.sosFail")+(e.message||e)); }
 }
 
 // ── 登入流程 ──
 function showLogin(){ $("#login").classList.remove("hidden"); $("#app").classList.add("hidden"); }
 function showApp(user){
   $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
-  $("#who").textContent = user.name || "";
+  $("#who").textContent = user.uid==="local" ? t("user.local") : (user.name || "");
   applyTheme(); applyI18n(state.settings.lang); fillSettings(); renderFavorites();
 }
 
@@ -308,7 +316,7 @@ function renderFavorites(){
   const favs = state.favorites || [];
   if(!favs.length){ card.classList.add("hidden"); return; }
   card.classList.remove("hidden");
-  list.innerHTML = favs.map(f=>`<span class="chip on">${f}</span>`).join("");
+  list.innerHTML = favs.map(f=>`<span class="chip on">${escapeHtml(f)}</span>`).join("");
   list.querySelectorAll(".chip").forEach((el,i)=>el.addEventListener("click",()=>speak(favs[i])));
 }
 

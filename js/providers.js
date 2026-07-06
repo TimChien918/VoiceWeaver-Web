@@ -1,6 +1,7 @@
 // 供應商目錄 + 呼叫器（同供應商可多把金鑰、可多選供應商，自動輪詢+備援）。
 import { state } from "./store.js";
 import { localHas, localText, localImage } from "./localtts.js";
+import { t } from "./i18n.js";
 
 // 文字 LLM 供應商（標 cors 者較可能可在瀏覽器直接呼叫）
 export const LLM_PROVIDERS = {
@@ -72,7 +73,7 @@ export async function runLlm(sys, user){
   }
   // ② 雲端供應商輪詢備援
   const list = rotate(llmEntries());
-  if(!list.length){ if(err) throw err; throw new Error("尚未新增任何文字供應商（設定頁），且電腦未連線"); }
+  if(!list.length){ if(err) throw err; throw new Error(t("err.noProviders")); }
   for(const e of list){
     try{
       const fn = e.provider==="gemini"?geminiText : e.provider==="cohere"?cohereText : openaiText;
@@ -80,7 +81,7 @@ export async function runLlm(sys, user){
       if(out) return out.replace(/^[「"']|[」"']$/g,"").trim();
     }catch(x){ err=x; console.warn(e.provider, x); }
   }
-  throw err || new Error("所有供應商都失敗");
+  throw err || new Error(t("err.allProvidersFailed"));
 }
 
 // ── 生圖 ────────────────────────────────────────────

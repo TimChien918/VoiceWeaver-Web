@@ -1,5 +1,6 @@
 // 重組 / 組句：走多供應商輪詢（providers.js）。
 import { runLlm, hasLlm } from "./providers.js";
+import { t } from "./i18n.js";
 
 const SYS_RECONSTRUCT =
   "你是失語症患者的溝通助理。把使用者給的碎詞（可能還有地點、看到的物品）組成一句自然、口語、有禮貌的"+
@@ -44,7 +45,7 @@ export async function scoreRehab(target, recognized){
     let m = 0; const wrong = [];
     for(const ch of t){ if(r.includes(ch)) m++; else if(!wrong.includes(ch)) wrong.push(ch); }
     const score = t.length ? Math.round(m/t.length*100) : 0;
-    return { score, feedback: "（AI 評分暫不可用，改用相似度估算）", wrongChars: wrong };
+    return { score, feedback: t("llm.fallbackFeedback"), wrongChars: wrong };
   }
 }
 

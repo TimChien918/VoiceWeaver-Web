@@ -1,6 +1,9 @@
 // 成績單：讀 Firestore rehabLogs，三段時間維度，統計 + 折線趨勢 + Telegram 匯出。
 import { state } from "./store.js";
 import { listRehabLogs } from "./store.js";
+import { t } from "./i18n.js";
+
+const esc = (x)=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -48,7 +51,7 @@ function computeStreak(timestamps){
 
 async function exportCsv(){
   const logs = await listRehabLogs(0);
-  if(!logs.length){ toast("尚無紀錄可匯出"); return; }
+  if(!logs.length){ toast(t("report.nothingToExport")); return; }
   const rows = ["﻿時間,場景,目標句,分數"];
   logs.sort((a,b)=>b.timestamp-a.timestamp).forEach(l=>{
     const dt = new Date(l.timestamp).toLocaleString("zh-TW");
@@ -59,7 +62,7 @@ async function exportCsv(){
   const a = document.createElement("a");
   a.href = url; a.download = "voiceweaver_成績報告.csv";
   a.click(); URL.revokeObjectURL(url);
-  toast("✅ 已匯出 CSV");
+  toast(t("report.csvDone"));
 }
 
 export async function loadReport(){
@@ -85,9 +88,9 @@ export async function loadReport(){
     const cls = l.score>=80?"good":l.score>=50?"mid":"low";
     return `<div class="hitem"><div class="row" style="margin:0;gap:10px">
       <span class="score-pill ${cls}">${l.score}</span>
-      <div><div class="h-main">${l.targetSentence||""}</div>
+      <div><div class="h-main">${esc(l.targetSentence||"")}</div>
       <div class="h-sub">${l.locationTag||""} · ${new Date(l.timestamp).toLocaleDateString()}</div></div></div></div>`;
-  }).join("") : '<p class="tiny muted center">此期間尚無練習紀錄</p>';
+  }).join("") : `<p class="tiny muted center">${t("report.noLogsRange")}</p>`;
 }
 
 function drawChart(logs, range){
@@ -105,14 +108,14 @@ function drawChart(logs, range){
 
   if(!logs.length){
     ctx.fillStyle = muted; ctx.font = "13px sans-serif"; ctx.textAlign = "center";
-    ctx.fillText("尚無資料", W/2, H/2); return;
+    ctx.fillText(t("report.noData"), W/2, H/2); return;
   }
 
   // bucket by day（today 用時段、year 用月）
   const buckets = {};
   for(const l of logs){
     const d = new Date(l.timestamp);
-    const key = range==="year" ? `${d.getMonth()+1}月`
+    const key = range==="year" ? d.toLocaleDateString(document.documentElement.lang||"zh-TW",{month:"short"})
       : range==="today" ? `${String(d.getHours()).padStart(2,"0")}:00`
       : `${d.getMonth()+1}/${d.getDate()}`;
     (buckets[key] ||= []).push(l.score||0);
@@ -147,7 +150,7 @@ function drawChart(logs, range){
 
 async function sendTelegram(){
   const { tgtoken, tgchat } = state.apiKeys;
-  if(!tgtoken || !tgchat){ toast("請先在設定頁填 Telegram Bot Token 與 Chat ID"); return; }
+  if(!tgtoken || !tgchat){ toast(t("report.needTg")); return; }
   const label = { today:"今日", month:"本月", year:"本年度" }[curRange];
   const msg = `📊 VoiceWeaver 成績單 · ${label}\n─────────────\n`+
     `🎯 練習次數：${$("#statSessions").textContent}\n`+
@@ -158,6 +161,6 @@ async function sendTelegram(){
       method:"POST", headers:{ "Content-Type":"application/json" },
       body: JSON.stringify({ chat_id: tgchat, text: msg }) });
     const j = await r.json();
-    toast(j.ok ? "✅ 已發送到 Telegram" : "❌ "+(j.description||"發送失敗"));
-  }catch(e){ toast("❌ 發送失敗："+(e.message||e)); }
+    toast(j.ok ? t("report.tgSent") : t("report.tgFail")+" "+(j.description||""));
+  }catch(e){ toast(t("report.tgFail")+"："+(e.message||e)); }
 }

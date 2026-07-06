@@ -6,6 +6,7 @@ import {
 import {
   getFirestore, doc, getDoc, setDoc, collection, addDoc, getDocs, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { t } from "./i18n.js";
 
 const DEFAULTS = {
   settings: { theme: "auto", lang: "zh-TW", rate: 0.95, font: 1.0,
@@ -79,7 +80,7 @@ export function initAuth({ onUser, onSaved }){
     if(u){
       state.uid = u.uid; state.online = true;
       await loadCloud(u.uid);
-      onUser({ uid:u.uid, anon:u.isAnonymous, name: u.displayName || (u.isAnonymous?"匿名使用者":u.email) });
+      onUser({ uid:u.uid, anon:u.isAnonymous, name: u.displayName || (u.isAnonymous?t("user.anon"):u.email) });
     } else {
       state.uid = null; state.online = false;
       onUser(null);
@@ -88,7 +89,7 @@ export function initAuth({ onUser, onSaved }){
 }
 
 export async function loginGoogle(){
-  if(!hasFirebase()) throw new Error("尚未設定 Firebase（config.js）");
+  if(!hasFirebase()) throw new Error(t("err.noFirebase"));
   await signInWithPopup(_auth, new GoogleAuthProvider());
 }
 export async function loginAnon(){
@@ -130,6 +131,19 @@ export function save(){
     }catch(e){ _onSaved("save.failed"); }
   }, 800);
 }
+
+// 頁面即將隱藏/關閉：若還有防抖中的雲端寫入，立刻送出（否則 800ms 內關頁 → 改動只在本機，
+// 下次載入被雲端舊資料蓋回 → 使用者以為設定沒存到）。
+function flushPendingSave(){
+  if(!_saveTimer) return;
+  clearTimeout(_saveTimer); _saveTimer = null;
+  if(_db && state.uid && state.uid!=="local"){
+    setDoc(doc(_db,"users",state.uid), { ...snapshot(), updatedAt:Date.now() }, { merge:true })
+      .then(()=>_onSaved("save.synced")).catch(()=>_onSaved("save.failed"));
+  }
+}
+window.addEventListener("pagehide", flushPendingSave);
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState==="hidden") flushPendingSave(); });
 
 // ── 歷史 ───────────────────────────────────────────
 export async function addHistory(rec){

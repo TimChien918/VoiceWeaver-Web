@@ -1,7 +1,8 @@
 // TTS / STT：預設用瀏覽器原生 Web Speech API（免金鑰）；
 // 若開啟「本地語音引擎」且連得上語音中心，則改用 GPT-SoVITS 角色語音。
 import { state } from "./store.js";
-import { localTtsEnabled, localSpeak } from "./localtts.js";
+import { localTtsEnabled, localSpeak, stopLocalSpeak } from "./localtts.js";
+import { t } from "./i18n.js";
 
 // 自然嗓音關鍵字：神經網路／線上嗓音通常比預設機械音「有人味」得多。
 const _NATURAL_HINTS = ["natural","neural","wavenet","journey","online","premium","enhanced","google","siri","自然","線上"];
@@ -16,6 +17,7 @@ function _scoreVoice(v, lang){
   return s;
 }
 function _bestVoice(lang){
+  if(!("speechSynthesis" in window)) return null;
   const vs = speechSynthesis.getVoices();
   if(!vs.length) return null;
   const base = (lang||"").split("-")[0].toLowerCase();
@@ -25,6 +27,7 @@ function _bestVoice(lang){
 
 /** 供設定頁下拉用：列出（指定語言的）可用嗓音，最自然的排前面。 */
 export function listVoices(lang){
+  if(!("speechSynthesis" in window)) return [];
   const base = (lang||"").split("-")[0].toLowerCase();
   return speechSynthesis.getVoices()
     .filter(v => !base || (v.lang||"").toLowerCase().startsWith(base))
@@ -43,6 +46,8 @@ export function speak(text){
 
 function _webSpeak(text){
   if(!text) return;
+  if(!("speechSynthesis" in window)) return;   // 老瀏覽器沒有 Web Speech → 靜默略過而非 ReferenceError
+  stopLocalSpeak();                            // 停掉可能還在播的本地 GPT-SoVITS 音檔，避免疊音
   const doSpeak = () => {
     try{
       // 只有真的在講才 cancel —— iOS/部分 Android「每次都 cancel」會把新句子一起吃掉而不發聲
@@ -66,6 +71,8 @@ function _webSpeak(text){
 /** 多語朗讀：指定語言唸一句（重組結果一鍵中/英/日/韓）。 */
 export function speakIn(text, lang){
   if(!text) return;
+  if(!("speechSynthesis" in window)) return;
+  stopLocalSpeak();                            // 多語朗讀走瀏覽器聲音，先停本地音避免疊音
   try{
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
@@ -84,7 +91,7 @@ export function sttSupported(){
 // 回傳一個可呼叫 stop() 的物件；onResult(text)、onEnd()
 export function listen({ onResult, onEnd, onError }){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if(!SR){ onError?.("此瀏覽器不支援語音輸入（建議 Chrome/Edge）"); return { stop(){} }; }
+  if(!SR){ onError?.(t("toast.sttUnsupported")); return { stop(){} }; }
   const rec = new SR();
   rec.lang = state.settings.lang || "zh-TW";
   rec.interimResults = true;
@@ -98,7 +105,7 @@ export function listen({ onResult, onEnd, onError }){
     }
     onResult?.(finalText + interim);
   };
-  rec.onerror = (e)=> onError?.(e.error || "語音輸入錯誤");
+  rec.onerror = (e)=> onError?.(e.error || t("stt.error"));
   rec.onend = ()=> onEnd?.(finalText.trim());
   rec.start();
   return { stop(){ try{ rec.stop(); }catch{} } };
