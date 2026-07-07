@@ -1,6 +1,6 @@
 // 重組 / 組句：走多供應商輪詢（providers.js）。
 import { runLlm, hasLlm } from "./providers.js";
-import { t } from "./i18n.js";
+import { t as tr } from "./i18n.js";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
 
 const SYS_RECONSTRUCT =
   "你是失語症患者的溝通助理。把使用者給的碎詞（可能還有地點、看到的物品）組成一句自然、口語、有禮貌的"+
@@ -19,6 +19,7 @@ export function composeAac(items, context){
 
 const SYS_REHAB_EVAL =
   "你是失語症語言治療師，評估患者的口語跟讀表現。不要用字元差異計算，要從語意傳達與流暢自然的角度判斷。\n"+
+  "這是一次完全獨立的評估：只依據下面「這一次」的目標句與患者語音判分，沒有任何先前的練習、分數或對話——不得參考、比較或延續任何過去的評估。\n"+
   "評分細則：語意完整性（50%，核心意思有沒有傳達、關鍵詞有沒有說到，即使用詞稍異但意思相同可給高分）；"+
   "流暢性（30%，有無重複、結巴、語氣是否連貫自然）；語氣語調（20%，是否符合句型如問句/請求/感謝）。\n"+
   '只回傳 JSON：{"score":整數0到100,"feedback":"一句繁體中文鼓勵或指引（20字以內）","wrongChars":["說得不準或漏掉的字"]}';
@@ -33,7 +34,7 @@ function extractJson(raw){
 export async function scoreRehab(target, recognized){
   const user = `目標句：${target}\n患者說出的：${recognized || "（未偵測到聲音）"}`;
   try{
-    const raw = await runLlm(SYS_REHAB_EVAL, user);
+    const raw = await runLlm(SYS_REHAB_EVAL, user, { temperature: 0.1, stable: true });
     const j = JSON.parse(extractJson(raw) || "{}");
     const score = Math.max(0, Math.min(100, Math.round(j.score)));
     if(Number.isFinite(score)) return { score, feedback: (j.feedback||"").trim(), wrongChars: Array.isArray(j.wrongChars)?j.wrongChars:[] };
@@ -45,7 +46,7 @@ export async function scoreRehab(target, recognized){
     let m = 0; const wrong = [];
     for(const ch of t){ if(r.includes(ch)) m++; else if(!wrong.includes(ch)) wrong.push(ch); }
     const score = t.length ? Math.round(m/t.length*100) : 0;
-    return { score, feedback: t("llm.fallbackFeedback"), wrongChars: wrong };
+    return { score, feedback: tr("llm.fallbackFeedback"), wrongChars: wrong };
   }
 }
 

@@ -131,11 +131,13 @@ export async function localImage(prompt, steps = 2) {
 }
 
 // 電腦端文字推論（Qwen）→ 回字串
-export async function localText(system, user) {
+export async function localText(system, user, temperature) {
   if (!_base && !(await detectLocalTts())) throw new Error(t("err.notConnected"));
+  const body = { system, user };
+  if (typeof temperature === "number") body.temperature = temperature;
   const r = await _fetch("/text", {
     method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ system, user }),
+    body: JSON.stringify(body),
   }, 120000);
   const j = await r.json();
   if (!j.ok) throw new Error(j.error || t("err.textFail"));

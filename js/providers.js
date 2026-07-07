@@ -32,29 +32,29 @@ let _rot = 0;
 function rotate(list){ if(list.length<=1) return list; const o=_rot++%list.length; return list.slice(o).concat(list.slice(0,o)); }
 
 // ── LLM 文字 ────────────────────────────────────────
-async function geminiText(entry, sys, user){
+async function geminiText(entry, sys, user, temp=0.5){
   const model = entry.model || LLM_PROVIDERS.gemini.model;
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(entry.key)}`;
   const r = await fetch(url,{ method:"POST", headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ system_instruction:{parts:[{text:sys}]}, contents:[{parts:[{text:user}]}],
-      generationConfig:{ temperature:0.5, maxOutputTokens:120 } }) });
+      generationConfig:{ temperature:temp, maxOutputTokens:160 } }) });
   if(!r.ok) throw new Error("Gemini "+r.status);
   const j = await r.json(); return (j.candidates?.[0]?.content?.parts?.[0]?.text||"").trim();
 }
-async function openaiText(entry, sys, user){
+async function openaiText(entry, sys, user, temp=0.5){
   const base = OPENAI_BASE[entry.provider]; const model = entry.model || LLM_PROVIDERS[entry.provider].model;
   const r = await fetch(base+"/chat/completions",{ method:"POST",
     headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+entry.key },
-    body: JSON.stringify({ model, temperature:0.5, max_tokens:120,
+    body: JSON.stringify({ model, temperature:temp, max_tokens:160,
       messages:[{role:"system",content:sys},{role:"user",content:user}] }) });
   if(!r.ok) throw new Error(entry.provider+" "+r.status);
   const j = await r.json(); return (j.choices?.[0]?.message?.content||"").trim();
 }
-async function cohereText(entry, sys, user){
+async function cohereText(entry, sys, user, temp=0.5){
   const r = await fetch("https://api.cohere.com/v2/chat",{ method:"POST",
     headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+entry.key },
     body: JSON.stringify({ model: entry.model||LLM_PROVIDERS.cohere.model,
-      messages:[{role:"system",content:sys},{role:"user",content:user}], temperature:0.5 }) });
+      messages:[{role:"system",content:sys},{role:"user",content:user}], temperature:temp }) });
   if(!r.ok) throw new Error("Cohere "+r.status);
   const j = await r.json(); return (j.message?.content?.[0]?.text||"").trim();
 }
@@ -64,20 +64,24 @@ function llmEntries(){
 }
 // 有金鑰，或「電腦幫跑文字」可用 → 都算有文字能力
 export function hasLlm(){ return llmEntries().length>0 || localHas("text"); }
-export async function runLlm(sys, user){
+// opts.temperature：取樣溫度（評分類任務用低溫求穩定）；
+// opts.stable：true＝不做負載輪替、永遠依固定順序嘗試 —— 復健評分必用，
+//   否則連續兩次跟讀會輪到「不同模型」評分（各家標準不同），分數看起來像被上一次帶著跑。
+export async function runLlm(sys, user, opts={}){
+  const temp = opts.temperature ?? 0.5;
   let err;
   // ① 電腦幫忙跑（Qwen, 9882）優先
   if(localHas("text")){
-    try{ const out = await localText(sys, user); if(out) return out.replace(/^[「"']|[」"']$/g,"").trim(); }
+    try{ const out = await localText(sys, user, temp); if(out) return out.replace(/^[「"']|[」"']$/g,"").trim(); }
     catch(x){ err=x; console.warn("local text", x); }
   }
-  // ② 雲端供應商輪詢備援
-  const list = rotate(llmEntries());
+  // ② 雲端供應商（stable＝固定順序；否則輪替分攤額度）
+  const list = opts.stable ? llmEntries() : rotate(llmEntries());
   if(!list.length){ if(err) throw err; throw new Error(t("err.noProviders")); }
   for(const e of list){
     try{
       const fn = e.provider==="gemini"?geminiText : e.provider==="cohere"?cohereText : openaiText;
-      const out = await fn(e, sys, user);
+      const out = await fn(e, sys, user, temp);
       if(out) return out.replace(/^[「"']|[」"']$/g,"").trim();
     }catch(x){ err=x; console.warn(e.provider, x); }
   }
