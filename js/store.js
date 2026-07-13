@@ -13,7 +13,7 @@ const DEFAULTS = {
               // 本地 GPT-SoVITS 語音引擎（透過語音中心橋接）
               localTtsEnabled: false, localTtsUrl: "", localComputeServers: [], localVoiceName: "", localVoiceLang: "" },
   // 單一欄位的金鑰（通報用）
-  apiKeys:  { tgtoken: "", tgchat: "" },
+  apiKeys:  { tgtoken: "", tgchat: "", ngrokToken: "", ngrokDomain: "", ngrokPairCode: "" },
   // 多供應商、多金鑰清單（每筆 {id, provider, key, model}）→ 重組/生圖自動輪詢
   llmApis:  [],
   imageApis:[],
@@ -21,6 +21,30 @@ const DEFAULTS = {
 
 let _idc = 0;
 export function newId(){ return "k" + Date.now().toString(36) + (_idc++).toString(36); }
+
+// 產生一組不可猜的配對碼（24 字），只產一次並存進帳號設定。
+export function ensurePairCode(){
+  if(!state.apiKeys.ngrokPairCode){
+    const a = new Uint8Array(18); (crypto||{}).getRandomValues?.(a);
+    state.apiKeys.ngrokPairCode = "vw" + Array.from(a, b=>b.toString(36).padStart(2,"0")).join("").slice(0,22);
+  }
+  return state.apiKeys.ngrokPairCode;
+}
+
+// 把 ngrok 授權碼／固定網域鏡射到 cloudbridge/{配對碼}，讓 Colab 用配對碼從雲端取用。
+// token 本身不外流：只有拿到「不可猜的配對碼」才讀得到這份文件。
+export async function pushNgrokBridge(){
+  if(!_db || !state.uid || state.uid==="local") return false;   // 需登入 Firebase
+  const code = ensurePairCode();
+  try{
+    await setDoc(doc(_db,"cloudbridge",code), {
+      ngrokToken: state.apiKeys.ngrokToken || "",
+      ngrokDomain: state.apiKeys.ngrokDomain || "",
+      updatedAt: Date.now(),
+    });
+    return true;
+  }catch(e){ console.warn("pushNgrokBridge failed", e); return false; }
+}
 
 export const state = {
   uid: null, online: false,

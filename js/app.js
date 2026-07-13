@@ -1,4 +1,4 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite } from "./store.js";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge } from "./store.js";
 import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js";
 import { reconstruct, composeAac, hasAnyLlmKey } from "./llm.js";
 import { speak, speakIn, listen, sttSupported } from "./speech.js";
@@ -38,6 +38,12 @@ function fillSettings(){
   // 本地語音引擎
   $("#lt_enabled").checked = !!state.settings.localTtsEnabled;
   renderCloudList();
+  // ngrok 雲端通道
+  if($("#ng_token")){
+    $("#ng_token").value = state.apiKeys.ngrokToken || "";
+    $("#ng_domain").value = state.apiKeys.ngrokDomain || "";
+    $("#ng_pair").value = ensurePairCode();
+  }
   if(state.settings.localVoiceName){
     $("#lt_voice").innerHTML = `<option value="${escapeHtml(state.settings.localVoiceName+"|"+state.settings.localVoiceLang)}">${escapeHtml(state.settings.localVoiceName)}（${escapeHtml(state.settings.localVoiceLang||"?")}）</option>`;
   }
@@ -155,6 +161,23 @@ function bindSettings(){
   $("#lt_add").addEventListener("click", addCloudServer);
   $("#lt_url").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addCloudServer(); } });
   $("#lt_detect").addEventListener("click", refreshLocalVoices);
+  // ngrok 雲端通道：token/domain 存帳號雲端 + 鏡射到配對文件（Colab 用配對碼取）
+  const pushNgrok = async ()=>{
+    save();
+    const st = $("#ng_status");
+    if(!state.uid || state.uid==="local"){ if(st) st.textContent = t("ng.needLogin"); return; }
+    if(st) st.textContent = t("ng.saving");
+    const ok = await pushNgrokBridge();
+    if(st) st.textContent = ok ? t("ng.saved") : t("ng.saveFail");
+  };
+  if($("#ng_token")){
+    $("#ng_token").addEventListener("change", e=>{ state.apiKeys.ngrokToken = e.target.value.trim(); pushNgrok(); });
+    $("#ng_domain").addEventListener("change", e=>{ state.apiKeys.ngrokDomain = e.target.value.trim(); pushNgrok(); });
+    $("#ng_copy").addEventListener("click", async ()=>{
+      try{ await navigator.clipboard.writeText($("#ng_pair").value); toast(t("ng.copied")); }
+      catch{ toast(t("ng.copyFail")); }
+    });
+  }
   $("#lt_voice").addEventListener("change", async e=>{
     const [name, lang] = (e.target.value||"").split("|");
     if(!name) return;
