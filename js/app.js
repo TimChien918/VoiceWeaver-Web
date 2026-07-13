@@ -47,6 +47,7 @@ function fillSettings(){
   if(state.settings.localVoiceName){
     $("#lt_voice").innerHTML = `<option value="${escapeHtml(state.settings.localVoiceName+"|"+state.settings.localVoiceLang)}">${escapeHtml(state.settings.localVoiceName)}（${escapeHtml(state.settings.localVoiceLang||"?")}）</option>`;
   }
+  if($("#lt_emotion")) $("#lt_emotion").value = state.settings.voiceEmotion || "";
 }
 
 // 介面語言（zh-TW/en-US/ja-JP/ko-KR）→ 語音標籤（ZH/EN/JA/KO）
@@ -161,6 +162,7 @@ function bindSettings(){
   $("#lt_add").addEventListener("click", addCloudServer);
   $("#lt_url").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addCloudServer(); } });
   $("#lt_detect").addEventListener("click", refreshLocalVoices);
+  if($("#lt_emotion")) $("#lt_emotion").addEventListener("change", e=>{ state.settings.voiceEmotion = e.target.value; save(); });
   // ngrok 雲端通道：token/domain 存帳號雲端 + 鏡射到配對文件（Colab 用配對碼取）
   const pushNgrok = async ()=>{
     save();

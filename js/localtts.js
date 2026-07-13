@@ -105,6 +105,7 @@ export async function localSpeak(text) {
     body.name = state.settings.localVoiceName;
     body.lang = state.settings.localVoiceLang || "";
   }
+  if (state.settings.voiceEmotion) body.emotion = state.settings.voiceEmotion;   // 空＝橋接自動偵測情緒
   const r = await _fetch("/speak", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

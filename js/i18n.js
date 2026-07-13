@@ -186,6 +186,13 @@ export const STRINGS = {
   "ng.saving": { "zh-TW":"同步中…", "en":"Syncing…", "ja":"同期中…", "ko":"동기화 중…" },
   "ng.saved": { "zh-TW":"✅ 已同步到雲端，Colab 可用配對碼取用", "en":"✅ Synced; Colab can fetch it via the pairing code", "ja":"✅ 同期完了。Colab はペアリングコードで取得可能", "ko":"✅ 동기화됨. Colab이 페어링 코드로 가져올 수 있음" },
   "ng.saveFail": { "zh-TW":"❌ 同步失敗，請稍後再試", "en":"❌ Sync failed, try again later", "ja":"❌ 同期失敗、後で再試行", "ko":"❌ 동기화 실패, 나중에 다시 시도" },
+  "set.emotionLabel": { "zh-TW":"語氣情緒", "en":"Tone / emotion", "ja":"口調・感情", "ko":"어조/감정" },
+  "emo.auto": { "zh-TW":"🎭 自動（依句子偵測）", "en":"🎭 Auto (detect from sentence)", "ja":"🎭 自動（文から判定）", "ko":"🎭 자동 (문장에서 감지)" },
+  "emo.happy": { "zh-TW":"😊 開心", "en":"😊 Happy", "ja":"😊 うれしい", "ko":"😊 기쁨" },
+  "emo.sad": { "zh-TW":"😢 難過", "en":"😢 Sad", "ja":"😢 悲しい", "ko":"😢 슬픔" },
+  "emo.fear": { "zh-TW":"😨 恐懼", "en":"😨 Fear", "ja":"😨 こわい", "ko":"😨 두려움" },
+  "emo.surprise": { "zh-TW":"😲 驚訝", "en":"😲 Surprise", "ja":"😲 驚き", "ko":"😲 놀람" },
+  "emo.neutral": { "zh-TW":"😐 中立", "en":"😐 Neutral", "ja":"😐 中立", "ko":"😐 중립" },
   "footer": { "zh-TW":"VoiceWeaver 網頁輕量版 · 純 API/瀏覽器、無本地運算", "en":"VoiceWeaver web lite · API/browser only, no on-device compute", "ja":"VoiceWeaver ウェブ軽量版 · API/ブラウザのみ、端末計算なし", "ko":"VoiceWeaver 웹 라이트 · API/브라우저 전용, 기기 연산 없음" },
 };
 
