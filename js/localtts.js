@@ -10,12 +10,20 @@ import { t } from "./i18n.js";
 let _base = null;   // 已確認可用的橋接 base URL
 let _health = { voice: false, image: false, text: false };  // 電腦端三項運算可用性
 
-// 候選位址：使用者手填（Tailscale https）優先，再試同機 localhost。
+// 候選位址：使用者新增的雲端清單（可多台，逐一嘗試、第一個健康的即採用）＋ 同機 localhost。
 function candidates() {
   const list = [];
-  let manual = (state.settings.localTtsUrl || "").trim().replace(/\/+$/, "");
-  if (manual && !/^https?:\/\//i.test(manual)) manual = "https://" + manual;   // 使用者常忘記打協定
-  if (manual) list.push(manual);
+  const norm = (u) => {
+    let x = (u || "").trim().replace(/\/+$/, "");
+    if (x && !/^https?:\/\//i.test(x)) x = "https://" + x;   // 使用者常忘記打協定
+    return x;
+  };
+  for (const srv of (state.settings.localComputeServers || [])) {
+    const u = norm(srv && srv.url);
+    if (u) list.push(u);
+  }
+  const legacy = norm(state.settings.localTtsUrl);   // 相容舊單一欄位
+  if (legacy) list.push(legacy);
   list.push("http://127.0.0.1:9879", "http://localhost:9879");
   return [...new Set(list)];
 }

@@ -201,8 +201,12 @@
             <button id="lt_detect" class="btn ghost" data-i18n="set.detect">🔍 偵測連線</button>
             <span id="lt_status" class="tiny muted" data-i18n="set.detectNot">尚未偵測</span>
           </div>
-          <label class="lbl" data-i18n="set.urlLabel">語音中心位址（選填）</label>
-          <input id="lt_url" type="text" placeholder="同一台電腦免填；遠端填 Tailscale 網址，例 https://mac.xxx.ts.net" data-i18n-ph="set.urlPh" autocomplete="off" />
+          <label class="lbl" data-i18n="set.cloudLabel">雲端／電腦清單（可加多個，連不上自動換下一個）</label>
+          <div class="row wrap" style="gap:6px">
+            <input id="lt_url" type="text" placeholder="Colab 網址、Tailscale 網址…同一台電腦可留空直接偵測" data-i18n-ph="set.urlPh" autocomplete="off" style="flex:1;min-width:180px" />
+            <button id="lt_add" class="btn ghost" data-i18n="set.addCloud">➕ 新增雲端</button>
+          </div>
+          <div id="lt_list" style="display:flex;flex-direction:column;gap:6px;margin-top:8px"></div>
           <label class="lbl" data-i18n="set.voiceLabel">角色語音</label>
           <select id="lt_voice"><option value="" data-i18n="set.voiceFirst">（先偵測連線）</option></select>
           <p class="tiny muted" style="margin-top:8px" data-i18n-html="set.computeHint">

@@ -37,7 +37,7 @@ function fillSettings(){
   renderProviderList("#imgList", "imageApis", IMAGE_PROVIDERS);
   // 本地語音引擎
   $("#lt_enabled").checked = !!state.settings.localTtsEnabled;
-  $("#lt_url").value = state.settings.localTtsUrl || "";
+  renderCloudList();
   if(state.settings.localVoiceName){
     $("#lt_voice").innerHTML = `<option value="${escapeHtml(state.settings.localVoiceName+"|"+state.settings.localVoiceLang)}">${escapeHtml(state.settings.localVoiceName)}（${escapeHtml(state.settings.localVoiceLang||"?")}）</option>`;
   }
@@ -75,6 +75,43 @@ function populateVoiceDropdown(){
     const val = `${v.name}|${v.lang}`;
     return `<option value="${escapeHtml(val)}" ${val===cur?"selected":""}>${escapeHtml(v.name)}（${escapeHtml(v.lang||"?")}）</option>`;
   }).join("");
+}
+
+// 雲端／電腦清單：可自由新增多個端點（Colab、Tailscale、自家電腦…），偵測時逐一嘗試自動接手。
+function renderCloudList(){
+  const box = $("#lt_list");
+  if(!box) return;
+  const list = state.settings.localComputeServers || [];
+  if(!list.length){
+    box.innerHTML = `<p class="tiny muted">${t("lt.noClouds")}</p>`;
+    return;
+  }
+  box.innerHTML = list.map((srv,i)=>{
+    const shown = escapeHtml((srv.url||"").replace(/^https?:\/\//,""));
+    const nm = escapeHtml(srv.name || `#${i+1}`);
+    return `<div class="row" style="gap:8px;align-items:center">
+      <span class="chip" style="flex:1;text-align:left;cursor:default">🖥 ${nm}<span class="tiny muted"> · ${shown}</span></span>
+      <button class="btn ghost tiny" data-rm="${i}" title="${escapeHtml(t("lt.removeCloud"))}">✕</button>
+    </div>`;
+  }).join("");
+  box.querySelectorAll("[data-rm]").forEach(b=>b.addEventListener("click", ()=>{
+    const i = +b.getAttribute("data-rm");
+    state.settings.localComputeServers.splice(i,1); save(); renderCloudList();
+  }));
+}
+
+function addCloudServer(){
+  const inp = $("#lt_url");
+  let url = (inp.value||"").trim().replace(/\/+$/,"");
+  if(!url){ toast(t("lt.enterUrl")); return; }
+  if(!/^https?:\/\//i.test(url)) url = "https://" + url;   // 沒打協定自動補
+  if(!Array.isArray(state.settings.localComputeServers)) state.settings.localComputeServers = [];
+  if(state.settings.localComputeServers.some(s=>s.url===url)){ toast(t("lt.dupCloud")); return; }
+  const n = state.settings.localComputeServers.length + 1;
+  state.settings.localComputeServers.push({ name: t("lt.cloudN").replace("{n}", n), url });
+  inp.value = ""; save(); renderCloudList();
+  toast(t("lt.cloudAdded"));
+  refreshLocalVoices().catch(()=>{});
 }
 
 // 偵測語音中心、回報三項運算可用性、把「符合目前介面語言」的角色語音填進下拉
@@ -115,7 +152,8 @@ function bindSettings(){
     state.settings.localTtsEnabled = e.target.checked; save();
     if(e.target.checked) await refreshLocalVoices();
   });
-  $("#lt_url").addEventListener("input", e=>{ state.settings.localTtsUrl = e.target.value.trim(); save(); });
+  $("#lt_add").addEventListener("click", addCloudServer);
+  $("#lt_url").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addCloudServer(); } });
   $("#lt_detect").addEventListener("click", refreshLocalVoices);
   $("#lt_voice").addEventListener("change", async e=>{
     const [name, lang] = (e.target.value||"").split("|");

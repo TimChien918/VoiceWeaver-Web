@@ -165,6 +165,14 @@ export const STRINGS = {
   "err.noFirebase": { "zh-TW":"尚未設定 Firebase（config.js）", "en":"Firebase isn't configured (config.js)", "ja":"Firebase 未設定（config.js）", "ko":"Firebase 미설정 (config.js)" },
   "user.anon": { "zh-TW":"匿名使用者", "en":"Anonymous user", "ja":"匿名ユーザー", "ko":"익명 사용자" },
   "stt.error": { "zh-TW":"語音輸入錯誤", "en":"Voice input error", "ja":"音声入力エラー", "ko":"음성 입력 오류" },
+  "set.cloudLabel": { "zh-TW":"雲端／電腦清單（可加多個，連不上自動換下一個）", "en":"Cloud / computer list (add several; auto-fails over)", "ja":"クラウド／PC 一覧（複数追加可・自動フェイルオーバー）", "ko":"클라우드/컴퓨터 목록 (여러 개 추가, 자동 전환)" },
+  "set.addCloud": { "zh-TW":"➕ 新增雲端", "en":"➕ Add cloud", "ja":"➕ クラウド追加", "ko":"➕ 클라우드 추가" },
+  "lt.noClouds": { "zh-TW":"尚未新增雲端／電腦；同一台電腦可直接按「偵測連線」。", "en":"No cloud/computer added yet; on the same machine just tap Detect.", "ja":"クラウド／PC 未追加。同じ PC なら「接続を検出」をタップ。", "ko":"클라우드/컴퓨터 미추가; 같은 PC면 '연결 감지'를 누르세요." },
+  "lt.removeCloud": { "zh-TW":"移除這個雲端", "en":"Remove this cloud", "ja":"このクラウドを削除", "ko":"이 클라우드 제거" },
+  "lt.cloudN": { "zh-TW":"雲端 {n}", "en":"Cloud {n}", "ja":"クラウド {n}", "ko":"클라우드 {n}" },
+  "lt.cloudAdded": { "zh-TW":"已新增雲端，偵測中…", "en":"Cloud added, detecting…", "ja":"クラウドを追加、検出中…", "ko":"클라우드 추가됨, 감지 중…" },
+  "lt.enterUrl": { "zh-TW":"請先輸入雲端網址", "en":"Enter a cloud URL first", "ja":"先にクラウド URL を入力", "ko":"먼저 클라우드 URL을 입력하세요" },
+  "lt.dupCloud": { "zh-TW":"這個網址已經在清單裡了", "en":"That URL is already in the list", "ja":"その URL は既に一覧にあります", "ko":"해당 URL은 이미 목록에 있습니다" },
   "footer": { "zh-TW":"VoiceWeaver 網頁輕量版 · 純 API/瀏覽器、無本地運算", "en":"VoiceWeaver web lite · API/browser only, no on-device compute", "ja":"VoiceWeaver ウェブ軽量版 · API/ブラウザのみ、端末計算なし", "ko":"VoiceWeaver 웹 라이트 · API/브라우저 전용, 기기 연산 없음" },
 };
 

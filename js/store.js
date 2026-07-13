@@ -11,7 +11,7 @@ import { t } from "./i18n.js";
 const DEFAULTS = {
   settings: { theme: "auto", lang: "zh-TW", rate: 0.95, font: 1.0,
               // 本地 GPT-SoVITS 語音引擎（透過語音中心橋接）
-              localTtsEnabled: false, localTtsUrl: "", localVoiceName: "", localVoiceLang: "" },
+              localTtsEnabled: false, localTtsUrl: "", localComputeServers: [], localVoiceName: "", localVoiceLang: "" },
   // 單一欄位的金鑰（通報用）
   apiKeys:  { tgtoken: "", tgchat: "" },
   // 多供應商、多金鑰清單（每筆 {id, provider, key, model}）→ 重組/生圖自動輪詢
@@ -57,6 +57,11 @@ function applyLoaded(d){
   state.llmApis  = Array.isArray(d.llmApis) ? d.llmApis : [];
   state.imageApis= Array.isArray(d.imageApis) ? d.imageApis : [];
   state.favorites= Array.isArray(d.favorites) ? d.favorites : [];
+  // 相容：舊版只有單一 localTtsUrl → 遷移成清單第一筆（只做一次）
+  if(!Array.isArray(state.settings.localComputeServers)) state.settings.localComputeServers = [];
+  if(!state.settings.localComputeServers.length && (state.settings.localTtsUrl||"").trim()){
+    state.settings.localComputeServers = [{ name:"雲端 1", url:state.settings.localTtsUrl.trim() }];
+  }
 }
 
 let _app=null, _auth=null, _db=null, _saveTimer=null, _onSaved=()=>{};
