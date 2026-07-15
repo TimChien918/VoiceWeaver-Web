@@ -6,7 +6,7 @@ import { AAC, AAC_CATS } from "./aac.js";
 import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js";
 import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js";
 import { setupReport, loadReport, setReportToast } from "./report.js";
-import { detectLocalTts, localVoices, localSwitch } from "./localtts.js";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare } from "./localtts.js";
 import { applyI18n, t } from "./i18n.js";
 
 const $ = (s)=>document.querySelector(s);
@@ -133,11 +133,55 @@ async function refreshLocalVoices(){
   if(h.voice){
     _cachedVoices = await localVoices();
     populateVoiceDropdown();
+    renderCloudLibrary().catch(()=>{});
     status.textContent = t("lt.connected").replace("{host}",host).replace("{caps}",caps).replace("{lang}",appLangToVoiceTag(state.settings.lang));
   } else {
     _cachedVoices = null;
     sel.innerHTML = `<option value="">${t("lt.voiceSvcDown")}</option>`;
+    const lib = $("#lib_list"); if(lib) lib.innerHTML = "";
     status.textContent = t("lt.connectedNoVoice").replace("{host}",host).replace("{caps}",caps);
+  }
+}
+
+// 雲端曲庫（Apple Music 式）：列出整個 Drive 曲庫，每個角色可「預備」下載到運算端
+function _sizeLabel(bytes){
+  if(bytes >= 1048576) return Math.round(bytes/1048576)+" MB";
+  if(bytes > 0) return Math.round(bytes/1024)+" KB";
+  return "—";
+}
+async function renderCloudLibrary(){
+  const box = $("#lib_list"); if(!box) return;
+  box.innerHTML = `<span class="tiny muted">${t("lib.loading")}</span>`;
+  const chars = await localCatalog();
+  if(!chars.length){ box.innerHTML = `<span class="tiny muted">${t("lib.empty")}</span>`; return; }
+  box.innerHTML = "";
+  for(const c of chars){
+    const tag = c.lang ? c.lang.toUpperCase() : "";
+    const emos = (c.emotions && c.emotions.length) ? c.emotions.join("／") : t("lib.noEmo");
+    const row = document.createElement("div");
+    row.className = "row"; row.style.cssText = "gap:8px;align-items:center;padding:6px 8px;border-radius:8px;background:rgba(127,127,127,.08)";
+    row.innerHTML =
+      `<span style="width:8px;height:8px;border-radius:4px;flex:0 0 auto;background:${c.ok?'#3ddc84':'#f0a020'}"></span>`+
+      `<div style="flex:1;min-width:0">`+
+        `<div style="font-weight:600">${escapeHtml(c.character||c.name)}${tag?`<span class="tiny muted"> ${tag}</span>`:""}</div>`+
+        `<div class="tiny muted">${_sizeLabel(c.bytes)} · ${escapeHtml(emos)}</div>`+
+      `</div>`+
+      `<button class="btn ghost tiny lib_prep">${t("lib.prepare")}</button>`;
+    const btn = row.querySelector(".lib_prep");
+    btn.addEventListener("click", async ()=>{
+      btn.disabled = true; const old = btn.textContent; btn.textContent = t("lib.preparing");
+      try{
+        const r = await localPrepare(c.character||c.name, c.lang||"");
+        if(r && r.ok){
+          const mb = Math.round((r.bytes||0)/1048576);
+          toast(`✅ ${c.character||c.name}${tag?(" "+tag):""}：`+t("lib.ready").replace("{mb}",mb).replace("{n}",r.files||0));
+        } else {
+          toast("⚠️ "+((r&&r.error)||t("lib.prepFail")));
+        }
+      }catch(x){ toast("⚠️ "+(x.message||x)); }
+      finally{ btn.disabled = false; btn.textContent = old; }
+    });
+    box.appendChild(row);
   }
 }
 
@@ -162,6 +206,7 @@ function bindSettings(){
   $("#lt_add").addEventListener("click", addCloudServer);
   $("#lt_url").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addCloudServer(); } });
   $("#lt_detect").addEventListener("click", refreshLocalVoices);
+  if($("#lib_refresh")) $("#lib_refresh").addEventListener("click", ()=>renderCloudLibrary().catch(()=>{}));
   if($("#lt_emotion")) $("#lt_emotion").addEventListener("change", e=>{ state.settings.voiceEmotion = e.target.value; save(); });
   // ngrok 雲端通道：token/domain 存帳號雲端 + 鏡射到配對文件（Colab 用配對碼取）
   const pushNgrok = async ()=>{

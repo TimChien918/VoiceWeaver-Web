@@ -82,6 +82,27 @@ export async function localVoices() {
   } catch (e) { return []; }
 }
 
+// 雲端曲庫目錄索引（Apple Music 式）：整個 Drive 曲庫的角色，不限目前載入的。
+// 回 [{name, character, lang, ok, emotions:[], bytes}]；連不上或無曲庫回 []。
+export async function localCatalog() {
+  if (!_base && !(await detectLocalTts())) return [];
+  try {
+    const r = await _fetch("/catalog", {}, 8000);
+    const j = await r.json();
+    const cat = j && j.ok ? j.catalog : null;
+    return (cat && Array.isArray(cat.characters)) ? cat.characters : [];
+  } catch (e) { return []; }
+}
+
+// 隨選下載：請運算端（電腦/Colab）把某角色從 Drive 拉到本地。回 {ok, bytes, files, error}。
+export async function localPrepare(character, lang) {
+  if (!_base && !(await detectLocalTts())) throw new Error(t("err.notConnected"));
+  const q = "character=" + encodeURIComponent(character) + "&lang=" + encodeURIComponent(lang || "");
+  const r = await _fetch("/prepare?" + q, {}, 300000);  // 大檔從 Drive 拉可能要一段時間
+  try { return await r.json(); }
+  catch (e) { return { ok: false, error: "prepare " + r.status }; }
+}
+
 // 切換 GPT-SoVITS 模型（載權重，較慢；切一次之後連續講不必再切）
 export async function localSwitch(name, lang) {
   if (!_base && !(await detectLocalTts())) throw new Error(t("err.notConnected"));

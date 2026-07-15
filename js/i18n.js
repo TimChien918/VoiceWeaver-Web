@@ -193,6 +193,16 @@ export const STRINGS = {
   "emo.fear": { "zh-TW":"😨 恐懼", "en":"😨 Fear", "ja":"😨 こわい", "ko":"😨 두려움" },
   "emo.surprise": { "zh-TW":"😲 驚訝", "en":"😲 Surprise", "ja":"😲 驚き", "ko":"😲 놀람" },
   "emo.neutral": { "zh-TW":"😐 中立", "en":"😐 Neutral", "ja":"😐 中立", "ko":"😐 중립" },
+  "lib.title": { "zh-TW":"☁️ 雲端曲庫（Drive）", "en":"☁️ Cloud library (Drive)", "ja":"☁️ クラウド曲庫（Drive）", "ko":"☁️ 클라우드 라이브러리 (Drive)" },
+  "lib.refresh": { "zh-TW":"🔄 重新整理", "en":"🔄 Refresh", "ja":"🔄 更新", "ko":"🔄 새로고침" },
+  "lib.hint": { "zh-TW":"整個雲端曲庫的角色。按「預備」請電腦／Colab 先把該角色從 Drive 下載到運算端，之後合成不用等。", "en":"All characters in the cloud library. Tap Prepare to have the PC/Colab pre-download it from Drive so synthesis won't wait.", "ja":"クラウド曲庫の全キャラ。「準備」でPC／Colabが先にDriveから取得します。", "ko":"클라우드 라이브러리의 모든 캐릭터. '준비'를 누르면 PC/Colab가 Drive에서 미리 내려받습니다." },
+  "lib.loading": { "zh-TW":"讀取中…", "en":"Loading…", "ja":"読み込み中…", "ko":"불러오는 중…" },
+  "lib.empty": { "zh-TW":"曲庫是空的，或尚未連線。", "en":"Library is empty, or not connected.", "ja":"曲庫が空、または未接続です。", "ko":"라이브러리가 비어 있거나 연결되지 않았습니다." },
+  "lib.noEmo": { "zh-TW":"無情緒", "en":"no emotions", "ja":"感情なし", "ko":"감정 없음" },
+  "lib.prepare": { "zh-TW":"⬇ 預備", "en":"⬇ Prepare", "ja":"⬇ 準備", "ko":"⬇ 준비" },
+  "lib.preparing": { "zh-TW":"下載中…", "en":"Downloading…", "ja":"取得中…", "ko":"내려받는 중…" },
+  "lib.ready": { "zh-TW":"已下載到運算端（約 {mb} MB / {n} 檔）", "en":"Downloaded to compute node (~{mb} MB / {n} files)", "ja":"演算側に取得（約 {mb} MB / {n} ファイル）", "ko":"연산 노드에 내려받음 (~{mb} MB / {n} 파일)" },
+  "lib.prepFail": { "zh-TW":"下載失敗", "en":"Download failed", "ja":"取得に失敗", "ko":"내려받기 실패" },
   "footer": { "zh-TW":"VoiceWeaver 網頁輕量版 · 純 API/瀏覽器、無本地運算", "en":"VoiceWeaver web lite · API/browser only, no on-device compute", "ja":"VoiceWeaver ウェブ軽量版 · API/ブラウザのみ、端末計算なし", "ko":"VoiceWeaver 웹 라이트 · API/브라우저 전용, 기기 연산 없음" },
 };
 
