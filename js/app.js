@@ -107,18 +107,23 @@ function renderCloudList(){
   }));
 }
 
-function addCloudServer(){
-  const inp = $("#lt_url");
-  let url = (inp.value||"").trim().replace(/\/+$/,"");
-  if(!url){ toast(t("lt.enterUrl")); return; }
+// 把一個網址加進「雲端／電腦清單」並立刻偵測連線。回 true=已加入。
+function addCloudUrl(raw){
+  let url = (raw||"").trim().replace(/\/+$/,"");
+  if(!url){ toast(t("lt.enterUrl")); return false; }
   if(!/^https?:\/\//i.test(url)) url = "https://" + url;   // 沒打協定自動補
   if(!Array.isArray(state.settings.localComputeServers)) state.settings.localComputeServers = [];
-  if(state.settings.localComputeServers.some(s=>s.url===url)){ toast(t("lt.dupCloud")); return; }
+  if(state.settings.localComputeServers.some(s=>s.url===url)){ toast(t("lt.dupCloud")); return false; }
   const n = state.settings.localComputeServers.length + 1;
   state.settings.localComputeServers.push({ name: t("lt.cloudN").replace("{n}", n), url });
-  inp.value = ""; save(); renderCloudList();
+  save(); renderCloudList();
   toast(t("lt.cloudAdded"));
   refreshLocalVoices().catch(()=>{});
+  return true;
+}
+function addCloudServer(){
+  const inp = $("#lt_url");
+  if(addCloudUrl(inp.value)) inp.value = "";
 }
 
 // 偵測語音中心、回報三項運算可用性、把「符合目前介面語言」的角色語音填進下拉
@@ -220,6 +225,12 @@ function bindSettings(){
   if($("#ng_token")){
     $("#ng_token").addEventListener("change", e=>{ state.apiKeys.ngrokToken = e.target.value.trim(); pushNgrok(); });
     $("#ng_domain").addEventListener("change", e=>{ state.apiKeys.ngrokDomain = e.target.value.trim(); pushNgrok(); });
+    // 一鍵把 Colab 的 ngrok 固定網域加進連線清單並偵測（免手動複製到上面欄位）
+    if($("#ng_use")) $("#ng_use").addEventListener("click", ()=>{
+      const d = ($("#ng_domain").value||"").trim();
+      if(!d){ toast(t("ng.needDomain")); return; }
+      addCloudUrl(d);
+    });
     $("#ng_copy").addEventListener("click", async ()=>{
       try{ await navigator.clipboard.writeText($("#ng_pair").value); toast(t("ng.copied")); }
       catch{ toast(t("ng.copyFail")); }

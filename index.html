@@ -228,14 +228,14 @@
             • <b>同一台電腦</b>：開網頁的電腦＝跑語音中心的電腦 → 免填位址，直接偵測即可。<br>
             • <b>Tailscale</b>：電腦先跑 <code>tailscale serve --bg 9879</code>（把橋接埠對外成 HTTPS），上面位址填你的 <code>https://主機.xxx.ts.net</code>（橋接會自動轉呼叫本機的 GPT-SoVITS，不必另外開 9880）。
           </p>
-        </div>
-        <div class="card">
-          <h3 data-i18n="ng.title">☁️ ngrok 雲端通道（Colab GPU 用）</h3>
+          <hr style="border:none;border-top:1px solid rgba(127,127,127,.25);margin:12px 0" />
+          <label class="lbl" data-i18n="ng.section">☁️ 用 Colab 免費 GPU（ngrok 通道）</label>
           <p class="tiny muted" data-i18n="ng.desc">用 Colab 免費 GPU 跑語音合成時，這裡填 ngrok 授權碼——會存到你的帳號雲端，Colab 用下方「配對碼」自動取用，你完全不用把授權碼貼進 Colab。</p>
           <label class="lbl" data-i18n="ng.token">ngrok authtoken</label>
           <input id="ng_token" type="password" placeholder="從 dashboard.ngrok.com 複製" autocomplete="off" />
           <label class="lbl" data-i18n="ng.domain">固定網域（選填，建議）</label>
           <input id="ng_domain" type="text" placeholder="例 voiceweaver.ngrok-free.app（填了網址就永遠不變）" autocomplete="off" />
+          <button id="ng_use" class="btn ghost" style="margin-top:6px" data-i18n="ng.useUrl">☁️ 用此 Colab 網址連線</button>
           <label class="lbl" data-i18n="ng.pair">Colab 配對碼（貼到 Colab 的 VW_PAIR_CODE）</label>
           <div class="row" style="gap:6px">
             <input id="ng_pair" type="text" readonly style="flex:1;font-family:monospace" />
