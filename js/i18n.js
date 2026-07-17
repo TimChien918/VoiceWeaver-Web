@@ -198,7 +198,7 @@ export const STRINGS = {
   "emo.neutral": { "zh-TW":"😐 中立", "en":"😐 Neutral", "ja":"😐 中立", "ko":"😐 중립" },
   "lib.title": { "zh-TW":"☁️ 雲端曲庫（Drive）", "en":"☁️ Cloud library (Drive)", "ja":"☁️ クラウド曲庫（Drive）", "ko":"☁️ 클라우드 라이브러리 (Drive)" },
   "lib.refresh": { "zh-TW":"🔄 重新整理", "en":"🔄 Refresh", "ja":"🔄 更新", "ko":"🔄 새로고침" },
-  "lib.hint": { "zh-TW":"整個雲端曲庫的角色。按「預備」請電腦／Colab 先把該角色從 Drive 下載到運算端，之後合成不用等。", "en":"All characters in the cloud library. Tap Prepare to have the PC/Colab pre-download it from Drive so synthesis won't wait.", "ja":"クラウド曲庫の全キャラ。「準備」でPC／Colabが先にDriveから取得します。", "ko":"클라우드 라이브러리의 모든 캐릭터. '준비'를 누르면 PC/Colab가 Drive에서 미리 내려받습니다." },
+  "lib.hint": { "zh-TW":"整個雲端曲庫的角色（Drive 就是曲庫，本機只是快取）。未下載的按「下載」請電腦／Colab 先從 Drive 抓下來，之後合成不用等。", "en":"All characters in the cloud library (Drive is the library; local is just a cache). Tap Download to have the PC/Colab fetch it from Drive first.", "ja":"クラウド曲庫の全キャラ（Drive が曲庫、ローカルはキャッシュ）。未取得は「ダウンロード」でPC／Colabが先に取得します。", "ko":"클라우드 라이브러리의 모든 캐릭터(Drive가 라이브러리, 로컬은 캐시). 미다운로드는 '다운로드'로 PC/Colab가 먼저 가져옵니다." },
   "lib.loading": { "zh-TW":"讀取中…", "en":"Loading…", "ja":"読み込み中…", "ko":"불러오는 중…" },
   "lib.empty": { "zh-TW":"曲庫是空的，或尚未連線。", "en":"Library is empty, or not connected.", "ja":"曲庫が空、または未接続です。", "ko":"라이브러리가 비어 있거나 연결되지 않았습니다." },
   "lib.noEmo": { "zh-TW":"無情緒", "en":"no emotions", "ja":"感情なし", "ko":"감정 없음" },
