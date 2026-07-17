@@ -50,22 +50,32 @@ async function _fetch(path, opts = {}, timeoutMs = 4000) {
 }
 
 // 偵測可用的橋接位址；成功回 {base, current}，失敗回 null。
+// 重點：不要「第一個回 ok 的就採用」——例如 Colab bridge 活著但服務全掛（voice/image/text
+// 全 false、曲庫空）時，會永遠蓋掉真正有內容的本機。改成挑「有實際能力」的節點：
+// 有任何一項運算(voice/image/text)可用者優先；全部都沒能力才退而求其次用第一個活著的。
 export async function detectLocalTts(timeoutMs = 2500) {
+  let fallback = null;   // 活著但沒任何運算能力（例如 Colab 服務還沒起）
   for (const base of candidates()) {
     try {
       const ctrl = new AbortController();
       const t = setTimeout(() => ctrl.abort(), timeoutMs);
       const r = await fetch(base + "/health", { signal: ctrl.signal });
       clearTimeout(t);
-      if (r.ok) {
-        const j = await r.json();
-        if (j && j.ok) {
-          _base = base;
-          _health = { voice: !!j.voice, image: !!j.image, text: !!j.text };
-          return { base, current: j.current || "", health: { ..._health } };
-        }
+      if (!r.ok) continue;
+      const j = await r.json();
+      if (!(j && j.ok)) continue;
+      const health = { voice: !!j.voice, image: !!j.image, text: !!j.text };
+      const capable = health.voice || health.image || health.text;
+      if (capable) {
+        _base = base; _health = health;
+        return { base, current: j.current || "", health: { ...health } };
       }
+      if (!fallback) fallback = { base, current: j.current || "", health };
     } catch (e) { /* 試下一個 */ }
+  }
+  if (fallback) {   // 全部節點都沒運算能力 → 用第一個活著的（至少能顯示狀態、之後服務起來就有）
+    _base = fallback.base; _health = fallback.health;
+    return { base: fallback.base, current: fallback.current, health: { ...fallback.health } };
   }
   _base = null;
   _health = { voice: false, image: false, text: false };
