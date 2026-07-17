@@ -105,6 +105,7 @@ export function initAuth({ onUser, onSaved }){
   _app = initializeApp(window.__FIREBASE_CONFIG__);
   _auth = getAuth(_app);
   _db = getFirestore(_app);
+  try{ _driveToken = sessionStorage.getItem("vw_drive_token") || null; }catch{}   // 重新整理後沿用
   onAuthStateChanged(_auth, async (u) => {
     if(u){
       state.uid = u.uid; state.online = true;
@@ -117,15 +118,31 @@ export function initAuth({ onUser, onSaved }){
   });
 }
 
+// 登入合一：同一次 Google 登入既是 Firebase 身分，也拿到 Drive 權限（drive.file）。
+export const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+let _driveToken = null;      // 這次工作階段的 Google OAuth access token（可呼叫 Drive API）
+
+/** 目前可用的 Drive access token（沒登入或沒授權回 null）。 */
+export function driveToken(){ return _driveToken; }
+
 export async function loginGoogle(){
   if(!hasFirebase()) throw new Error(t("err.noFirebase"));
-  await signInWithPopup(_auth, new GoogleAuthProvider());
+  const provider = new GoogleAuthProvider();
+  provider.addScope(DRIVE_SCOPE);                       // 同一個同意畫面順便要 Drive 權限
+  const res = await signInWithPopup(_auth, provider);
+  // 從登入結果取出 Google OAuth access token → 之後可直接打 Drive API（存到自己的 Drive）
+  const cred = GoogleAuthProvider.credentialFromResult(res);
+  _driveToken = cred?.accessToken || null;
+  try{ if(_driveToken) sessionStorage.setItem("vw_drive_token", _driveToken); }catch{}
+  return { uid: res.user?.uid, email: res.user?.email, drive: !!_driveToken };
 }
 export async function loginAnon(){
   if(!hasFirebase()){ return; } // 本機模式已等同登入
   await signInAnonymously(_auth);
 }
 export async function logout(){
+  _driveToken = null;
+  try{ sessionStorage.removeItem("vw_drive_token"); }catch{}
   if(_auth) await signOut(_auth);
   else { location.reload(); }
 }
