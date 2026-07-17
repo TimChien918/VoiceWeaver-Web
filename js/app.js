@@ -78,9 +78,11 @@ function populateVoiceDropdown(){
     save();
     cur = `${voices[0].name}|${voices[0].lang}`;
   }
+  // 雲端曲庫：標示哪些已下載到運算端（未下載的選了會先自動下載，需要等）
   sel.innerHTML = voices.map(v=>{
     const val = `${v.name}|${v.lang}`;
-    return `<option value="${escapeHtml(val)}" ${val===cur?"selected":""}>${escapeHtml(v.name)}（${escapeHtml(v.lang||"?")}）</option>`;
+    const mark = v.downloaded === false ? "☁️ " : (v.downloaded ? "✅ " : "");
+    return `<option value="${escapeHtml(val)}" ${val===cur?"selected":""}>${mark}${escapeHtml(v.name)}（${escapeHtml(v.lang||"?")}）</option>`;
   }).join("");
 }
 
@@ -163,16 +165,18 @@ async function renderCloudLibrary(){
   for(const c of chars){
     const tag = c.lang ? c.lang.toUpperCase() : "";
     const emos = (c.emotions && c.emotions.length) ? c.emotions.join("／") : t("lib.noEmo");
+    const dl = !!c.downloaded;                       // 雲端＝曲庫，本機只是快取
     const row = document.createElement("div");
     row.className = "row"; row.style.cssText = "gap:8px;align-items:center;padding:6px 8px;border-radius:8px;background:rgba(127,127,127,.08)";
     row.innerHTML =
-      `<span style="width:8px;height:8px;border-radius:4px;flex:0 0 auto;background:${c.ok?'#3ddc84':'#f0a020'}"></span>`+
+      `<span style="width:8px;height:8px;border-radius:4px;flex:0 0 auto;background:${dl?'#3ddc84':'#8a8f98'}"></span>`+
       `<div style="flex:1;min-width:0">`+
         `<div style="font-weight:600">${escapeHtml(c.character||c.name)}${tag?`<span class="tiny muted"> ${tag}</span>`:""}</div>`+
-        `<div class="tiny muted">${_sizeLabel(c.bytes)} · ${escapeHtml(emos)}</div>`+
+        `<div class="tiny muted">${dl?t("lib.dlDone"):t("lib.dlNone")} · ${_sizeLabel(c.bytes)} · ${escapeHtml(emos)}</div>`+
       `</div>`+
-      `<button class="btn ghost tiny lib_prep">${t("lib.prepare")}</button>`;
+      `<button class="btn ghost tiny lib_prep"${dl?" disabled":""}>${dl?t("lib.dlDone"):t("lib.prepare")}</button>`;
     const btn = row.querySelector(".lib_prep");
+    if(dl) btn.style.opacity = ".55";
     btn.addEventListener("click", async ()=>{
       btn.disabled = true; const old = btn.textContent; btn.textContent = t("lib.preparing");
       try{
@@ -180,6 +184,8 @@ async function renderCloudLibrary(){
         if(r && r.ok){
           const mb = Math.round((r.bytes||0)/1048576);
           toast(`✅ ${c.character||c.name}${tag?(" "+tag):""}：`+t("lib.ready").replace("{mb}",mb).replace("{n}",r.files||0));
+          renderCloudLibrary().catch(()=>{});   // 重繪，讓狀態變「已下載」
+          refreshLocalVoices().catch(()=>{});   // 角色下拉的 ✅/☁️ 也跟著更新
         } else {
           toast("⚠️ "+((r&&r.error)||t("lib.prepFail")));
         }
