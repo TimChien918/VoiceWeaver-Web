@@ -5,9 +5,9 @@
 export const STRINGS = {
   // 登入
   "login.tagline": { "zh-TW":"輕量網頁版 · 失語溝通輔助", "en":"Lightweight web · aphasia communication aid", "ja":"軽量ウェブ版 · 失語コミュニケーション支援", "ko":"경량 웹 · 실어증 의사소통 보조" },
-  "login.google":  { "zh-TW":"使用 Google 登入", "en":"Sign in with Google", "ja":"Google でログイン", "ko":"Google로 로그인" },
-  "login.anon":    { "zh-TW":"匿名試用", "en":"Try anonymously", "ja":"匿名で試す", "ko":"익명으로 사용" },
-  "login.note":    { "zh-TW":"登入後會自動記住你的 API 金鑰與設定，換裝置也能還原。", "en":"After signing in, your API keys and settings are saved and restored across devices.", "ja":"ログインすると API キーと設定が保存され、別の端末でも復元できます。", "ko":"로그인하면 API 키와 설정이 저장되어 다른 기기에서도 복원됩니다." },
+  "login.google":  { "zh-TW":"使用 Google 登入（跨裝置同步）", "en":"Sign in with Google (sync across devices)", "ja":"Google でログイン（端末間で同期）", "ko":"Google로 로그인 (기기 간 동기화)" },
+  "login.anon":    { "zh-TW":"▶ 直接開始", "en":"▶ Start now", "ja":"▶ すぐにはじめる", "ko":"▶ 바로 시작" },
+  "login.note":    { "zh-TW":"「直接開始」資料存在這台裝置。照護者用 Google 登入，設定與圖卡換裝置也會跟著走。", "en":"“Start now” keeps data on this device. Caregivers can sign in with Google so settings and cards follow across devices.", "ja":"「すぐにはじめる」はこの端末にのみ保存。介護者は Google ログインで設定とカードを他端末へ同期できます。", "ko":"'바로 시작'은 이 기기에만 저장됩니다. 보호자는 Google 로그인으로 설정과 카드를 다른 기기와 동기화할 수 있습니다." },
   // 導覽
   "nav.compose":  { "zh-TW":"語句重組", "en":"Compose", "ja":"文の再構成", "ko":"문장 재구성" },
   "nav.rehab":    { "zh-TW":"語音復健", "en":"Speech Rehab", "ja":"発話リハビリ", "ko":"언어 재활" },
@@ -218,6 +218,7 @@ export const STRINGS = {
   "care.pinCancel": { "zh-TW":"返回卡片", "en":"Back to cards", "ja":"カードに戻る", "ko":"카드로 돌아가기" },
   "care.pinBad": { "zh-TW":"密碼需為 4 位數字", "en":"PIN must be 4 digits", "ja":"暗証番号は4桁の数字です", "ko":"비밀번호는 숫자 4자리입니다" },
   "care.customScenario": { "zh-TW":"📷 我的照片卡", "en":"📷 My photo cards", "ja":"📷 わたしの写真カード", "ko":"📷 내 사진 카드" },
+  "care.entered": { "zh-TW":"已進入防呆模式。要離開：連點右上角 5 下，再輸入密碼", "en":"Fail-safe mode on. To exit: tap top-right corner 5 times, then enter the PIN", "ja":"あんしんモード開始。終了は右上を5回タップ→暗証番号", "ko":"안심 모드 시작. 종료: 오른쪽 위 5번 탭 후 비밀번호 입력" },
   "aac.fontSize": { "zh-TW":"字體：", "en":"Font:", "ja":"文字：", "ko":"글자:" },
   "cc.title": { "zh-TW":"📷 自訂圖卡（拍熟悉的東西）", "en":"📷 Custom cards (photo of familiar things)", "ja":"📷 カスタムカード（身近な物を撮影）", "ko":"📷 사용자 카드 (익숙한 물건 촬영)" },
   "cc.desc": { "zh-TW":"用手機直接拍長輩熟悉的物品或家人照片做成圖卡——看到自己認得的東西，最能建立信任。照片會縮小存進帳號。", "en":"Snap familiar objects or family photos to make cards — seeing things they recognize builds trust. Photos are shrunk and saved to the account.", "ja":"身近な物や家族の写真を撮ってカードに。見覚えのある物が一番安心につながります。写真は縮小して保存。", "ko":"익숙한 물건이나 가족 사진을 찍어 카드로 만드세요. 알아보는 것이 신뢰를 만듭니다. 사진은 축소되어 계정에 저장됩니다." },

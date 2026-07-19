@@ -13,9 +13,10 @@
       <div class="logo">🗣️</div>
       <h1>VoiceWeaver</h1>
       <p class="muted" data-i18n="login.tagline">輕量網頁版 · 失語溝通輔助</p>
-      <button id="btnGoogle" class="btn primary" data-i18n="login.google">使用 Google 登入</button>
-      <button id="btnAnon" class="btn ghost" data-i18n="login.anon">匿名試用</button>
-      <p class="tiny muted" data-i18n="login.note">登入後會自動記住你的 API 金鑰與設定，換裝置也能還原。</p>
+      <!-- 最簡入口：一顆大按鈕直接開始（免帳號）；Google 登入給照護者做跨裝置同步 -->
+      <button id="btnAnon" class="btn primary big" data-i18n="login.anon">▶ 直接開始</button>
+      <button id="btnGoogle" class="btn ghost" data-i18n="login.google">使用 Google 登入（跨裝置同步）</button>
+      <p class="tiny muted" data-i18n="login.note">「直接開始」資料存在這台裝置。照護者用 Google 登入，設定與圖卡換裝置也會跟著走。</p>
       <p id="loginErr" class="tiny err"></p>
     </div>
   </div>

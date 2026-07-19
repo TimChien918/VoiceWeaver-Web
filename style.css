@@ -104,6 +104,9 @@ label.row{ margin-top:0; cursor:pointer; }
 .ccitem .cc-del{ position:absolute; top:4px; right:4px; background:var(--danger); color:#fff;
   border:0; border-radius:50%; width:24px; height:24px; line-height:22px; font-size:.8rem; cursor:pointer;
   box-shadow:0 1px 3px rgba(0,0,0,.3); }
+/* 病患面主按鈕：朗讀最大最醒目（其餘維持一般大小） */
+#aacSpeak{ flex:1; font-size:1.15rem; padding:14px 18px; }
+
 /* 整句緩衝＝「句子條」：虛線框像等待完成的句子，chip 加大好點好讀 */
 .combo{ min-height:56px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;
   padding:8px 10px; border:2px dashed color-mix(in srgb,var(--accent2) 45%,var(--line));

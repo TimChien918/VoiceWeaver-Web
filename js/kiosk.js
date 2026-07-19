@@ -40,17 +40,31 @@ function currentScenarioCards(){
   return sc.cards.map(([emoji, word])=>({ emoji, word }));
 }
 
+// 螢幕常亮：長輩盯著板子時螢幕不熄滅（熄了會恐慌）。頁面被切走再回來時自動續約。
+let _wake = null;
+async function grabWakeLock(){
+  try{ _wake = await navigator.wakeLock?.request("screen"); }catch{ /* 不支援/被拒＝維持原樣 */ }
+}
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState === "visible" && document.querySelector("#kiosk") && kioskActive()) grabWakeLock();
+});
+
 export function enterKiosk(){
   renderCards();
   $("#kioskPin").classList.add("hidden");
   $("#kiosk").classList.remove("hidden");
   document.body.classList.add("kiosk-on");
+  // 全螢幕：連瀏覽器網址列都收起來＝看起來就是一塊板子（重載自動進入時瀏覽器會拒絕，安靜略過）
+  try{ document.documentElement.requestFullscreen?.()?.catch(()=>{}); }catch{}
+  grabWakeLock();
 }
 
 export function exitKiosk(){
   $("#kiosk").classList.add("hidden");
   $("#kioskPin").classList.add("hidden");
   document.body.classList.remove("kiosk-on");
+  try{ _wake?.release(); }catch{} _wake = null;
+  try{ if(document.fullscreenElement) document.exitFullscreen()?.catch(()=>{}); }catch{}
 }
 
 function renderCards(){

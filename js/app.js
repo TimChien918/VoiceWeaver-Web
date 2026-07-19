@@ -239,6 +239,7 @@ function bindSettings(){
       state.settings.kioskScenario = $("#care_scenario").value;
       state.settings.uiMode = "severe"; save();
       enterKiosk();
+      toast(t("care.entered"));   // 提醒照護者退出方法（右上5連點+PIN），忘記會恐慌
     });
   }
   $("#addLlm").addEventListener("click", ()=>{ state.llmApis.push({id:newId(),provider:Object.keys(LLM_PROVIDERS)[0],key:"",model:""}); save(); renderProviderList("#llmList","llmApis",LLM_PROVIDERS); });
@@ -316,10 +317,19 @@ function setupTabs(){
     t.classList.add("active");
     $$(".panel").forEach(p=>p.classList.add("hidden"));
     $("#tab-"+t.dataset.tab).classList.remove("hidden");
+    try{ localStorage.setItem("vw_tab", t.dataset.tab); }catch{}   // 記住分頁，下次開啟直接回來
     if(t.dataset.tab==="history") renderHistory();
     if(t.dataset.tab==="rehab") renderRehabLogs();
     if(t.dataset.tab==="report") loadReport();
   }));
+}
+
+// 回到上次使用的分頁（長輩不用每次找「AAC 圖卡」在哪）
+function restoreLastTab(){
+  let k = "";
+  try{ k = localStorage.getItem("vw_tab") || ""; }catch{}
+  const btn = k && document.querySelector(`.tab[data-tab="${k}"]`);
+  if(btn && !btn.classList.contains("active")) btn.click();
 }
 
 // ── 重組 ──
@@ -413,6 +423,8 @@ function renderAac(){
 function renderCombo(){
   $("#aacCombo").innerHTML = combo.map((w,i)=>`<span class="chip on" data-i="${i}">${w} ✕</span>`).join("") || `<span class="tiny muted">${t("combo.empty")}</span>`;
   $$("#aacCombo .chip").forEach(c=>bindTap(c, ()=>{ combo.splice(+c.dataset.i,1); renderCombo(); }, 250));
+  // 沒設 LLM 金鑰時「✨組成句子」按了只會報錯 → 直接隱藏，少一顆干擾按鈕
+  $("#aacCompose")?.classList.toggle("hidden", !hasAnyLlmKey());
 }
 
 // ── 自訂圖卡（拍照建檔）：原生相機 capture → canvas 縮圖 → 存帳號 ──
@@ -557,6 +569,7 @@ function showApp(user){
   applyTheme(); applyI18n(state.settings.lang); fillSettings(); renderFavorites();
   // 雲端設定載入後重繪 AAC：帳號裡的字級/自訂圖卡/「📷 我的」分類才會立即出現
   renderAac(); renderCcList();
+  restoreLastTab();   // 回到上次使用的分頁
   // 上次是重症防呆模式 → 開頁直接回到全螢幕圖卡（長輩重新整理也不會迷路）
   if(state.settings.uiMode === "severe") enterKiosk();
 }
