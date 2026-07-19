@@ -555,6 +555,8 @@ function showApp(user){
   $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
   $("#who").textContent = user.uid==="local" ? t("user.local") : (user.name || "");
   applyTheme(); applyI18n(state.settings.lang); fillSettings(); renderFavorites();
+  // 雲端設定載入後重繪 AAC：帳號裡的字級/自訂圖卡/「📷 我的」分類才會立即出現
+  renderAac(); renderCcList();
   // 上次是重症防呆模式 → 開頁直接回到全螢幕圖卡（長輩重新整理也不會迷路）
   if(state.settings.uiMode === "severe") enterKiosk();
 }
