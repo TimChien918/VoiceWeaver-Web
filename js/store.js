@@ -10,6 +10,11 @@ import { t } from "./i18n.js";
 
 const DEFAULTS = {
   settings: { theme: "auto", lang: "zh-TW", rate: 0.95, font: 1.0,
+              // 輕重症雙軌：mild=語法訓練（現行完整介面）；severe=高齡防呆（去科技化 Kiosk）
+              uiMode: "mild",
+              kioskScenario: "",      // 單一情境鎖定（SCENARIOS 的 key；空=第一個情境）
+              kioskPin: "1234",       // 照護者退出 PIN（4 位數字）
+              aacScale: 1,            // 圖卡字級 1~4（3=特大→2欄、4=巨大→1欄，網格自動降級）
               // 本地 GPT-SoVITS 語音引擎（透過語音中心橋接）
               localTtsEnabled: false, localTtsUrl: "", localComputeServers: [], localVoiceName: "", localVoiceLang: "", voiceEmotion: "" },
   // 單一欄位的金鑰（通報用）
@@ -53,6 +58,9 @@ export const state = {
   llmApis: [],
   imageApis: [],
   favorites: [],   // 我的最愛常用句
+  // 自訂圖卡（拍照建檔）：[{id, word, pos, img(dataURL 縮圖)}]。
+  // 讓長輩看到「自己熟悉的物品照片」建立信任；照片壓成小縮圖存設定文件。
+  customCards: [],
 };
 
 /** 切換收藏一句（回傳是否為已加入）。 */
@@ -81,6 +89,7 @@ function applyLoaded(d){
   state.llmApis  = Array.isArray(d.llmApis) ? d.llmApis : [];
   state.imageApis= Array.isArray(d.imageApis) ? d.imageApis : [];
   state.favorites= Array.isArray(d.favorites) ? d.favorites : [];
+  state.customCards = Array.isArray(d.customCards) ? d.customCards : [];
   // 相容：舊版只有單一 localTtsUrl → 遷移成清單第一筆（只做一次）
   if(!Array.isArray(state.settings.localComputeServers)) state.settings.localComputeServers = [];
   if(!state.settings.localComputeServers.length && (state.settings.localTtsUrl||"").trim()){
@@ -149,7 +158,8 @@ export async function logout(){
 
 // ── 載入 ───────────────────────────────────────────
 function snapshot(){
-  return { settings:state.settings, apiKeys:state.apiKeys, llmApis:state.llmApis, imageApis:state.imageApis, favorites:state.favorites };
+  return { settings:state.settings, apiKeys:state.apiKeys, llmApis:state.llmApis, imageApis:state.imageApis,
+           favorites:state.favorites, customCards:state.customCards };
 }
 function loadLocal(){
   try{ applyLoaded(migrate(JSON.parse(localStorage.getItem(LS) || "{}"))); }

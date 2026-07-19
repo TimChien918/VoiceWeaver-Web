@@ -63,8 +63,41 @@ label.row{ margin-top:0; cursor:pointer; }
 .chips .chip.wrong{ background:rgba(255,59,48,.15); color:var(--danger); border-color:var(--danger); font-weight:700; }
 .cards-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(92px,1fr)); gap:8px; }
 .acard{ background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:12px 6px;
-  text-align:center; cursor:pointer; font-size:.9rem; }
+  text-align:center; cursor:pointer; font-size:.9rem;
+  word-break:keep-all; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; }
 .acard .emoji{ font-size:26px; display:block; }
+.acard .aphoto{ width:56px; height:56px; object-fit:cover; border-radius:10px; display:block; margin:0 auto 2px; }
+
+/* ── 費茲傑羅詞性色碼（Fitzgerald Key）：黃=名詞、綠=動詞、藍=形容詞 ──
+   淡色底＋同色系粗邊，深淺主題都讀得清；中性詞維持原樣。 */
+.acard.pos-n{ background:color-mix(in srgb,#ffcc00 22%,var(--bg)); border-color:#d9ae00; }
+.acard.pos-v{ background:color-mix(in srgb,#34c759 20%,var(--bg)); border-color:#2ea44f; }
+.acard.pos-a{ background:color-mix(in srgb,#0a84ff 18%,var(--bg)); border-color:#0a84ff; }
+
+/* ── 超大字級＋網格自動降級：s1 普通(自動欄) → s2 大 → s3 特大(2欄) → s4 巨大(1欄) ──
+   字越大欄越少、觸控區越大；word-break:keep-all 確保詞不斷行溢出。 */
+.cards-grid.aac-s2{ grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:10px; }
+.cards-grid.aac-s2 .acard{ font-size:1.25rem; padding:16px 8px; }
+.cards-grid.aac-s2 .acard .emoji{ font-size:40px; }
+.cards-grid.aac-s2 .acard .aphoto{ width:76px; height:76px; }
+.cards-grid.aac-s3{ grid-template-columns:1fr 1fr; gap:12px; }             /* 2×2：單排兩大卡 */
+.cards-grid.aac-s3 .acard{ font-size:1.9rem; font-weight:700; padding:26px 10px; }
+.cards-grid.aac-s3 .acard .emoji{ font-size:64px; }
+.cards-grid.aac-s3 .acard .aphoto{ width:108px; height:108px; }
+.cards-grid.aac-s4{ grid-template-columns:1fr; gap:14px; }                 /* 1×2：一欄超巨卡 */
+.cards-grid.aac-s4 .acard{ font-size:2.7rem; font-weight:800; padding:34px 12px; }
+.cards-grid.aac-s4 .acard .emoji{ font-size:96px; }
+.cards-grid.aac-s4 .acard .aphoto{ width:150px; height:150px; }
+.aac-scale-chip.on{ background:var(--accent); color:#fff; border-color:var(--accent); }
+/* 點卡視覺回饋：放大微動畫（輕症不即時朗讀，靠這個確認「有點到」） */
+.acard.tapped{ animation:atap .22s ease; }
+@keyframes atap{ 40%{ transform:scale(1.07); } 100%{ transform:scale(1); } }
+
+/* 自訂圖卡（拍照建檔） */
+.cc-preview{ width:52px; height:52px; object-fit:cover; border-radius:10px; border:1px solid var(--line); }
+.ccitem{ position:relative; }
+.ccitem .cc-del{ position:absolute; top:4px; right:4px; background:var(--danger); color:#fff;
+  border:0; border-radius:50%; width:22px; height:22px; line-height:20px; font-size:.8rem; cursor:pointer; }
 .combo{ min-height:42px; display:flex; gap:6px; flex-wrap:wrap; padding:6px 0; }
 .combo .chip.on{ background:var(--accent2); color:#fff; border-color:var(--accent2); }
 
@@ -96,3 +129,47 @@ label.row{ margin-top:0; cursor:pointer; }
 .stat{ flex:1; text-align:center; background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:12px 6px; }
 .stat-val{ font-size:26px; font-weight:800; color:var(--accent); }
 .stat-lbl{ font-size:.74rem; color:var(--muted); margin-top:2px; }
+
+/* ── 重症／高齡防呆模式（Kiosk）：去科技化全螢幕圖卡 ──
+   視覺目標：不像軟體，像一張「米色塑膠墊板」上擺著 2–4 張實體圖卡。
+   固定淺色紙感（不跟深色主題走）：長輩對黑底白字的「螢幕感」最有戒心。 */
+body.kiosk-on{ overflow:hidden; }
+.kiosk{
+  position:fixed; inset:0; z-index:40;
+  background:#f6efdf;                                        /* 米色紙感 */
+  background-image:radial-gradient(#00000009 1px, transparent 1px);  /* 淡淡紙紋 */
+  background-size:22px 22px;
+  display:flex; padding:4vmin;
+  user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;  /* 禁長按/選字 */
+  touch-action:manipulation;                                 /* 禁雙擊縮放 */
+}
+.kiosk-cards{ flex:1; display:grid; gap:4vmin; }
+.kiosk-cards[data-n="1"]{ grid-template:1fr / 1fr; }
+.kiosk-cards[data-n="2"]{ grid-template:1fr 1fr / 1fr; }                     /* 1×2：上下兩大卡 */
+.kiosk-cards[data-n="3"], .kiosk-cards[data-n="4"]{ grid-template:1fr 1fr / 1fr 1fr; }  /* 2×2 */
+.kcard{
+  background:#fffdf6; border:3px solid #d8cdb4; border-radius:28px;
+  box-shadow:0 6px 0 #d8cdb4;                                /* 實體卡片的厚度感 */
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2vmin;
+  cursor:pointer;
+}
+.kcard .kemoji{ font-size:16vmin; line-height:1; }
+.kcard .kword{ font-size:9vmin; font-weight:800; color:#4a3f28; word-break:keep-all; }
+.kcard.tapped{ animation:ktap .35s ease; }
+@keyframes ktap{ 30%{ transform:scale(1.06); } 100%{ transform:scale(1); } }
+.kiosk-exit{ position:absolute; top:0; right:0; width:76px; height:76px; z-index:2; }  /* 隱形退出熱區 */
+
+/* 照護者 PIN（此層是給照護者的，可以有一般 UI 樣式） */
+.kiosk-pin{ position:absolute; inset:0; z-index:3; background:rgba(0,0,0,.45);
+  display:flex; align-items:center; justify-content:center; }
+.kiosk-pin-box{ background:var(--card); color:var(--fg); border-radius:20px; padding:22px;
+  width:min(320px,86vw); text-align:center; }
+.kiosk-pin-title{ margin:0; font-weight:700; }
+.kiosk-pin-dots{ display:flex; gap:12px; justify-content:center; margin:12px 0 16px; }
+.kiosk-dot{ width:14px; height:14px; border-radius:50%; border:2px solid var(--muted); }
+.kiosk-dot.full{ background:var(--accent); border-color:var(--accent); }
+.kiosk-pin-dots.shake{ animation:kshake .35s; }
+@keyframes kshake{ 25%{transform:translateX(-6px);} 50%{transform:translateX(6px);} 75%{transform:translateX(-4px);} }
+.kiosk-pin-pad{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px; }
+.kiosk-pin-key{ font-size:1.4rem; padding:12px 0; border-radius:14px; border:1px solid var(--line);
+  background:var(--bg); color:var(--fg); font-weight:700; cursor:pointer; }

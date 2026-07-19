@@ -127,8 +127,9 @@ export async function localSwitch(name, lang) {
 
 let _audio = null;
 let _audioUrl = null;
-// 合成並播放：帶上目前選定的角色語音，橋接若發現和已載入的不同會自動切換
-export async function localSpeak(text) {
+// 合成並播放：帶上目前選定的角色語音，橋接若發現和已載入的不同會自動切換。
+// opts.emotion 可強制指定情緒（重症防呆模式固定「开心」＝GPT-SoVITS 版的語調輕快化）。
+export async function localSpeak(text, opts = {}) {
   if (!text) return;
   if (!_base && !(await detectLocalTts())) throw new Error(t("err.notConnected"));
   const body = { text };
@@ -136,7 +137,8 @@ export async function localSpeak(text) {
     body.name = state.settings.localVoiceName;
     body.lang = state.settings.localVoiceLang || "";
   }
-  if (state.settings.voiceEmotion) body.emotion = state.settings.voiceEmotion;   // 空＝橋接自動偵測情緒
+  const emo = opts.emotion || state.settings.voiceEmotion;
+  if (emo) body.emotion = emo;   // 空＝橋接自動偵測情緒
   const r = await _fetch("/speak", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

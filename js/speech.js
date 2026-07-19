@@ -44,7 +44,20 @@ export function speak(text){
   _webSpeak(text);
 }
 
-function _webSpeak(text){
+/** 重症／高齡防呆模式專用：語調輕快化（消除機械沉悶感、建立正向反饋）。
+ *  GPT-SoVITS 路徑＝改用「开心」情緒參考音（合成 wav 無法調 pitch，用情緒達成等價效果）；
+ *  瀏覽器 TTS 路徑＝pitch 1.2 / rate 1.08。 */
+export function speakUpbeat(text){
+  if(!text) return;
+  if(localTtsEnabled()){
+    localSpeak(text, { emotion:"开心" })
+      .catch(e=>{ console.warn("本地語音失敗，改用瀏覽器語音", e); _webSpeak(text, { pitch:1.2, rate:1.08 }); });
+    return;
+  }
+  _webSpeak(text, { pitch:1.2, rate:1.08 });
+}
+
+function _webSpeak(text, opts = {}){
   if(!text) return;
   if(!("speechSynthesis" in window)) return;   // 老瀏覽器沒有 Web Speech → 靜默略過而非 ReferenceError
   stopLocalSpeak();                            // 停掉可能還在播的本地 GPT-SoVITS 音檔，避免疊音
@@ -54,8 +67,8 @@ function _webSpeak(text){
       if(speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
       u.lang = state.settings.lang || "zh-TW";
-      u.rate = state.settings.rate || 0.95;
-      u.pitch = 1.0;
+      u.rate = opts.rate ?? (state.settings.rate || 0.95);
+      u.pitch = opts.pitch ?? 1.0;
       const vs = speechSynthesis.getVoices();
       // 使用者在設定頁選的嗓音優先；沒選就自動挑「最有人味」的那個
       const chosen = (state.settings.voice && vs.find(v => v.voiceURI === state.settings.voice)) || _bestVoice(u.lang);

@@ -2,7 +2,10 @@ import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistor
 import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js";
 import { reconstruct, composeAac, hasAnyLlmKey } from "./llm.js";
 import { speak, speakIn, listen, sttSupported } from "./speech.js";
-import { AAC, AAC_CATS } from "./aac.js";
+import { AAC, AAC_CATS, SCENARIOS } from "./aac.js";
+import { setupKiosk, enterKiosk } from "./kiosk.js";
+import { bindTap } from "./interaction.js";
+import { orderCards } from "./predict.js";
 import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js";
 import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js";
 import { setupReport, loadReport, setReportToast } from "./report.js";
@@ -25,6 +28,19 @@ function applyTheme(){
   document.documentElement.style.setProperty("--font", (state.settings.font||1)+"rem");
 }
 
+// 防呆模式的情境下拉：內建情境＋（有 2 張以上自訂照片卡時）「📷 我的照片卡」
+function fillCareScenario(){
+  const sel = $("#care_scenario");
+  if(!sel) return;
+  const cur = state.settings.kioskScenario;
+  let html = Object.entries(SCENARIOS)
+    .map(([k,v])=>`<option value="${k}" ${k===cur?"selected":""}>${v.name}（${v.cards.map(c=>c[1]).join("、")}）</option>`).join("");
+  if((state.customCards||[]).length >= 2){
+    html += `<option value="__custom" ${cur==="__custom"?"selected":""}>${t("care.customScenario")}（${state.customCards.slice(0,4).map(c=>c.word).join("、")}）</option>`;
+  }
+  sel.innerHTML = html;
+}
+
 // ── 設定 UI 綁定 ──
 function fillSettings(){
   $("#k_tgtoken").value = state.apiKeys.tgtoken;
@@ -33,6 +49,9 @@ function fillSettings(){
   $("#s_lang").value = state.settings.lang;
   $("#s_rate").value = state.settings.rate; $("#rateVal").textContent = state.settings.rate+"x";
   $("#s_font").value = state.settings.font; $("#fontVal").textContent = state.settings.font+"x";
+  // 高齡／重症防呆模式：情境下拉 + 照護者 PIN
+  fillCareScenario();
+  if($("#care_pin")) $("#care_pin").value = state.settings.kioskPin || "1234";
   renderProviderList("#llmList", "llmApis", LLM_PROVIDERS);
   renderProviderList("#imgList", "imageApis", IMAGE_PROVIDERS);
   // 本地語音引擎
@@ -207,6 +226,21 @@ function bindSettings(){
     save(); });
   $("#s_rate").addEventListener("input", e=>{ state.settings.rate=+e.target.value; $("#rateVal").textContent=e.target.value+"x"; save(); });
   $("#s_font").addEventListener("input", e=>{ state.settings.font=+e.target.value; $("#fontVal").textContent=e.target.value+"x"; applyTheme(); save(); });
+  // 高齡／重症防呆模式
+  if($("#care_enter")){
+    $("#care_scenario").addEventListener("change", e=>{ state.settings.kioskScenario = e.target.value; save(); });
+    $("#care_pin").addEventListener("change", e=>{
+      const pin = (e.target.value||"").replace(/\D/g,"").slice(0,4);
+      e.target.value = pin;
+      if(pin.length===4){ state.settings.kioskPin = pin; save(); }
+      else toast(t("care.pinBad"));
+    });
+    $("#care_enter").addEventListener("click", ()=>{
+      state.settings.kioskScenario = $("#care_scenario").value;
+      state.settings.uiMode = "severe"; save();
+      enterKiosk();
+    });
+  }
   $("#addLlm").addEventListener("click", ()=>{ state.llmApis.push({id:newId(),provider:Object.keys(LLM_PROVIDERS)[0],key:"",model:""}); save(); renderProviderList("#llmList","llmApis",LLM_PROVIDERS); });
   $("#addImg").addEventListener("click", ()=>{ state.imageApis.push({id:newId(),provider:"pollinations",key:"",model:""}); save(); renderProviderList("#imgList","imageApis",IMAGE_PROVIDERS); });
   // 本地語音引擎
@@ -337,23 +371,111 @@ function fileToJpegBase64(file, max){
 }
 
 // ── AAC ──
+// 圖卡點擊全面走 bindTap（pointerup + 防連點 + 禁長按）——手抖誤觸只算一次。
+const CC_CAT = "📷 我的";     // 自訂圖卡分類（有卡才顯示，排最前）
 let aacCat = AAC_CATS[0];
-const combo = [];
+let lastPos = "";             // 上一個點的詞性 → 候選詞預測（動詞後名詞優先…）
+const combo = [];             // 整句緩衝（輕症：點卡只進緩衝，按「朗讀」才整句連貫唸）
+
+function aacCats(){
+  return (state.customCards||[]).length ? [CC_CAT, ...AAC_CATS] : AAC_CATS;
+}
+// 目前分類的卡片，統一成 {emoji?, img?, word, pos}
+function aacCards(cat){
+  if(cat === CC_CAT) return (state.customCards||[]).map(c=>({ img:c.img, word:c.word, pos:c.pos||"" }));
+  return (AAC[cat]||[]).map(([emoji, word, pos])=>({ emoji, word, pos:pos||"" }));
+}
 function renderAac(){
-  $("#aacCats").innerHTML = AAC_CATS.map(c=>`<span class="chip ${c===aacCat?'on':''}" data-c="${c}">${c}</span>`).join("");
-  $$("#aacCats .chip").forEach(ch=>ch.addEventListener("click",()=>{ aacCat=ch.dataset.c; renderAac(); }));
-  $("#aacItems").innerHTML = AAC[aacCat].map(([e,w])=>`<div class="acard" data-w="${w}"><span class="emoji">${e}</span>${w}</div>`).join("");
-  $$("#aacItems .acard").forEach(a=>a.addEventListener("click",()=>{ combo.push(a.dataset.w); renderCombo(); speak(a.dataset.w); }));
+  const cats = aacCats();
+  if(!cats.includes(aacCat)) aacCat = cats[0];
+  $("#aacCats").innerHTML = cats.map(c=>`<span class="chip ${c===aacCat?'on':''}" data-c="${c}">${c}</span>`).join("");
+  $$("#aacCats .chip").forEach(ch=>bindTap(ch, ()=>{ aacCat=ch.dataset.c; renderAac(); }, 250));
+  // 字級：s2~s4 加在網格上（s3 兩欄、s4 一欄，自動降級）；字級切換 chip 同步高亮
+  const s = Math.max(1, Math.min(4, +state.settings.aacScale || 1));
+  $("#aacItems").className = "cards-grid" + (s > 1 ? ` aac-s${s}` : "");
+  $$(".aac-scale-chip").forEach(ch=>ch.classList.toggle("on", +ch.dataset.s === s));
+  // 動態候選詞預測：依上一個點的詞性重排（動詞後名詞優先…），引導 SVO 語序
+  $("#aacItems").innerHTML = orderCards(aacCards(aacCat), lastPos).map(c=>
+    `<div class="acard${c.pos?` pos-${c.pos}`:""}" data-w="${escapeHtml(c.word)}" data-pos="${c.pos||""}">${
+      c.img ? `<img class="aphoto" src="${c.img}" alt="" draggable="false" />`
+            : `<span class="emoji">${c.emoji}</span>`
+    }${escapeHtml(c.word)}</div>`).join("");
+  // 輕症＝語法訓練：點卡「只進整句緩衝」不即時朗讀（整句組完按朗讀一次連貫唸）；
+  // 放大微動畫給視覺回饋，220ms 後才依預測重排（讓動畫看得到）。
+  $$("#aacItems .acard").forEach(a=>bindTap(a, ()=>{
+    a.classList.add("tapped");
+    combo.push(a.dataset.w);
+    const pos = a.dataset.pos || "";
+    renderCombo();
+    setTimeout(()=>{ const changed = pos !== lastPos; lastPos = pos; if(changed) renderAac(); }, 220);
+  }));
 }
 function renderCombo(){
   $("#aacCombo").innerHTML = combo.map((w,i)=>`<span class="chip on" data-i="${i}">${w} ✕</span>`).join("") || `<span class="tiny muted">${t("combo.empty")}</span>`;
-  $$("#aacCombo .chip").forEach(c=>c.addEventListener("click",()=>{ combo.splice(+c.dataset.i,1); renderCombo(); }));
+  $$("#aacCombo .chip").forEach(c=>bindTap(c, ()=>{ combo.splice(+c.dataset.i,1); renderCombo(); }, 250));
 }
+
+// ── 自訂圖卡（拍照建檔）：原生相機 capture → canvas 縮圖 → 存帳號 ──
+const CC_MAX = 12;            // 縮圖存設定文件（Firestore 單文件 1MB 上限），設個安全上限
+let ccPending = "";           // 待加入的縮圖 dataURL
+function fileToThumb(file, size=192){
+  return new Promise((res, rej)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const c = document.createElement("canvas");
+      const sq = Math.min(img.width, img.height);        // 置中裁成正方形
+      c.width = c.height = size;
+      c.getContext("2d").drawImage(img, (img.width-sq)/2, (img.height-sq)/2, sq, sq, 0, 0, size, size);
+      URL.revokeObjectURL(img.src);
+      res(c.toDataURL("image/jpeg", 0.72));
+    };
+    img.onerror = rej;
+    img.src = URL.createObjectURL(file);
+  });
+}
+function renderCcList(){
+  const list = state.customCards || [];
+  $("#ccList").innerHTML = list.map(c=>
+    `<div class="acard ccitem${c.pos?` pos-${c.pos}`:""}"><button class="cc-del" data-id="${c.id}">✕</button>` +
+    `<img class="aphoto" src="${c.img}" alt="" draggable="false" />${escapeHtml(c.word)}</div>`).join("")
+    || `<span class="tiny muted">${t("cc.empty")}</span>`;
+  $$("#ccList .cc-del").forEach(b=>bindTap(b, ()=>{
+    state.customCards = state.customCards.filter(c=>c.id !== b.dataset.id);
+    save(); renderCcList(); renderAac(); fillCareScenario();
+  }, 250));
+}
+function setupCustomCards(){
+  if(!$("#ccTake")) return;
+  bindTap($("#ccTake"), ()=>$("#ccPhoto").click(), 250);
+  $("#ccPhoto").addEventListener("change", async e=>{
+    const f = e.target.files?.[0]; e.target.value = "";
+    if(!f) return;
+    try{
+      ccPending = await fileToThumb(f);
+      const pv = $("#ccPreview"); pv.src = ccPending; pv.classList.remove("hidden");
+    }catch{ toast(t("cc.photoFail")); }
+  });
+  bindTap($("#ccAdd"), ()=>{
+    const word = $("#ccWord").value.trim();
+    if(!ccPending){ toast(t("cc.needPhoto")); return; }
+    if(!word){ toast(t("cc.needWord")); return; }
+    if((state.customCards||[]).length >= CC_MAX){ toast(t("cc.full")); return; }
+    state.customCards.push({ id:newId(), word, pos:$("#ccPos").value, img:ccPending });
+    ccPending = ""; $("#ccWord").value = ""; $("#ccPreview").classList.add("hidden");
+    save(); renderCcList(); renderAac(); fillCareScenario();
+    toast(t("cc.added"));
+  }, 250);
+  renderCcList();
+}
+
 function setupAac(){
-  renderAac(); renderCombo();
-  $("#aacSpeak").addEventListener("click", ()=>{ if(combo.length) speak(combo.join("，")); });
-  $("#aacClear").addEventListener("click", ()=>{ combo.length=0; renderCombo(); });
-  $("#aacCompose").addEventListener("click", async ()=>{
+  renderAac(); renderCombo(); setupCustomCards();
+  $$(".aac-scale-chip").forEach(ch=>bindTap(ch, ()=>{
+    state.settings.aacScale = +ch.dataset.s; save(); renderAac();
+  }, 250));
+  bindTap($("#aacSpeak"), ()=>{ if(combo.length) speak(combo.join("")); });   // 整句緩衝一次連貫朗讀（Speak All）
+  bindTap($("#aacClear"), ()=>{ combo.length=0; renderCombo(); });
+  bindTap($("#aacCompose"), async ()=>{
     if(!combo.length){ toast(t("toast.pickCards")); return; }
     if(!hasAnyLlmKey()){ toast(t("toast.needLlmCompose")); return; }
     toast(t("toast.composing"));
@@ -433,6 +555,8 @@ function showApp(user){
   $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
   $("#who").textContent = user.uid==="local" ? t("user.local") : (user.name || "");
   applyTheme(); applyI18n(state.settings.lang); fillSettings(); renderFavorites();
+  // 上次是重症防呆模式 → 開頁直接回到全螢幕圖卡（長輩重新整理也不會迷路）
+  if(state.settings.uiMode === "severe") enterKiosk();
 }
 
 function renderFavorites(){
@@ -448,6 +572,7 @@ function renderFavorites(){
 function main(){
   applyI18n(state.settings.lang);   // 登入畫面也先翻譯
   setupTabs(); setupActions(); setupAac(); setupCamera(); bindSettings();
+  setupKiosk({ onExit: ()=>toast(t("care.exited")) });
   setRehabToast(toast); setReportToast(toast);
   setupRehab(); setupReport();
   // 已啟用本地語音 → 背景偵測一次，讓引擎就緒（連不上不影響其他功能）

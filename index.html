@@ -139,10 +139,7 @@
 
       <!-- AAC -->
       <section id="tab-aac" class="panel hidden">
-        <div class="card">
-          <div id="aacCats" class="chips"></div>
-          <div id="aacItems" class="cards-grid"></div>
-        </div>
+        <!-- 整句緩衝在最上面：點卡片進緩衝、按「朗讀」整句一次連貫唸（輕症語法訓練） -->
         <div class="card">
           <label class="lbl" data-i18n="aac.selected">已選</label>
           <div id="aacCombo" class="combo"></div>
@@ -151,6 +148,35 @@
             <button id="aacCompose" class="btn ghost" data-i18n="aac.compose">✨ 組成句子</button>
             <button id="aacClear" class="btn ghost" data-i18n="aac.clear">清空</button>
           </div>
+        </div>
+        <div class="card">
+          <div class="row" style="margin:0 0 8px;gap:6px;align-items:center">
+            <span class="tiny muted" data-i18n="aac.fontSize">字體：</span>
+            <span class="chip aac-scale-chip" data-s="1">A</span>
+            <span class="chip aac-scale-chip" data-s="2">A＋</span>
+            <span class="chip aac-scale-chip" data-s="3">A＋＋</span>
+            <span class="chip aac-scale-chip" data-s="4">A＋＋＋</span>
+          </div>
+          <div id="aacCats" class="chips"></div>
+          <div id="aacItems" class="cards-grid"></div>
+        </div>
+        <div class="card">
+          <h3 data-i18n="cc.title">📷 自訂圖卡（拍熟悉的東西）</h3>
+          <p class="tiny muted" data-i18n="cc.desc">用手機直接拍長輩熟悉的物品或家人照片做成圖卡——看到自己認得的東西，最能建立信任。照片會縮小存進帳號。</p>
+          <input id="ccPhoto" type="file" accept="image/*" capture="environment" class="hidden" />
+          <div class="row wrap">
+            <button id="ccTake" class="btn ghost" data-i18n="cc.take">📷 拍照／選圖</button>
+            <img id="ccPreview" class="cc-preview hidden" alt="" />
+            <input id="ccWord" type="text" data-i18n-ph="cc.wordPh" placeholder="這是什麼？（例：孫子、老花眼鏡）" style="flex:1;min-width:150px" />
+            <select id="ccPos" style="width:auto">
+              <option value="" data-i18n="cc.posNone">一般</option>
+              <option value="n" data-i18n="cc.posN">名詞（黃）</option>
+              <option value="v" data-i18n="cc.posV">動詞（綠）</option>
+              <option value="a" data-i18n="cc.posA">形容詞（藍）</option>
+            </select>
+            <button id="ccAdd" class="btn primary" data-i18n="cc.add">➕ 加入</button>
+          </div>
+          <div id="ccList" class="cards-grid" style="margin-top:10px"></div>
         </div>
       </section>
 
@@ -190,6 +216,15 @@
           <input id="s_rate" type="range" min="0.5" max="1.5" step="0.05" />
           <label class="lbl"><span data-i18n="set.font">字體大小</span> <span id="fontVal" class="muted"></span></label>
           <input id="s_font" type="range" min="0.9" max="1.6" step="0.05" />
+        </div>
+        <div class="card">
+          <h3 data-i18n="care.title">🧓 高齡／重症防呆模式</h3>
+          <p class="tiny muted" data-i18n="care.desc">給看不懂手機的長輩：全螢幕只剩 2–4 張大卡，像一張紙圖卡，怎麼按都不會跳走、點了就唸出來。照護者要離開時：連點右上角 5 下，再輸入密碼。</p>
+          <label class="lbl" data-i18n="care.scenario">鎖定情境（畫面只顯示這個情境的卡片）</label>
+          <select id="care_scenario"></select>
+          <label class="lbl" data-i18n="care.pin">照護者密碼（4 位數字）</label>
+          <input id="care_pin" type="text" inputmode="numeric" maxlength="4" placeholder="1234" autocomplete="off" />
+          <button id="care_enter" class="btn primary big" data-i18n="care.enter">🔒 進入防呆模式</button>
         </div>
         <div class="card">
           <h3 data-i18n="set.computeTitle">🖥 讓電腦幫忙跑運算（語音／生圖／文字）</h3>
@@ -248,6 +283,20 @@
         <p class="tiny muted center" data-i18n="footer">VoiceWeaver 網頁輕量版 · 純 API/瀏覽器、無本地運算</p>
       </section>
     </main>
+    <!-- 重症／高齡防呆模式：去科技化全螢幕圖卡（像一張實體墊板；唯一出口＝右上角連點5下+PIN） -->
+    <div id="kiosk" class="kiosk hidden">
+      <div id="kioskCards" class="kiosk-cards"></div>
+      <div id="kioskExitZone" class="kiosk-exit"></div>
+      <div id="kioskPin" class="kiosk-pin hidden">
+        <div class="kiosk-pin-box">
+          <p class="kiosk-pin-title" data-i18n="care.pinTitle">照護者密碼</p>
+          <div id="kioskPinDots" class="kiosk-pin-dots"></div>
+          <div id="kioskPinPad" class="kiosk-pin-pad"></div>
+          <button id="kioskPinCancel" class="btn ghost" data-i18n="care.pinCancel">返回卡片</button>
+        </div>
+      </div>
+    </div>
+
     <div id="toast" class="toast hidden"></div>
   </div>
 
