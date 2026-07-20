@@ -265,7 +265,13 @@ function bindSettings(){
   };
   if($("#ng_token")){
     $("#ng_token").addEventListener("change", e=>{ state.apiKeys.ngrokToken = e.target.value.trim(); pushNgrok(); });
-    $("#ng_domain").addEventListener("change", e=>{ state.apiKeys.ngrokDomain = e.target.value.trim(); pushNgrok(); });
+    $("#ng_domain").addEventListener("change", e=>{
+      // 正規化成純網域：使用者常貼整串網址（https://xxx.ngrok-free.app/）——
+      // ngrok 的 domain 參數帶 scheme/斜線會 ERR_NGROK_9038 開不了通道
+      const d = e.target.value.trim().replace(/^https?:\/\//i,"").split("/")[0].replace(/\.$/,"");
+      e.target.value = d;
+      state.apiKeys.ngrokDomain = d; pushNgrok();
+    });
     // 一鍵把 Colab 的 ngrok 固定網域加進連線清單並偵測（免手動複製到上面欄位）
     if($("#ng_use")) $("#ng_use").addEventListener("click", ()=>{
       const d = ($("#ng_domain").value||"").trim();
