@@ -41,11 +41,21 @@ export function localBase() { return _base; }
 export function localHas(kind) { return localComputeEnabled() && !!_health[kind]; }
 export function localHealth() { return { ..._health }; }
 
+// ngrok 免費版對「瀏覽器請求」會插一頁 HTML 警告攔截頁 → fetch 拿到 HTML、JSON 解析失敗
+// → Colab 節點被誤判成死的。帶 ngrok-skip-browser-warning 標頭即可繞過。
+// 只對 ngrok 網址帶（帶了會觸發 CORS preflight，別煩本機/Tailscale 的橋接）。
+function _hdrs(base, extra) {
+  const h = { ...(extra || {}) };
+  if (/ngrok/i.test(base || "")) h["ngrok-skip-browser-warning"] = "1";
+  return h;
+}
+
 async function _fetch(path, opts = {}, timeoutMs = 4000) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    return await fetch((_base || "") + path, { ...opts, signal: ctrl.signal });
+    return await fetch((_base || "") + path,
+      { ...opts, headers: _hdrs(_base, opts.headers), signal: ctrl.signal });
   } finally { clearTimeout(t); }
 }
 
@@ -59,7 +69,7 @@ export async function detectLocalTts(timeoutMs = 2500) {
     try {
       const ctrl = new AbortController();
       const t = setTimeout(() => ctrl.abort(), timeoutMs);
-      const r = await fetch(base + "/health", { signal: ctrl.signal });
+      const r = await fetch(base + "/health", { headers: _hdrs(base), signal: ctrl.signal });
       clearTimeout(t);
       if (!r.ok) continue;
       const j = await r.json();
