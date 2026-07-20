@@ -175,12 +175,30 @@ function _sizeLabel(bytes){
   if(bytes > 0) return Math.round(bytes/1024)+" KB";
   return "—";
 }
+const LANG_SECTIONS = [["ZH","🇹🇼 中文"],["EN","🇺🇸 English"],["JA","🇯🇵 日本語"],["KO","🇰🇷 한국어"]];
 async function renderCloudLibrary(){
   const box = $("#lib_list"); if(!box) return;
   box.innerHTML = `<span class="tiny muted">${t("lib.loading")}</span>`;
-  const chars = await localCatalog();
-  if(!chars.length){ box.innerHTML = `<span class="tiny muted">${t("lib.empty")}</span>`; return; }
+  const all = await localCatalog();
+  if(!all.length){ box.innerHTML = `<span class="tiny muted">${t("lib.empty")}</span>`; return; }
   box.innerHTML = "";
+  // 語言分區（ZH/EN/JA/KO），區內「已下載在最上面」再按名稱排
+  const known = new Set(LANG_SECTIONS.map(([k])=>k));
+  const sections = [...LANG_SECTIONS, ["", "🌐 其他"]];
+  for(const [langKey, label] of sections){
+    const chars = all
+      .filter(c=>{ const L=(c.lang||"").toUpperCase(); return langKey ? L===langKey : !known.has(L); })
+      .sort((a,b)=> (!!b.downloaded - !!a.downloaded) || String(a.character||a.name).localeCompare(String(b.character||b.name), "zh-Hant"));
+    if(!chars.length) continue;
+    const head = document.createElement("div");
+    head.className = "tiny muted";
+    head.style.cssText = "margin:8px 0 2px;font-weight:700";
+    head.textContent = `${label}（${chars.filter(c=>c.downloaded).length}/${chars.length} ${t("lib.dlDone")}）`;
+    box.appendChild(head);
+    renderLibraryRows(box, chars);
+  }
+}
+function renderLibraryRows(box, chars){
   for(const c of chars){
     const tag = c.lang ? c.lang.toUpperCase() : "";
     const emos = (c.emotions && c.emotions.length) ? c.emotions.join("／") : t("lib.noEmo");
