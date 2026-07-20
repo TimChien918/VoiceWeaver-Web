@@ -219,8 +219,13 @@ function renderLibraryRows(box, chars){
       try{
         const r = await localPrepare(c.character||c.name, c.lang||"");
         if(r && r.ok){
-          const mb = Math.round((r.bytes||0)/1048576);
-          toast(`✅ ${c.character||c.name}${tag?(" "+tag):""}：`+t("lib.ready").replace("{mb}",mb).replace("{n}",r.files||0));
+          if(r.downloaded === undefined){
+            // 舊版伺服器不回 downloaded → 下載了也不會亮綠燈，直接講明白免得使用者一直重按
+            toast(t("lib.oldServer"));
+          } else {
+            const mb = Math.round((r.bytes||0)/1048576);
+            toast(`✅ ${c.character||c.name}${tag?(" "+tag):""}：`+t("lib.ready").replace("{mb}",mb).replace("{n}",r.files||0));
+          }
           renderCloudLibrary().catch(()=>{});   // 重繪，讓狀態變「已下載」
           refreshLocalVoices().catch(()=>{});   // 角色下拉的 ✅/☁️ 也跟著更新
         } else {
