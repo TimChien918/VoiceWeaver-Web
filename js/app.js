@@ -1,7 +1,7 @@
 import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge } from "./store.js";
 import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js";
 import { reconstruct, composeAac, hasAnyLlmKey } from "./llm.js";
-import { speak, speakIn, listen, sttSupported } from "./speech.js";
+import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js";
 import { AAC, AAC_CATS, SCENARIOS } from "./aac.js";
 import { setupKiosk, enterKiosk } from "./kiosk.js";
 import { bindTap } from "./interaction.js";
@@ -617,7 +617,7 @@ function main(){
   applyI18n(state.settings.lang);   // 登入畫面也先翻譯
   setupTabs(); setupActions(); setupAac(); setupCamera(); bindSettings();
   setupKiosk({ onExit: ()=>toast(t("care.exited")) });
-  setRehabToast(toast); setReportToast(toast);
+  setRehabToast(toast); setReportToast(toast); setSpeechToast(toast);
   setupRehab(); setupReport();
   // 已啟用本地語音 → 背景偵測一次，讓引擎就緒（連不上不影響其他功能）
   if(state.settings.localTtsEnabled) refreshLocalVoices().catch(()=>{});

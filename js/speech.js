@@ -4,6 +4,11 @@ import { state } from "./store.js";
 import { localTtsEnabled, localSpeak, stopLocalSpeak } from "./localtts.js";
 import { t } from "./i18n.js";
 
+// 讓上層（app.js）注入 toast，好把「本地語音失敗、已退回瀏覽器語音」的原因顯示出來，
+// 不再靜默吞錯——否則使用者只覺得「連上了卻無法合成」，看不到真正原因。
+let _onErr = null;
+export function setSpeechToast(fn){ _onErr = fn; }
+
 // 自然嗓音關鍵字：神經網路／線上嗓音通常比預設機械音「有人味」得多。
 const _NATURAL_HINTS = ["natural","neural","wavenet","journey","online","premium","enhanced","google","siri","自然","線上"];
 function _scoreVoice(v, lang){
@@ -38,7 +43,11 @@ export function speak(text){
   if(!text) return;
   // 本地 GPT-SoVITS 角色語音優先；失敗則自動退回瀏覽器原生語音。
   if(localTtsEnabled()){
-    localSpeak(text).catch(e=>{ console.warn("本地語音失敗，改用瀏覽器語音", e); _webSpeak(text); });
+    localSpeak(text).catch(e=>{
+      console.warn("本地語音失敗，改用瀏覽器語音", e);
+      _onErr?.(t("err.localSpeakFell").replace("{err}", (e && e.message) || e));
+      _webSpeak(text);
+    });
     return;
   }
   _webSpeak(text);
