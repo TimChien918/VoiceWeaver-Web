@@ -152,11 +152,22 @@ body.kiosk-on{ overflow:hidden; }
   background:#f6efdf;                                        /* 米色紙感 */
   background-image:radial-gradient(#00000009 1px, transparent 1px);  /* 淡淡紙紋 */
   background-size:22px 22px;
-  display:flex; padding:4vmin;
+  display:flex; flex-direction:column; padding:4vmin; gap:3vmin;
   user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;  /* 禁長按/選字 */
   touch-action:manipulation;                                 /* 禁雙擊縮放 */
 }
-.kiosk-cards{ flex:1; display:grid; gap:4vmin; }
+/* 線索列：病人指過的卡留著累積，讓家人讀著猜（不碰 AI） */
+.kiosk-trail{ flex:0 0 auto; display:flex; align-items:center; gap:2vmin;
+  overflow-x:auto; padding-right:82px; min-height:0; }       /* 右留空避開退出熱區 */
+.kiosk-trail:empty{ display:none; }
+.ktrail-ctl{ flex:0 0 auto; width:11vmin; height:11vmin; border-radius:50%;
+  border:2px solid #d8cdb4; background:#fffdf6; color:#6b5d3e; font-size:5vmin; cursor:pointer; }
+.ktrail-item{ flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:.5vmin;
+  background:#fffdf6; border:2px solid #e4dcc6; border-radius:14px; padding:1vmin 2vmin; cursor:pointer; }
+.ktrail-item .ke{ font-size:7vmin; line-height:1; }
+.ktrail-item img{ width:9vmin; height:9vmin; object-fit:cover; border-radius:2vmin; }
+.ktrail-item .kw{ font-size:3.4vmin; font-weight:700; color:#4a3f28; word-break:keep-all; }
+.kiosk-cards{ flex:1; display:grid; gap:4vmin; min-height:0; }
 .kiosk-cards[data-n="1"]{ grid-template:1fr / 1fr; }
 .kiosk-cards[data-n="2"]{ grid-template:1fr 1fr / 1fr; }                     /* 1×2：上下兩大卡 */
 .kiosk-cards[data-n="3"], .kiosk-cards[data-n="4"]{ grid-template:1fr 1fr / 1fr 1fr; }  /* 2×2 */

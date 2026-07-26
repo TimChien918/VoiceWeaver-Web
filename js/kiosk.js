@@ -11,6 +11,7 @@ import { SCENARIOS } from "./aac.js";
 import { bindTap } from "./interaction.js";   // 共用觸控防呆（pointerup + 防連點 + 禁長按）
 
 const $ = (s)=>document.querySelector(s);
+const esc = (s)=>String(s??"").replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
 // 零門檻探索（Discovery）：點卡先給極短提示音——「我按了、它有反應」，
 // 搭配放大動畫建立因果關係認知。音量低、時長 0.12s，不蓋過朗讀。
@@ -49,7 +50,43 @@ document.addEventListener("visibilitychange", ()=>{
   if(document.visibilityState === "visible" && document.querySelector("#kiosk") && kioskActive()) grabWakeLock();
 });
 
+// ── 線索列 ──────────────────────────────────────────
+// 設計核心：最嚴重的病人，最後是「熟悉家人去猜」，不是 AI 去講出正確答案。
+// 點過的卡留在畫面頂端累積成一串「線索」，家人看著這串去猜病人的意思——
+// 這裡完全不碰 AI、不組句、不解讀，只是把病人指過的東西留著、可重播。
+let _kcards = [];   // 目前情境的卡片資料（供點擊時取 emoji/img/word）
+let _trail = [];    // 線索：最近點的卡
+const TRAIL_MAX = 6;
+
+function pushTrail(card){
+  _trail.push({ emoji: card.emoji, img: card.img, word: card.word });
+  if(_trail.length > TRAIL_MAX) _trail = _trail.slice(-TRAIL_MAX);
+  renderTrail();
+}
+function renderTrail(){
+  const box = $("#kioskTrail");
+  if(!box) return;
+  if(!_trail.length){ box.innerHTML = ""; return; }
+  box.innerHTML =
+    `<button class="ktrail-ctl" data-act="replay" aria-label="replay">▶</button>` +
+    `<button class="ktrail-ctl" data-act="clear" aria-label="clear">✕</button>` +
+    _trail.map((c,i)=>
+      `<div class="ktrail-item" data-i="${i}">${
+        c.img ? `<img src="${c.img}" alt="" draggable="false" />` : `<span class="ke">${esc(c.emoji)}</span>`
+      }<span class="kw">${esc(c.word)}</span></div>`).join("");
+  // 點單張線索＝重唸那一個（幫家人確認）；整串重播；清空——都是家人操作，不碰 AI
+  box.querySelectorAll(".ktrail-item").forEach(el=>bindTap(el, ()=>{
+    tapBeep(); speakUpbeat(_trail[+el.dataset.i].word);
+  }, 250));
+  bindTap(box.querySelector('[data-act="replay"]'), replayTrail, 400);
+  bindTap(box.querySelector('[data-act="clear"]'), ()=>{ _trail = []; renderTrail(); }, 300);
+}
+async function replayTrail(){
+  for(const c of _trail){ speakUpbeat(c.word); await new Promise(r=>setTimeout(r, 950)); }
+}
+
 export function enterKiosk(){
+  _trail = []; renderTrail();   // 每次進入是新的一段對話
   renderCards();
   $("#kioskPin").classList.add("hidden");
   $("#kiosk").classList.remove("hidden");
@@ -68,20 +105,22 @@ export function exitKiosk(){
 }
 
 function renderCards(){
-  const cards = currentScenarioCards().slice(0, 4);    // 情境最多 4 張（2×2）
+  _kcards = currentScenarioCards().slice(0, 4);        // 情境最多 4 張（2×2）
   const box = $("#kioskCards");
-  box.dataset.n = cards.length;                        // CSS 依張數排 1×2 / 2×2
-  box.innerHTML = cards.map(c=>
-    `<div class="kcard" data-w="${c.word}">${
+  box.dataset.n = _kcards.length;                      // CSS 依張數排 1×2 / 2×2
+  box.innerHTML = _kcards.map((c,i)=>
+    `<div class="kcard" data-i="${i}" data-w="${esc(c.word)}">${
       c.img ? `<img class="kimg" src="${c.img}" alt="" draggable="false" />`
-            : `<span class="kemoji">${c.emoji}</span>`
-    }<span class="kword">${c.word}</span></div>`
+            : `<span class="kemoji">${esc(c.emoji)}</span>`
+    }<span class="kword">${esc(c.word)}</span></div>`
   ).join("");
-  box.querySelectorAll(".kcard").forEach(c=>bindTap(c, ()=>{
-    c.classList.remove("tapped"); void c.offsetWidth;  // 重新觸發動畫
-    c.classList.add("tapped");
-    tapBeep();                                         // 因果提示音（Discovery）
-    speakUpbeat(c.dataset.w);                          // 點擊立即「輕快」朗讀單字
+  box.querySelectorAll(".kcard").forEach(el=>bindTap(el, ()=>{
+    el.classList.remove("tapped"); void el.offsetWidth; // 重新觸發動畫
+    el.classList.add("tapped");
+    tapBeep();                                          // 因果提示音（Discovery）
+    const card = _kcards[+el.dataset.i];
+    speakUpbeat(card.word);                             // 點擊立即「輕快」朗讀單字
+    pushTrail(card);                                    // 留成線索，供家人讀著猜
   }));
 }
 
