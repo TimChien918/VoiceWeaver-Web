@@ -201,3 +201,28 @@ body.kiosk-on{ overflow:hidden; }
 .kiosk-pin-pad{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:12px; }
 .kiosk-pin-key{ font-size:1.4rem; padding:12px 0; border-radius:14px; border:1px solid var(--line);
   background:var(--bg); color:var(--fg); font-weight:700; cursor:pointer; }
+
+/* ── 使用模式（依嚴重程度）三段選單 ── */
+#sevModes{ display:flex; flex-direction:column; gap:2px; margin:2px 0 12px; }
+.sevmode{ padding:14px 6px; border-bottom:1px solid var(--line); cursor:pointer; }
+.sevmode:last-child{ border-bottom:0; }
+.sevmode-name{ font-size:1.15rem; font-weight:700; display:flex; align-items:center; justify-content:space-between; }
+.sevmode.on .sevmode-name{ color:var(--accent); }
+.sevmode-tick{ color:var(--accent); font-weight:800; }
+.sevmode-desc{ margin-top:3px; }
+
+/* 中/重度：隱藏純技術的複雜設定卡 */
+body.sev-moderate .complex, body.sev-severe .complex{ display:none !important; }
+
+/* ── 重度：全螢幕識字卡逐張掃描 ── */
+.kiosk-cards[data-n="1"]{ grid-template:1fr / 1fr; }   /* 逐張＝單張佔滿 */
+.kcard.kscan .kemoji{ font-size:34vmin; }              /* 特大字體 */
+.kcard.kscan .kword{ font-size:14vmin; }
+.kcard.kscan .kimg{ width:44vmin; height:44vmin; }
+.kcard.scanpulse{ animation:kscanpulse .5s ease; }     /* 換到新卡時的掃描高亮 */
+@keyframes kscanpulse{ 0%{ box-shadow:0 6px 0 #d8cdb4, 0 0 0 0 rgba(108,99,255,.5); }
+  100%{ box-shadow:0 6px 0 #d8cdb4, 0 0 0 4vmin rgba(108,99,255,0); } }
+.kiosk-next{ flex:0 0 auto; align-self:center; min-width:44vmin;
+  font-size:6vmin; font-weight:800; padding:2.5vmin 6vmin; border-radius:4vmin;
+  border:3px solid #d8cdb4; background:#fffdf6; color:#6b5d3e; box-shadow:0 5px 0 #d8cdb4; cursor:pointer; }
+.kiosk-next:active{ transform:translateY(2px); box-shadow:0 3px 0 #d8cdb4; }

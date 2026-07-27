@@ -2,7 +2,7 @@ import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistor
 import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js";
 import { reconstruct, composeAac, hasAnyLlmKey } from "./llm.js";
 import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js";
-import { AAC, AAC_CATS, SCENARIOS } from "./aac.js";
+import { AAC, AAC_CATS } from "./aac.js";
 import { setupKiosk, enterKiosk } from "./kiosk.js";
 import { bindTap } from "./interaction.js";
 import { orderCards } from "./predict.js";
@@ -28,17 +28,33 @@ function applyTheme(){
   document.documentElement.style.setProperty("--font", (state.settings.font||1)+"rem");
 }
 
-// 防呆模式的情境下拉：內建情境＋（有 2 張以上自訂照片卡時）「📷 我的照片卡」
-function fillCareScenario(){
-  const sel = $("#care_scenario");
-  if(!sel) return;
-  const cur = state.settings.kioskScenario;
-  let html = Object.entries(SCENARIOS)
-    .map(([k,v])=>`<option value="${k}" ${k===cur?"selected":""}>${v.name}（${v.cards.map(c=>c[1]).join("、")}）</option>`).join("");
-  if((state.customCards||[]).length >= 2){
-    html += `<option value="__custom" ${cur==="__custom"?"selected":""}>${t("care.customScenario")}（${state.customCards.slice(0,4).map(c=>c.word).join("、")}）</option>`;
-  }
-  sel.innerHTML = html;
+// 使用模式（依嚴重程度，對齊 App 三段）
+const SEV_MODES = [
+  ["mild",     "輕度", "鍵盤打字為主，完整功能"],
+  ["moderate", "中度", "超大圖卡預設展開，隱藏複雜設定"],
+  ["severe",   "重度", "全螢幕識字卡逐張掃描 + 特大字體"],
+];
+// 套用模式到介面：中/重度隱藏複雜設定（body class 控制）；重度＝進入全螢幕逐張掃描
+function applySeverity(mode, { enter=false } = {}){
+  state.settings.severityMode = mode;
+  document.body.classList.toggle("sev-moderate", mode === "moderate");
+  document.body.classList.toggle("sev-severe", mode === "severe");
+  // 中度：圖卡預設放大（若使用者還沒自己調過就給特大）
+  if(mode === "moderate" && (+state.settings.aacScale || 1) < 3){ state.settings.aacScale = 3; }
+  save();
+  renderSevModes();
+  if(mode === "severe"){ if(enter){ enterKiosk(); toast(t("care.entered")); } }
+  else if(mode === "moderate"){ renderAac(); $('.tab[data-tab="aac"]')?.click(); }
+}
+function renderSevModes(){
+  const box = $("#sevModes"); if(!box) return;
+  const cur = state.settings.severityMode || "mild";
+  box.innerHTML = SEV_MODES.map(([k,name,desc])=>
+    `<div class="sevmode${k===cur?" on":""}" data-m="${k}">
+       <div class="sevmode-name">${name}${k===cur?' <span class="sevmode-tick">✓</span>':''}</div>
+       <div class="sevmode-desc tiny muted">${desc}</div>
+     </div>`).join("");
+  box.querySelectorAll(".sevmode").forEach(el=>bindTap(el, ()=>applySeverity(el.dataset.m, { enter:true }), 250));
 }
 
 // ── 設定 UI 綁定 ──
@@ -49,8 +65,8 @@ function fillSettings(){
   $("#s_lang").value = state.settings.lang;
   $("#s_rate").value = state.settings.rate; $("#rateVal").textContent = state.settings.rate+"x";
   $("#s_font").value = state.settings.font; $("#fontVal").textContent = state.settings.font+"x";
-  // 高齡／重症防呆模式：情境下拉 + 照護者 PIN
-  fillCareScenario();
+  // 使用模式（依嚴重程度）三段選單 + 重度退出 PIN
+  renderSevModes();
   if($("#care_pin")) $("#care_pin").value = state.settings.kioskPin || "1234";
   renderProviderList("#llmList", "llmApis", LLM_PROVIDERS);
   renderProviderList("#imgList", "imageApis", IMAGE_PROVIDERS);
@@ -249,20 +265,13 @@ function bindSettings(){
     save(); });
   $("#s_rate").addEventListener("input", e=>{ state.settings.rate=+e.target.value; $("#rateVal").textContent=e.target.value+"x"; save(); });
   $("#s_font").addEventListener("input", e=>{ state.settings.font=+e.target.value; $("#fontVal").textContent=e.target.value+"x"; applyTheme(); save(); });
-  // 高齡／重症防呆模式
-  if($("#care_enter")){
-    $("#care_scenario").addEventListener("change", e=>{ state.settings.kioskScenario = e.target.value; save(); });
+  // 使用模式（三段選單在 renderSevModes 內綁 tap）＋重度退出 PIN
+  if($("#care_pin")){
     $("#care_pin").addEventListener("change", e=>{
       const pin = (e.target.value||"").replace(/\D/g,"").slice(0,4);
       e.target.value = pin;
       if(pin.length===4){ state.settings.kioskPin = pin; save(); }
       else toast(t("care.pinBad"));
-    });
-    $("#care_enter").addEventListener("click", ()=>{
-      state.settings.kioskScenario = $("#care_scenario").value;
-      state.settings.uiMode = "severe"; save();
-      enterKiosk();
-      toast(t("care.entered"));   // 提醒照護者退出方法（右上5連點+PIN），忘記會恐慌
     });
   }
   $("#addLlm").addEventListener("click", ()=>{ state.llmApis.push({id:newId(),provider:Object.keys(LLM_PROVIDERS)[0],key:"",model:""}); save(); renderProviderList("#llmList","llmApis",LLM_PROVIDERS); });
@@ -482,7 +491,7 @@ function renderCcList(){
     || `<span class="tiny muted">${t("cc.empty")}</span>`;
   $$("#ccList .cc-del").forEach(b=>bindTap(b, ()=>{
     state.customCards = state.customCards.filter(c=>c.id !== b.dataset.id);
-    save(); renderCcList(); renderAac(); fillCareScenario();
+    save(); renderCcList(); renderAac();
   }, 250));
 }
 function setupCustomCards(){
@@ -503,7 +512,7 @@ function setupCustomCards(){
     if((state.customCards||[]).length >= CC_MAX){ toast(t("cc.full")); return; }
     state.customCards.push({ id:newId(), word, pos:$("#ccPos").value, img:ccPending });
     ccPending = ""; $("#ccWord").value = ""; $("#ccPreview").classList.add("hidden");
-    save(); renderCcList(); renderAac(); fillCareScenario();
+    save(); renderCcList(); renderAac();
     toast(t("cc.added"));
   }, 250);
   renderCcList();
@@ -600,7 +609,8 @@ function showApp(user){
   renderAac(); renderCcList();
   restoreLastTab();   // 回到上次使用的分頁
   // 上次是重症防呆模式 → 開頁直接回到全螢幕圖卡（長輩重新整理也不會迷路）
-  if(state.settings.uiMode === "severe") enterKiosk();
+  if(state.settings.severityMode === "severe") enterKiosk();
+  else if(state.settings.severityMode === "moderate") document.body.classList.add("sev-moderate");
 }
 
 function renderFavorites(){

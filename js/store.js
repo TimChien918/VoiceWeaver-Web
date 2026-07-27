@@ -10,10 +10,12 @@ import { t } from "./i18n.js";
 
 const DEFAULTS = {
   settings: { theme: "auto", lang: "zh-TW", rate: 0.95, font: 1.0,
-              // 輕重症雙軌：mild=語法訓練（現行完整介面）；severe=高齡防呆（去科技化 Kiosk）
-              uiMode: "mild",
-              kioskScenario: "",      // 單一情境鎖定（SCENARIOS 的 key；空=第一個情境）
-              kioskPin: "1234",       // 照護者退出 PIN（4 位數字）
+              // 使用模式（依嚴重程度，對齊 App）：
+              //   mild 輕度＝鍵盤打字為主、完整功能
+              //   moderate 中度＝超大圖卡預設展開、隱藏複雜設定
+              //   severe 重度＝全螢幕識字卡逐張掃描＋特大字體
+              severityMode: "mild",
+              kioskPin: "1234",       // 重度退出 PIN（4 位數字）
               aacScale: 1,            // 圖卡字級 1~4（3=特大→2欄、4=巨大→1欄，網格自動降級）
               // 本地 GPT-SoVITS 語音引擎（透過語音中心橋接）
               localTtsEnabled: false, localTtsUrl: "", localComputeServers: [], localVoiceName: "", localVoiceLang: "", voiceEmotion: "" },
@@ -81,6 +83,10 @@ function migrate(d){
     if(seed.length) d.llmApis = seed;
   }
   if((!d.imageApis || !d.imageApis.length)) d.imageApis = [{ id:newId(), provider:"pollinations", key:"", model:"" }];
+  // 舊「輕重症雙軌」uiMode → 新三段 severityMode（severe 保留、其餘視為輕度）
+  if(d.settings && d.settings.uiMode && !d.settings.severityMode){
+    d.settings.severityMode = d.settings.uiMode === "severe" ? "severe" : "mild";
+  }
   return d;
 }
 function applyLoaded(d){

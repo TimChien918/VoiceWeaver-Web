@@ -188,19 +188,19 @@
 
       <!-- 設定 -->
       <section id="tab-settings" class="panel hidden">
-        <div class="card">
+        <div class="card complex">
           <h3 data-i18n="set.llmTitle">💬 文字供應商（重組／組句）</h3>
           <p class="tiny muted" data-i18n="set.llmDesc">可加多個供應商、同一家也能放多把金鑰；使用時自動輪詢＋失敗備援。</p>
           <div id="llmList"></div>
           <button id="addLlm" class="btn ghost" style="margin-top:8px" data-i18n="set.addLlm">＋ 新增文字供應商</button>
         </div>
-        <div class="card">
+        <div class="card complex">
           <h3 data-i18n="set.imgTitle">🖼 生圖供應商</h3>
           <p class="tiny muted" data-i18n="set.imgDesc">Pollinations 免金鑰、永遠保底；可再加 Gemini／HuggingFace／OpenAI。</p>
           <div id="imgList"></div>
           <button id="addImg" class="btn ghost" style="margin-top:8px" data-i18n="set.addImg">＋ 新增生圖供應商</button>
         </div>
-        <div class="card">
+        <div class="card complex">
           <h3 data-i18n="set.tgTitle">🆘 緊急通報（Telegram，選用）</h3>
           <label class="lbl">Bot Token</label>
           <input id="k_tgtoken" type="password" autocomplete="off" />
@@ -219,13 +219,11 @@
           <input id="s_font" type="range" min="0.9" max="1.6" step="0.05" />
         </div>
         <div class="card">
-          <h3 data-i18n="care.title">🧓 高齡／重症防呆模式</h3>
-          <p class="tiny muted" data-i18n="care.desc">給看不懂手機的長輩：全螢幕只剩 2–4 張大卡，像一張紙圖卡，怎麼按都不會跳走、點了就唸出來。照護者要離開時：連點右上角 5 下，再輸入密碼。</p>
-          <label class="lbl" data-i18n="care.scenario">鎖定情境（畫面只顯示這個情境的卡片）</label>
-          <select id="care_scenario"></select>
-          <label class="lbl" data-i18n="care.pin">照護者密碼（4 位數字）</label>
+          <h3 data-i18n="care.title">🧑‍⚕️ 使用模式（依嚴重程度）</h3>
+          <div id="sevModes"></div>
+          <label class="lbl" data-i18n="care.pin">重度退出密碼（4 位數字）</label>
           <input id="care_pin" type="text" inputmode="numeric" maxlength="4" placeholder="1234" autocomplete="off" />
-          <button id="care_enter" class="btn primary big" data-i18n="care.enter">🔒 進入防呆模式</button>
+          <p class="tiny muted" data-i18n="care.severeHint">重度＝全螢幕逐張掃描大圖卡；要離開時連點右上角 5 下再輸入密碼。圖卡內容用「AAC 圖卡」分頁的自訂圖卡（拍家人／熟悉的東西最好）。</p>
         </div>
         <div class="card">
           <h3 data-i18n="set.computeTitle">🖥 讓電腦幫忙跑運算（語音／生圖／文字）</h3>
@@ -289,6 +287,7 @@
       <!-- 線索列：病人點過的卡留著累積，讓熟悉家人看著這串去猜（不碰 AI） -->
       <div id="kioskTrail" class="kiosk-trail"></div>
       <div id="kioskCards" class="kiosk-cards"></div>
+      <button id="kioskNext" class="kiosk-next" data-i18n="care.next">下一張 ▶</button>
       <div id="kioskExitZone" class="kiosk-exit"></div>
       <div id="kioskPin" class="kiosk-pin hidden">
         <div class="kiosk-pin-box">

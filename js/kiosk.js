@@ -7,7 +7,7 @@
 //   • 所有觸發都綁 pointerup + 防連點（顫抖誤觸只算一次），全面禁止長按。
 import { state, save } from "./store.js";
 import { speakUpbeat } from "./speech.js";
-import { SCENARIOS } from "./aac.js";
+import { SEVERE_CORE } from "./aac.js";
 import { bindTap } from "./interaction.js";   // 共用觸控防呆（pointerup + 防連點 + 禁長按）
 
 const $ = (s)=>document.querySelector(s);
@@ -31,14 +31,11 @@ function tapBeep(){
 
 export function kioskActive(){ return !$("#kiosk").classList.contains("hidden"); }
 
-/** 目前鎖定情境的卡片，統一成 [{emoji?, img?, word}]。
- *  "__custom"＝照護者拍的「自己照片卡」（熟悉的東西最能建立信任）；沒設或設錯 → 第一個內建情境。 */
-function currentScenarioCards(){
-  if(state.settings.kioskScenario === "__custom" && (state.customCards||[]).length){
-    return state.customCards.map(c=>({ img: c.img, word: c.word }));
-  }
-  const sc = SCENARIOS[state.settings.kioskScenario] || Object.values(SCENARIOS)[0];
-  return sc.cards.map(([emoji, word])=>({ emoji, word }));
+/** 重度卡片來源（整合自「大圖卡」，不再有獨立情境卡）：
+ *  家人自建照片卡優先（最貼近病人、只有家人懂）；沒有就用核心生活必需卡。 */
+function severeCards(){
+  if((state.customCards||[]).length) return state.customCards.map(c=>({ img: c.img, word: c.word }));
+  return SEVERE_CORE.map(([emoji, word])=>({ emoji, word }));
 }
 
 // 螢幕常亮：長輩盯著板子時螢幕不熄滅（熄了會恐慌）。頁面被切走再回來時自動續約。
@@ -54,7 +51,6 @@ document.addEventListener("visibilitychange", ()=>{
 // 設計核心：最嚴重的病人，最後是「熟悉家人去猜」，不是 AI 去講出正確答案。
 // 點過的卡留在畫面頂端累積成一串「線索」，家人看著這串去猜病人的意思——
 // 這裡完全不碰 AI、不組句、不解讀，只是把病人指過的東西留著、可重播。
-let _kcards = [];   // 目前情境的卡片資料（供點擊時取 emoji/img/word）
 let _trail = [];    // 線索：最近點的卡
 const TRAIL_MAX = 6;
 
@@ -87,7 +83,7 @@ async function replayTrail(){
 
 export function enterKiosk(){
   _trail = []; renderTrail();   // 每次進入是新的一段對話
-  renderCards();
+  startScan();
   $("#kioskPin").classList.add("hidden");
   $("#kiosk").classList.remove("hidden");
   document.body.classList.add("kiosk-on");
@@ -97,6 +93,7 @@ export function enterKiosk(){
 }
 
 export function exitKiosk(){
+  stopScan();
   $("#kiosk").classList.add("hidden");
   $("#kioskPin").classList.add("hidden");
   document.body.classList.remove("kiosk-on");
@@ -104,25 +101,36 @@ export function exitKiosk(){
   try{ if(document.fullscreenElement) document.exitFullscreen()?.catch(()=>{}); }catch{}
 }
 
-function renderCards(){
-  _kcards = currentScenarioCards().slice(0, 4);        // 情境最多 4 張（2×2）
+// ── 重度＝全螢幕識字卡「逐張掃描」＋特大字體 ──
+// 一次只顯示一張大卡，每 3 秒自動換下一張（掃描）；家人／病人看到對的那張就點畫面唸出來、
+// 也可按「下一張」手動翻。點卡＝唸＋進線索列。給無法在一堆卡裡準確指的最嚴重者。
+let _scan = [];
+let _idx = 0;
+let _scanTimer = null;
+const SCAN_MS = 3000;
+
+function renderScanCard(){
   const box = $("#kioskCards");
-  box.dataset.n = _kcards.length;                      // CSS 依張數排 1×2 / 2×2
-  box.innerHTML = _kcards.map((c,i)=>
-    `<div class="kcard" data-i="${i}" data-w="${esc(c.word)}">${
+  if(!box || !_scan.length) return;
+  const c = _scan[_idx % _scan.length];
+  box.dataset.n = 1;
+  box.innerHTML =
+    `<div class="kcard kscan" data-w="${esc(c.word)}">${
       c.img ? `<img class="kimg" src="${c.img}" alt="" draggable="false" />`
             : `<span class="kemoji">${esc(c.emoji)}</span>`
-    }<span class="kword">${esc(c.word)}</span></div>`
-  ).join("");
-  box.querySelectorAll(".kcard").forEach(el=>bindTap(el, ()=>{
-    el.classList.remove("tapped"); void el.offsetWidth; // 重新觸發動畫
-    el.classList.add("tapped");
-    tapBeep();                                          // 因果提示音（Discovery）
-    const card = _kcards[+el.dataset.i];
-    speakUpbeat(card.word);                             // 點擊立即「輕快」朗讀單字
-    pushTrail(card);                                    // 留成線索，供家人讀著猜
-  }));
+    }<span class="kword">${esc(c.word)}</span></div>`;
+  const card = box.querySelector(".kcard");
+  card.classList.remove("scanpulse"); void card.offsetWidth; card.classList.add("scanpulse");
+  bindTap(card, ()=>{                       // 點目前這張＝唸出＋進線索，並讓掃描重新計時（別馬上跳走）
+    card.classList.add("tapped");
+    tapBeep(); speakUpbeat(c.word); pushTrail(c);
+    restartScan();
+  });
 }
+function advance(n){ if(_scan.length){ _idx = (_idx + n + _scan.length) % _scan.length; renderScanCard(); } }
+function restartScan(){ clearInterval(_scanTimer); _scanTimer = setInterval(()=>advance(1), SCAN_MS); }
+function startScan(){ _scan = severeCards(); _idx = 0; renderScanCard(); restartScan(); }
+function stopScan(){ clearInterval(_scanTimer); _scanTimer = null; }
 
 // ── 照護者退出：右上角隱形區 3 秒內連點 5 下 → PIN ──
 let _taps = [];
@@ -141,7 +149,8 @@ function pressKey(d){
   renderPinDots();
   if(_pinBuf.length === 4){
     if(_pinBuf === (state.settings.kioskPin || "1234")){
-      state.settings.uiMode = "mild";   // 退出＝回照護者介面（重新整理也不會再進防呆）
+      state.settings.severityMode = "mild";   // 退出＝回照護者介面（重新整理也不會再進重度）
+      document.body.classList.remove("sev-severe", "sev-moderate");
       save();
       exitKiosk();
       _onExit?.();
@@ -174,4 +183,6 @@ export function setupKiosk({ onExit } = {}){
     d === "" ? `<span></span>` : `<button class="kiosk-pin-key" data-d="${d}">${d}</button>`).join("");
   pad.querySelectorAll(".kiosk-pin-key").forEach(b=>bindTap(b, ()=>pressKey(b.dataset.d), 150));
   bindTap($("#kioskPinCancel"), ()=>$("#kioskPin").classList.add("hidden"), 150);
+  // 手動「下一張」：家人也能自己翻，不必等自動掃描
+  bindTap($("#kioskNext"), ()=>{ advance(1); restartScan(); }, 200);
 }
