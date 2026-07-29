@@ -55,19 +55,25 @@
         </div>
         <div id="result" class="card result hidden">
           <div id="resultText" class="result-text"></div>
-          <div class="row wrap">
-            <button id="btnSpeak" class="btn primary" data-i18n="btn.speak">🔊 朗讀</button>
-            <button id="btnRegen" class="btn ghost" data-i18n="btn.regen">重組一次</button>
-            <button id="btnImg" class="btn ghost" data-i18n="btn.img">🖼 生成圖卡</button>
-            <button id="btnCopy" class="btn ghost" data-i18n="btn.copy">📋 複製</button>
-            <button id="btnShare" class="btn ghost" data-i18n="btn.share">🔗 分享</button>
-            <button id="btnFav" class="btn ghost" data-i18n="btn.fav">⭐ 收藏</button>
-          </div>
-          <div class="row wrap" style="margin-top:6px">
-            <button class="btn ghost lang-btn" data-lang="zh-TW">🇹🇼 中</button>
-            <button class="btn ghost lang-btn" data-lang="en-US">🇺🇸 EN</button>
-            <button class="btn ghost lang-btn" data-lang="ja-JP">🇯🇵 日</button>
-            <button class="btn ghost lang-btn" data-lang="ko-KR">🇰🇷 한</button>
+          <!-- 主要動作：病人當下真正要的只有「唸出來」跟「不對就換一個」 -->
+          <button id="btnSpeak" class="btn primary block" data-i18n="btn.speak">🔊 朗讀</button>
+          <button id="btnAlt" class="btn ghost block hidden" data-i18n="btn.nextAlt">換一個說法</button>
+          <!-- 其餘 8 個動作收進「更多」，平常不占版面 -->
+          <button id="btnMore" class="btn link block" data-i18n="btn.more">更多</button>
+          <div id="moreActions" class="hidden">
+            <div class="row wrap">
+              <button id="btnRegen" class="btn ghost" data-i18n="btn.regen">重組一次</button>
+              <button id="btnImg" class="btn ghost" data-i18n="btn.img">🖼 生成圖卡</button>
+              <button id="btnCopy" class="btn ghost" data-i18n="btn.copy">📋 複製</button>
+              <button id="btnShare" class="btn ghost" data-i18n="btn.share">🔗 分享</button>
+              <button id="btnFav" class="btn ghost" data-i18n="btn.fav">⭐ 收藏</button>
+            </div>
+            <div class="row wrap" style="margin-top:6px">
+              <button class="btn ghost lang-btn" data-lang="zh-TW">🇹🇼 中</button>
+              <button class="btn ghost lang-btn" data-lang="en-US">🇺🇸 EN</button>
+              <button class="btn ghost lang-btn" data-lang="ja-JP">🇯🇵 日</button>
+              <button class="btn ghost lang-btn" data-lang="ko-KR">🇰🇷 한</button>
+            </div>
           </div>
           <img id="resultImg" class="result-img hidden" alt="意圖圖卡" />
         </div>

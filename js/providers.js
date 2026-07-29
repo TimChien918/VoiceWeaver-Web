@@ -5,9 +5,9 @@ import { t } from "./i18n.js";
 
 // 文字 LLM 供應商（標 cors 者較可能可在瀏覽器直接呼叫）
 export const LLM_PROVIDERS = {
-  gemini:     { label:"Google Gemini",  needsKey:true,  model:"gemini-2.0-flash" },
-  groq:       { label:"Groq",           needsKey:true,  model:"llama-3.3-70b-versatile" },
-  openrouter: { label:"OpenRouter",     needsKey:true,  model:"google/gemini-2.0-flash-exp:free" },
+  gemini:     { label:"Google Gemini",  needsKey:true,  model:"gemini-3.5-flash" },
+  groq:       { label:"Groq",           needsKey:true,  model:"qwen/qwen3.6-27b" },
+  openrouter: { label:"OpenRouter",     needsKey:true,  model:"qwen/qwen3-14b" },
   deepseek:   { label:"DeepSeek",       needsKey:true,  model:"deepseek-chat" },
   mistral:    { label:"Mistral",        needsKey:true,  model:"mistral-small-latest" },
   together:   { label:"Together",       needsKey:true,  model:"meta-llama/Llama-3.3-70B-Instruct-Turbo-Free" },

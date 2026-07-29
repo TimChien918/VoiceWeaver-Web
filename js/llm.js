@@ -3,14 +3,78 @@ import { runLlm, hasLlm } from "./providers.js";
 import { t as tr } from "./i18n.js";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
 
 const SYS_RECONSTRUCT =
-  "你是失語症患者的溝通助理。把使用者給的碎詞（可能還有地點、看到的物品）組成一句自然、口語、有禮貌的"+
-  "話。規則：只輸出一句話、不要解釋、不要引號；不要憑空加入沒提到的東西；有強烈意圖（如求救）語氣要清楚但不誇張。";
+  "你是輔助失語症患者溝通的語言助理。請用碎詞、地點與看到的物品，重組患者最可能想表達的句子。\n"+
+  "\n【最重要的原則：貼著碎詞走，不要腦補新內容】\n"+
+  "句子裡每個實詞（名詞、動詞、形容詞）都必須能對應回碎詞本身，或明確對應到給定的地點／物件情境；\n"+
+  "你只能補上讓句子成立所需的「語法零件」——代名詞（我、你）、助動詞（請、需要、想）、語助詞（了、嗎、呢）——\n"+
+  "不可以新增碎詞裡完全沒提到的新事件、新時間、新對象或新問句。\n"+
+  "例如碎詞「家人...快」只代表「家人動作要快」，應重組成「請家人快一點」這類貼近原意的句子；\n"+
+  "不可以延伸成「我想知道家人什麼時候會到」——那是碎詞裡沒有的全新問句，屬於過度腦補。\n"+
+  "\n輸入中的問句或疑問詞是硬約束，必須保留其語意；例如「什麼時候」「在哪裡」「可以嗎」「要等多久」不可刪掉。\n"+
+  "碎詞很短甚至只有一個字（例如「十」「水」「痛」）時，仍要給出最可能的日常說法，不要拒答或回空句；\n"+
+  "只補最貼近字面的語法零件：「水」→「我想喝水」、「痛」→「我這裡會痛」。\n"+
+  "\nconfidence 是你對這句重組的把握（0-100）：80-100＝幾乎確定；50-79＝碎詞短或有歧義但給了合理猜測；1-49＝真的看不出想表達什麼。\n"+
+  '只輸出 JSON：{"reconstructed":"完整繁體中文句子","confidence":0到100整數}';
+
+/** 取樣次數／溫度：溫度太高模型容易編出碎詞裡沒有的內容，0.3 是多樣性與忠實度的折衷。 */
+const RECONSTRUCT_SAMPLES = 3;
+const RECONSTRUCT_TEMP = 0.3;
+
+function parseCoT(raw){
+  const j = extractJson(raw);
+  if(j){
+    try{
+      const o = JSON.parse(j);
+      const text = (o.reconstructed||"").trim();
+      if(text) return { text, confidence: Math.max(0, Math.min(100, Math.round(o.confidence ?? 70)))/100 };
+    }catch(e){ /* 落到下面用純文字 */ }
+  }
+  const t = (raw||"").trim().replace(/\s*\n\s*/g," ");
+  return t ? { text: t, confidence: 0.6 } : null;
+}
+
+/**
+ * 多數決排名：把 N 次取樣依「正規化後的文字」分組去重，
+ * 依票數→組內平均信心度排序，最多回 3 個候選給「換一個說法」用。
+ * 三次都各說各話時退化成依信心度排序的 best-of-3，不會比只呼叫一次差。
+ */
+function rankBySelfConsistency(samples){
+  const norm = s => s.trim().replace(/[。！!?？，,]+$/,"").trim();
+  const groups = new Map();
+  for(const s of samples){
+    const k = norm(s.text);
+    if(!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(s);
+  }
+  return [...groups.values()]
+    .map(g => {
+      const rep = g.reduce((a,b)=> b.confidence>a.confidence ? b : a);
+      const avg = g.reduce((sum,x)=>sum+x.confidence,0)/g.length;
+      return { votes: g.length, text: rep.text, confidence: avg };
+    })
+    .sort((a,b)=> b.votes-a.votes || b.confidence-a.confidence)
+    .slice(0,3)
+    .map(({text,confidence})=>({text,confidence}));
+}
 
 export function hasAnyLlmKey(){ return hasLlm(); }
 
-export function reconstruct(fragments, context){
+/**
+ * 重組句子。自我一致性：同一份碎詞平行取樣 N 次，用多數決挑最一致的結果，
+ * 比單次呼叫更抗模型偶發幻覺。平行送出，總延遲不會變成 N 倍。
+ * @returns {Promise<{text:string, confidence:number, alternatives:Array<{text,confidence}>}>}
+ */
+export async function reconstruct(fragments, context){
   const u = `碎詞：${fragments}\n${context?("情境："+context):""}`.trim();
-  return runLlm(SYS_RECONSTRUCT, u);
+  const results = await Promise.all(
+    Array.from({length: RECONSTRUCT_SAMPLES}, () =>
+      runLlm(SYS_RECONSTRUCT, u, { temperature: RECONSTRUCT_TEMP })
+        .then(parseCoT).catch(()=>null))
+  );
+  const samples = results.filter(Boolean);
+  if(!samples.length) throw new Error("重組失敗");
+  const ranked = rankBySelfConsistency(samples);
+  return { text: ranked[0].text, confidence: ranked[0].confidence, alternatives: ranked };
 }
 export function composeAac(items, context){
   const sys = "你是失語症患者的溝通助理。使用者用圖卡點選了一串元素，組成一句自然、口語、有禮貌的繁體中文。只輸出一句話。";

@@ -34,7 +34,7 @@ body{ margin:0; font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sys
 main{ padding:14px; max-width:680px; margin:0 auto; }
 .panel{ display:flex; flex-direction:column; gap:14px; }
 
-.card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:14px; }
+.card{ background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; }
 .card h3{ margin:0 0 6px; }
 .lbl{ display:block; font-size:.85rem; color:var(--muted); margin:10px 0 4px; }
 textarea,input,select{ width:100%; font:inherit; color:var(--fg); background:var(--bg);
@@ -48,10 +48,21 @@ label.row{ margin-top:0; cursor:pointer; }
 
 .row{ display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:nowrap; }
 .row.wrap{ flex-wrap:wrap; }
-.btn{ border:0; border-radius:11px; padding:10px 14px; font:inherit; font-weight:600; cursor:pointer; }
+/* ── 統一按鈕視覺（對齊 Apple HIG：圓角 10、最小點擊高度 44、字級一致）──
+   三種語意：primary＝主要動作、ghost＝次要、danger＝破壞性、link＝純文字。
+   原本各按鈕圓角/高度/字重不一，改成同一套規格。 */
+.btn{ border:0; border-radius:10px; padding:0 14px; min-height:44px;
+  font:inherit; font-size:.95rem; font-weight:500; cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center; gap:6px; }
 .btn.primary{ background:var(--accent); color:#fff; }
 .btn.ghost{ background:var(--bg); color:var(--fg); border:1px solid var(--line); }
-.btn.big{ width:100%; margin-top:12px; padding:14px; font-size:1.05rem; }
+/* 破壞性動作：紅字紅框，不用整片紅底嚇人（iOS 慣例） */
+.btn.danger{ background:transparent; color:var(--danger); border:1px solid var(--danger); }
+/* 純文字動作（例如「更多」） */
+.btn.link{ background:transparent; color:var(--muted); border:0; font-weight:400; }
+/* 整行寬按鈕，彼此間距一致 */
+.btn.block{ width:100%; margin-top:8px; }
+.btn.big{ width:100%; margin-top:12px; font-size:1.05rem; }
 .chip{ border:1px solid var(--line); background:var(--card); color:var(--fg); border-radius:20px;
   padding:5px 12px; font-size:.82rem; cursor:pointer; white-space:nowrap; }
 

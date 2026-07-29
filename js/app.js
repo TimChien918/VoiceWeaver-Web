@@ -371,16 +371,51 @@ function restoreLastTab(){
 }
 
 // ── 重組 ──
+// 自我一致性一次取樣 3 個候選；不滿意可按「換一個說法」在候選間切換（不重打 API），
+// 三個都看過還是不對，最後一顆會變成「重新生成」才真的重新呼叫 LLM。
+let altList = [];       // 目前這批候選
+let altIndex = 0;       // 正在顯示第幾個
+let lastFrag = "";      // 重新生成時要用的原始碎詞
+
+function renderAltButton(){
+  const btn = $("#btnAlt");
+  if(!btn) return;
+  if(altList.length <= 1){ btn.classList.add("hidden"); return; }
+  btn.classList.remove("hidden");
+  const last = altIndex >= altList.length - 1;
+  btn.textContent = last
+    ? t("btn.regenerate")
+    : t("btn.nextAlt").replace("%1", altIndex + 1).replace("%2", altList.length);
+}
+
+function showAlt(i){
+  altIndex = i;
+  lastResult = altList[i].text;
+  $("#resultText").textContent = lastResult;
+  renderAltButton();
+}
+
+async function cycleAlt(){
+  if(altIndex >= altList.length - 1){ await doCompose(); return; }  // 都不對 → 重新生成
+  showAlt(altIndex + 1);
+  speak(lastResult);
+}
+
 async function doCompose(){
   const frag = $("#fragments").value.trim();
   if(!frag){ toast(t("toast.enterFragments")); return; }
   if(!hasAnyLlmKey()){ toast(t("toast.needLlm")); return; }
   $("#btnCompose").disabled = true; $("#btnCompose").textContent = t("btn.composing");
   try{
-    lastResult = await reconstruct(frag, ctxText);
+    lastFrag = frag;
+    const r = await reconstruct(frag, ctxText);
+    altList = r.alternatives || [{ text: r.text, confidence: r.confidence }];
+    altIndex = 0;
+    lastResult = r.text;
     $("#resultText").textContent = lastResult;
     $("#result").classList.remove("hidden");
     $("#resultImg").classList.add("hidden");
+    renderAltButton();
     addHistory({ original: frag + (ctxText?(" | "+ctxText):""), reconstructed: lastResult });
     speak(lastResult);
   }catch(e){ toast(t("toast.composeFail") + (e.message||e)); }
@@ -550,6 +585,13 @@ function escapeHtml(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;"
 // ── 其他按鈕 ──
 function setupActions(){
   $("#btnCompose").addEventListener("click", doCompose);
+  $("#btnAlt").addEventListener("click", cycleAlt);
+  // 「更多」展開／收起次要動作
+  $("#btnMore").addEventListener("click", ()=>{
+    const box = $("#moreActions");
+    const open = box.classList.toggle("hidden") === false;
+    $("#btnMore").textContent = open ? t("btn.less") : t("btn.more");
+  });
   $("#btnSpeak").addEventListener("click", ()=>speak(lastResult));
   $("#btnRegen").addEventListener("click", doCompose);
   $("#btnImg").addEventListener("click", async ()=>{
