@@ -12,6 +12,8 @@ let curRange = "month";
 
 export function setReportToast(fn){ toast = fn; }
 
+// 比對用關鍵字，**不可翻譯**：這是拿來掃描患者中文語料的，翻掉就統計不到了
+// （同 App 的 I18n 規則：只翻顯示文字，比對用的中文關鍵字一律留原文）。
 const POSITIVE = ["謝謝","好","喜歡","開心","高興","幸福","舒服","加油"];
 function countPositive(text){
   return POSITIVE.reduce((n,w)=>{ let i=0,c=0; while(true){const f=(text||"").indexOf(w,i); if(f<0)break; c++; i=f+w.length;} return n+c; },0);
@@ -52,15 +54,15 @@ function computeStreak(timestamps){
 async function exportCsv(){
   const logs = await listRehabLogs(0);
   if(!logs.length){ toast(t("report.nothingToExport")); return; }
-  const rows = ["﻿時間,場景,目標句,分數"];
+  const rows = ["﻿" + t("report.csvHeader")];
   logs.sort((a,b)=>b.timestamp-a.timestamp).forEach(l=>{
-    const dt = new Date(l.timestamp).toLocaleString("zh-TW");
+    const dt = new Date(l.timestamp).toLocaleString(document.documentElement.lang || "zh-TW");
     rows.push(`${dt},${l.locationTag||""},"${(l.targetSentence||"").replace(/"/g,'""')}",${l.score}`);
   });
   const blob = new Blob([rows.join("\n")], {type:"text/csv;charset=utf-8"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url; a.download = "voiceweaver_成績報告.csv";
+  a.href = url; a.download = t("report.csvName");
   a.click(); URL.revokeObjectURL(url);
   toast(t("report.csvDone"));
 }
@@ -151,11 +153,12 @@ function drawChart(logs, range){
 async function sendTelegram(){
   const { tgtoken, tgchat } = state.apiKeys;
   if(!tgtoken || !tgchat){ toast(t("report.needTg")); return; }
-  const label = { today:"今日", month:"本月", year:"本年度" }[curRange];
-  const msg = `📊 VoiceWeaver 成績單 · ${label}\n─────────────\n`+
-    `🎯 練習次數：${$("#statSessions").textContent}\n`+
-    `📈 平均分數：${$("#statAvg").textContent} / 100\n`+
-    `💖 正向情緒字眼：${$("#statPositive").textContent} 次\n\n（由網頁版傳送）`;
+  const label = t({ today:"report.today", month:"report.month", year:"report.year" }[curRange]);
+  const msg = t("report.tgTitle").replace("{label}", label) + "\n─────────────\n"+
+    t("report.tgSessions").replace("{v}", $("#statSessions").textContent) + "\n"+
+    t("report.tgAvg").replace("{v}", $("#statAvg").textContent) + "\n"+
+    t("report.tgPositive").replace("{v}", $("#statPositive").textContent) + "\n\n"+
+    t("report.tgFrom");
   try{
     const r = await fetch(`https://api.telegram.org/bot${tgtoken}/sendMessage`,{
       method:"POST", headers:{ "Content-Type":"application/json" },

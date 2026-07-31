@@ -22,7 +22,7 @@ const OPENAI_BASE = {
 
 // 生圖供應商
 export const IMAGE_PROVIDERS = {
-  pollinations:{ label:"Pollinations（免金鑰）", needsKey:false },
+  pollinations:{ label:"Pollinations", needsKey:false },
   gemini:      { label:"Gemini Imagen",          needsKey:true },
   huggingface: { label:"HuggingFace",            needsKey:true, model:"black-forest-labs/FLUX.1-schnell" },
   openai:      { label:"OpenAI (gpt-image-1)",   needsKey:true },

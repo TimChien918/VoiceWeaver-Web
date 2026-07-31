@@ -24,18 +24,30 @@ export async function detectLocation(){
     const j = await r.json();
     const t = j.elements?.[0]?.tags;
     const name = t?.name || t?.amenity || t?.shop;
-    return name ? `${name}` : `附近 (${lat.toFixed(4)},${lon.toFixed(4)})`;
-  }catch{ return `位置 (${lat.toFixed(4)},${lon.toFixed(4)})`; }
+    return name ? `${name}` : `${t("loc.nearby")} (${lat.toFixed(4)},${lon.toFixed(4)})`;
+  }catch{ return `${t("loc.position")} (${lat.toFixed(4)},${lon.toFixed(4)})`; }
 }
 
-// ── 相機雲端辨識：拍一張 → Gemini Vision 回傳看到的物品（中文，逗號分隔）──
+// 辨識結果要用「使用者正在看的語言」回，否則日文介面拍照卻跳出中文物品名。
+const VISION_PROMPT = {
+  "zh-TW": "用繁體中文列出這張照片裡最主要的 3-5 個物品，只輸出名詞、用頓號分隔，不要解釋。",
+  "en":    "List the 3-5 main objects in this photo in English. Output nouns only, separated by commas, no explanation.",
+  "ja":    "この写真の主な物を3〜5個、日本語で挙げてください。名詞のみ、読点区切り、説明不要。",
+  "ko":    "이 사진의 주요 물건 3~5개를 한국어로 나열하세요. 명사만, 쉼표로 구분, 설명 없이."
+};
+function visionPrompt(){
+  const L = document.documentElement.getAttribute("data-lang") || "zh-TW";
+  return VISION_PROMPT[L] || VISION_PROMPT[L.split("-")[0]] || VISION_PROMPT["zh-TW"];
+}
+
+// ── 相機雲端辨識：拍一張 → Gemini Vision 回傳看到的物品（依介面語言，逗號分隔）──
 export async function recognizePhoto(base64Jpeg){
   const key = geminiKey();
   if(!key) throw new Error(t("err.needGeminiVision"));
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(key)}`;
   const r = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ contents:[{ role:"user", parts:[
-      { text:"用繁體中文列出這張照片裡最主要的 3-5 個物品，只輸出名詞、用頓號分隔，不要解釋。" },
+      { text: visionPrompt() },
       { inline_data:{ mime_type:"image/jpeg", data: base64Jpeg } }
     ]}] }) });
   if(!r.ok){
@@ -55,10 +67,10 @@ export async function telegramNotify(text){
   try{
     const pos = await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{timeout:6000}));
     loc = `\n📍 https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
-  }catch{ loc = "\n📍 位置未知"; }
+  }catch{ loc = t("sos.noLoc"); }
   const url = `https://api.telegram.org/bot${tgtoken}/sendMessage`;
   const r = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ chat_id: tgchat, text: "🆘 VoiceWeaver 求助：" + text + loc }) });
+    body: JSON.stringify({ chat_id: tgchat, text: t("sos.prefix") + text + loc }) });
   if(!r.ok) throw new Error("Telegram "+r.status);
   return true;
 }

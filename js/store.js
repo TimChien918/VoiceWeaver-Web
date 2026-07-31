@@ -99,7 +99,7 @@ function applyLoaded(d){
   // 相容：舊版只有單一 localTtsUrl → 遷移成清單第一筆（只做一次）
   if(!Array.isArray(state.settings.localComputeServers)) state.settings.localComputeServers = [];
   if(!state.settings.localComputeServers.length && (state.settings.localTtsUrl||"").trim()){
-    state.settings.localComputeServers = [{ name:"雲端 1", url:state.settings.localTtsUrl.trim() }];
+    state.settings.localComputeServers = [{ name:t("lt.cloudN").replace("{n}","1"), url:state.settings.localTtsUrl.trim() }];
   }
 }
 
@@ -114,7 +114,7 @@ export function initAuth({ onUser, onSaved }){
     // 純本機：直接「登入」成本機使用者，讀 localStorage
     loadLocal();
     state.uid = "local"; state.online = false;
-    onUser({ uid:"local", anon:true, name:"本機（未連 Firebase）" });
+    onUser({ uid:"local", anon:true, name:"" });
     return;
   }
   _app = initializeApp(window.__FIREBASE_CONFIG__);
@@ -125,7 +125,7 @@ export function initAuth({ onUser, onSaved }){
     if(u){
       state.uid = u.uid; state.online = true;
       await loadCloud(u.uid);
-      onUser({ uid:u.uid, anon:u.isAnonymous, name: u.displayName || (u.isAnonymous?t("user.anon"):u.email) });
+      onUser({ uid:u.uid, anon:u.isAnonymous, name: u.displayName || (u.isAnonymous ? "" : u.email) });
     } else {
       state.uid = null; state.online = false;
       onUser(null);

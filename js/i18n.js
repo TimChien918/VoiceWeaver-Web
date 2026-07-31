@@ -9,10 +9,10 @@ export const STRINGS = {
   "login.anon":    { "zh-TW":"▶ 直接開始", "en":"▶ Start now", "ja":"▶ すぐにはじめる", "ko":"▶ 바로 시작" },
   "login.note":    { "zh-TW":"「直接開始」資料存在這台裝置。照護者用 Google 登入，設定與圖卡換裝置也會跟著走。", "en":"“Start now” keeps data on this device. Caregivers can sign in with Google so settings and cards follow across devices.", "ja":"「すぐにはじめる」はこの端末にのみ保存。介護者は Google ログインで設定とカードを他端末へ同期できます。", "ko":"'바로 시작'은 이 기기에만 저장됩니다. 보호자는 Google 로그인으로 설정과 카드를 다른 기기와 동기화할 수 있습니다." },
   // 導覽
-  "nav.compose":  { "zh-TW":"語句重組", "en":"Compose", "ja":"文の再構成", "ko":"문장 재구성" },
-  "nav.rehab":    { "zh-TW":"語音復健", "en":"Speech Rehab", "ja":"発話リハビリ", "ko":"언어 재활" },
-  "nav.aac":      { "zh-TW":"AAC 圖卡", "en":"AAC Cards", "ja":"AAC カード", "ko":"AAC 카드" },
-  "nav.report":   { "zh-TW":"成績單", "en":"Report", "ja":"レポート", "ko":"리포트" },
+  "nav.compose":  { "zh-TW":"重組", "en":"Compose", "ja":"再構成", "ko":"재구성" },
+  "nav.rehab":    { "zh-TW":"復健", "en":"Rehab", "ja":"リハビリ", "ko":"재활" },
+  "nav.aac":      { "zh-TW":"圖卡", "en":"Cards", "ja":"カード", "ko":"카드" },
+  "nav.report":   { "zh-TW":"報表", "en":"Report", "ja":"レポート", "ko":"보고서" },
   "nav.history":  { "zh-TW":"歷史", "en":"History", "ja":"履歴", "ko":"기록" },
   "nav.settings": { "zh-TW":"設定", "en":"Settings", "ja":"設定", "ko":"설정" },
   "logout":       { "zh-TW":"登出", "en":"Log out", "ja":"ログアウト", "ko":"로그아웃" },
@@ -48,8 +48,8 @@ export const STRINGS = {
   "rehab.recent":        { "zh-TW":"最近練習", "en":"Recent practice", "ja":"最近の練習", "ko":"최근 연습" },
   // 成績單
   "report.today":  { "zh-TW":"今日", "en":"Today", "ja":"今日", "ko":"오늘" },
-  "report.month":  { "zh-TW":"本月", "en":"This month", "ja":"今月", "ko":"이번 달" },
-  "report.year":   { "zh-TW":"本年度", "en":"This year", "ja":"今年", "ko":"올해" },
+  "report.month":  { "zh-TW":"本月", "en":"Month", "ja":"今月", "ko":"이번 달" },
+  "report.year":   { "zh-TW":"本年度", "en":"Year", "ja":"今年", "ko":"올해" },
   "report.sessions": { "zh-TW":"練習次數", "en":"Sessions", "ja":"練習回数", "ko":"연습 횟수" },
   "report.avg":      { "zh-TW":"平均分", "en":"Avg score", "ja":"平均点", "ko":"평균 점수" },
   "report.streak":   { "zh-TW":"連續天數", "en":"Streak", "ja":"連続日数", "ko":"연속 일수" },
@@ -243,6 +243,32 @@ export const STRINGS = {
   "cc.full": { "zh-TW":"自訂圖卡已達上限（12 張）", "en":"Custom cards limit reached (12)", "ja":"カスタムカードは上限（12枚）です", "ko":"사용자 카드 한도(12장)에 도달했습니다" },
   "cc.added": { "zh-TW":"已加入圖卡", "en":"Card added", "ja":"カードを追加しました", "ko":"카드가 추가되었습니다" },
   "cc.photoFail": { "zh-TW":"照片讀取失敗，請再試一次", "en":"Failed to read photo, try again", "ja":"写真の読み込みに失敗、もう一度", "ko":"사진 읽기 실패, 다시 시도하세요" },
+  // ── 使用模式（三段，對齊 App 的 SeverityMode）──
+  "sev.mild":     { "zh-TW":"輕度", "en":"Mild", "ja":"軽度", "ko":"경도" },
+  "sev.mildDesc": { "zh-TW":"鍵盤打字為主，完整功能", "en":"Mostly keyboard typing, full features", "ja":"キーボード入力中心、全機能", "ko":"키보드 입력 위주, 전체 기능" },
+  "sev.moderate": { "zh-TW":"中度", "en":"Moderate", "ja":"中等度", "ko":"중등도" },
+  "sev.moderateDesc": { "zh-TW":"超大圖卡預設展開，隱藏複雜設定", "en":"Extra-large cards expanded by default; complex settings hidden", "ja":"特大カードを既定で展開、複雑な設定は非表示", "ko":"특대 카드 기본 펼침, 복잡한 설정 숨김" },
+  "sev.severe":   { "zh-TW":"重度", "en":"Severe", "ja":"重度", "ko":"중증" },
+  "sev.severeDesc": { "zh-TW":"全螢幕識字卡逐張掃描 + 特大字體", "en":"Full-screen flashcards scanned one by one + extra-large text", "ja":"全画面カードを1枚ずつスキャン＋特大文字", "ko":"전체 화면 카드 한 장씩 스캔 + 특대 글자" },
+  // ── 情境前綴 / 求助 / 自訂卡分類 ──
+  "ctx.saw":      { "zh-TW":"看到：", "en":"Seen: ", "ja":"見えるもの：", "ko":"보이는 것: " },
+  "ctx.loc":      { "zh-TW":"地點：", "en":"Place: ", "ja":"場所：", "ko":"장소: " },
+  "sos.default":  { "zh-TW":"我需要協助", "en":"I need help", "ja":"助けが必要です", "ko":"도움이 필요해요" },
+  "sos.prefix":   { "zh-TW":"🆘 VoiceWeaver 求助：", "en":"🆘 VoiceWeaver help request: ", "ja":"🆘 VoiceWeaver 救援要請：", "ko":"🆘 VoiceWeaver 도움 요청: " },
+  "sos.noLoc":    { "zh-TW":"\n📍 位置未知", "en":"\n📍 Location unknown", "ja":"\n📍 位置不明", "ko":"\n📍 위치 불명" },
+  "cc.myCards":   { "zh-TW":"📷 我的", "en":"📷 Mine", "ja":"📷 わたしの", "ko":"📷 내 카드" },
+  "lib.langOther":{ "zh-TW":"🌐 其他", "en":"🌐 Other", "ja":"🌐 その他", "ko":"🌐 기타" },
+  // ── 地點反查退回值 ──
+  "loc.nearby":   { "zh-TW":"附近", "en":"Nearby", "ja":"付近", "ko":"근처" },
+  "loc.position": { "zh-TW":"位置", "en":"Position", "ja":"位置", "ko":"위치" },
+  // ── 成績單匯出／Telegram ──
+  "report.csvHeader": { "zh-TW":"時間,場景,目標句,分數", "en":"Time,Place,Target,Score", "ja":"日時,場面,目標文,スコア", "ko":"시간,장소,목표 문장,점수" },
+  "report.csvName":   { "zh-TW":"voiceweaver_成績報告.csv", "en":"voiceweaver_report.csv", "ja":"voiceweaver_レポート.csv", "ko":"voiceweaver_리포트.csv" },
+  "report.tgTitle":   { "zh-TW":"📊 VoiceWeaver 成績單 · {label}", "en":"📊 VoiceWeaver report · {label}", "ja":"📊 VoiceWeaver レポート · {label}", "ko":"📊 VoiceWeaver 리포트 · {label}" },
+  "report.tgSessions":{ "zh-TW":"🎯 練習次數：{v}", "en":"🎯 Sessions: {v}", "ja":"🎯 練習回数：{v}", "ko":"🎯 연습 횟수: {v}" },
+  "report.tgAvg":     { "zh-TW":"📈 平均分數：{v} / 100", "en":"📈 Average score: {v} / 100", "ja":"📈 平均点：{v} / 100", "ko":"📈 평균 점수: {v} / 100" },
+  "report.tgPositive":{ "zh-TW":"💖 正向情緒字眼：{v} 次", "en":"💖 Positive words: {v}", "ja":"💖 前向きな言葉：{v} 回", "ko":"💖 긍정 표현: {v}회" },
+  "report.tgFrom":    { "zh-TW":"（由網頁版傳送）", "en":"(sent from the web version)", "ja":"（ウェブ版から送信）", "ko":"(웹 버전에서 전송)" },
   "footer": { "zh-TW":"VoiceWeaver 網頁輕量版 · 純 API/瀏覽器、無本地運算", "en":"VoiceWeaver web lite · API/browser only, no on-device compute", "ja":"VoiceWeaver ウェブ軽量版 · API/ブラウザのみ、端末計算なし", "ko":"VoiceWeaver 웹 라이트 · API/브라우저 전용, 기기 연산 없음" },
 };
 

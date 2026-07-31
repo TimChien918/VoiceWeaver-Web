@@ -30,9 +30,9 @@ function applyTheme(){
 
 // 使用模式（依嚴重程度，對齊 App 三段）
 const SEV_MODES = [
-  ["mild",     "輕度", "鍵盤打字為主，完整功能"],
-  ["moderate", "中度", "超大圖卡預設展開，隱藏複雜設定"],
-  ["severe",   "重度", "全螢幕識字卡逐張掃描 + 特大字體"],
+  ["mild",     "sev.mild",     "sev.mildDesc"],
+  ["moderate", "sev.moderate", "sev.moderateDesc"],
+  ["severe",   "sev.severe",   "sev.severeDesc"],
 ];
 // 套用模式到介面：中/重度隱藏複雜設定（body class 控制）；重度＝進入全螢幕逐張掃描
 function applySeverity(mode, { enter=false } = {}){
@@ -49,10 +49,10 @@ function applySeverity(mode, { enter=false } = {}){
 function renderSevModes(){
   const box = $("#sevModes"); if(!box) return;
   const cur = state.settings.severityMode || "mild";
-  box.innerHTML = SEV_MODES.map(([k,name,desc])=>
+  box.innerHTML = SEV_MODES.map(([k,nameKey,descKey])=>
     `<div class="sevmode${k===cur?" on":""}" data-m="${k}">
-       <div class="sevmode-name">${name}${k===cur?' <span class="sevmode-tick">✓</span>':''}</div>
-       <div class="sevmode-desc tiny muted">${desc}</div>
+       <div class="sevmode-name">${t(nameKey)}${k===cur?' <span class="sevmode-tick">✓</span>':''}</div>
+       <div class="sevmode-desc tiny muted">${t(descKey)}</div>
      </div>`).join("");
   box.querySelectorAll(".sevmode").forEach(el=>bindTap(el, ()=>applySeverity(el.dataset.m, { enter:true }), 250));
 }
@@ -200,7 +200,7 @@ async function renderCloudLibrary(){
   box.innerHTML = "";
   // 語言分區（ZH/EN/JA/KO），區內「已下載在最上面」再按名稱排
   const known = new Set(LANG_SECTIONS.map(([k])=>k));
-  const sections = [...LANG_SECTIONS, ["", "🌐 其他"]];
+  const sections = [...LANG_SECTIONS, ["", t("lib.langOther")]];
   for(const [langKey, label] of sections){
     const chars = all
       .filter(c=>{ const L=(c.lang||"").toUpperCase(); return langKey ? L===langKey : !known.has(L); })
@@ -262,6 +262,12 @@ function bindSettings(){
     applyI18n(state.settings.lang);          // 先翻譯整個介面（含儲存狀態用的語言）
     populateVoiceDropdown();                  // 角色語音清單即時用快取重新篩選
     renderCombo();                            // AAC 組合區空狀態文字跟著新語言重繪
+    renderSevModes();                         // 使用模式三段（名稱與說明都是動態產生）
+    renderWho();                              // 頂端使用者名（匿名／本機）也要跟著新語言
+    renderAac();                              // AAC 分類 chip（「我的」分類名要跟著翻）
+    // 成績單內容是「載入當下」畫出來的（含圖表裡的「尚無資料」與空狀態），
+    // 正在看報表時要重跑一次，否則畫面會留著舊語言的字。
+    if($('.tab[data-tab="report"]')?.classList.contains("active")) loadReport();
     save(); });
   $("#s_rate").addEventListener("input", e=>{ state.settings.rate=+e.target.value; $("#rateVal").textContent=e.target.value+"x"; save(); });
   $("#s_font").addEventListener("input", e=>{ state.settings.font=+e.target.value; $("#fontVal").textContent=e.target.value+"x"; applyTheme(); save(); });
@@ -434,7 +440,7 @@ function setupCamera(){
     try{
       const b64 = await fileToJpegBase64(f, 768);
       const items = await recognizePhoto(b64);
-      if(items){ ctxText = ("看到："+items); $("#ctx").textContent = "📷 "+items; toast(t("toast.recognized")); }
+      if(items){ ctxText = (t("ctx.saw")+items); $("#ctx").textContent = "📷 "+items; toast(t("toast.recognized")); }
     }catch(e){ toast(t("toast.recognizeFail")+(e.message||e)); }
     inp.value="";
   });
@@ -455,7 +461,8 @@ function fileToJpegBase64(file, max){
 
 // ── AAC ──
 // 圖卡點擊全面走 bindTap（pointerup + 防連點 + 禁長按）——手抖誤觸只算一次。
-const CC_CAT = "📷 我的";     // 自訂圖卡分類（有卡才顯示，排最前）
+// 自訂圖卡分類：ID 固定不隨語言變（它同時是 aacCat 的值與 chip 的 data-c），顯示名才翻譯。
+const CC_CAT = "__custom__";
 let aacCat = AAC_CATS[0];
 let lastPos = "";             // 上一個點的詞性 → 候選詞預測（動詞後名詞優先…）
 const combo = [];             // 整句緩衝（輕症：點卡只進緩衝，按「朗讀」才整句連貫唸）
@@ -471,7 +478,8 @@ function aacCards(cat){
 function renderAac(){
   const cats = aacCats();
   if(!cats.includes(aacCat)) aacCat = cats[0];
-  $("#aacCats").innerHTML = cats.map(c=>`<span class="chip ${c===aacCat?'on':''}" data-c="${c}">${c}</span>`).join("");
+  const catLabel = c => c === CC_CAT ? t("cc.myCards") : c;
+  $("#aacCats").innerHTML = cats.map(c=>`<span class="chip ${c===aacCat?'on':''}" data-c="${escapeHtml(c)}">${escapeHtml(catLabel(c))}</span>`).join("");
   $$("#aacCats .chip").forEach(ch=>bindTap(ch, ()=>{ aacCat=ch.dataset.c; renderAac(); }, 250));
   // 字級：s2~s4 加在網格上（s3 兩欄、s4 一欄，自動降級）；字級切換 chip 同步高亮
   const s = Math.max(1, Math.min(4, +state.settings.aacScale || 1));
@@ -610,7 +618,7 @@ function setupActions(){
   $$(".lang-btn").forEach(b=>b.addEventListener("click", ()=>{ if(lastResult) speakIn(lastResult, b.dataset.lang); }));
   $("#btnLoc").addEventListener("click", async ()=>{
     toast(t("toast.locating"));
-    try{ const l = await detectLocation(); ctxText = (ctxText?ctxText+"；":"")+("地點："+l); $("#ctx").textContent="📍 "+l; }
+    try{ const l = await detectLocation(); ctxText = (ctxText?ctxText+"；":"")+(t("ctx.loc")+l); $("#ctx").textContent="📍 "+l; }
     catch(e){ toast(t("toast.locateFail")+(e.message||e)); }
   });
   // 麥克風
@@ -637,15 +645,22 @@ function setupActions(){
   });
 }
 async function sos(){
-  try{ await telegramNotify(lastResult || "我需要協助"); toast(t("toast.sosSent")); }
+  try{ await telegramNotify(lastResult || t("sos.default")); toast(t("toast.sosSent")); }
   catch(e){ toast(t("toast.sosFail")+(e.message||e)); }
 }
 
 // ── 登入流程 ──
 function showLogin(){ $("#login").classList.remove("hidden"); $("#app").classList.add("hidden"); }
+let _user = null;
+// 顯示名在「渲染時」才翻譯（不是登入當下），否則切語言後這行會卡在舊語言
+function renderWho(){
+  if(!_user) return;
+  $("#who").textContent = _user.uid==="local" ? t("user.local")
+                        : (_user.name || (_user.anon ? t("user.anon") : ""));
+}
 function showApp(user){
   $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
-  $("#who").textContent = user.uid==="local" ? t("user.local") : (user.name || "");
+  _user = user; renderWho();
   applyTheme(); applyI18n(state.settings.lang); fillSettings(); renderFavorites();
   // 雲端設定載入後重繪 AAC：帳號裡的字級/自訂圖卡/「📷 我的」分類才會立即出現
   renderAac(); renderCcList();
