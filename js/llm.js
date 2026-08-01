@@ -1,6 +1,6 @@
 // 重組 / 組句：走多供應商輪詢（providers.js）。
-import { runLlm, hasLlm } from "./providers.js?v=1.4.2";
-import { t as tr } from "./i18n.js?v=1.4.2";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
+import { runLlm, hasLlm } from "./providers.js?v=1.4.6";
+import { t as tr } from "./i18n.js?v=1.4.6";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
 
 const SYS_RECONSTRUCT =
   "你是輔助失語症患者溝通的語言助理。請用碎詞、地點與看到的物品，重組患者最可能想表達的句子。\n"+

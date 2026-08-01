@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 <title>VoiceWeaver 網頁版</title>
-<link rel="stylesheet" href="style.css?v=1.4.2" />
+<link rel="stylesheet" href="style.css?v=1.4.6" />
 </head>
 <body>
   <!-- 登入閘 -->
@@ -52,9 +52,13 @@
           <textarea id="fragments" rows="3" placeholder="例：水 休息 現在" data-i18n-ph="compose.ph"></textarea>
           <div class="row wrap">
             <button id="btnMic" class="btn ghost" data-i18n="btn.mic">🎤 語音輸入</button>
+            <!-- 直接聽：跳過語音轉文字，把錄音原封不動交給 AI 判斷意思。
+                 沒有支援原生音訊的金鑰時由 JS 隱藏。 -->
+            <button id="btnAudioDirect" class="btn ghost hidden" data-i18n="btn.audioDirect">🗣 直接說給 AI 聽</button>
             <button id="btnLoc" class="btn ghost" data-i18n="btn.loc">📍 加入地點</button>
             <button id="btnCam" class="btn ghost" data-i18n="btn.cam">📷 拍照辨識</button>
             <span id="ctx" class="tiny muted"></span>
+            <span id="audioHint" class="tiny muted"></span>
           </div>
           <button id="btnCompose" class="btn primary big" data-i18n="btn.compose">✨ 重組成自然句</button>
         </div>
@@ -432,7 +436,7 @@
 
   <!-- 你的 Firebase 設定（複製 config.example.js 為 config.js 並填入）。沒有 config.js 時為純本機模式。 -->
   <script>window.__FIREBASE_CONFIG__ = null;</script>
-  <script src="config.js?v=1.4.2" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
-  <script type="module" src="js/app.js?v=1.4.2"></script>
+  <script src="config.js?v=1.4.6" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
+  <script type="module" src="js/app.js?v=1.4.6"></script>
 </body>
 </html>

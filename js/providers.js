@@ -1,7 +1,7 @@
 // 供應商目錄 + 呼叫器（同供應商可多把金鑰、可多選供應商，自動輪詢+備援）。
-import { state } from "./store.js?v=1.4.2";
-import { localHas, localText, localImage } from "./localtts.js?v=1.4.2";
-import { t } from "./i18n.js?v=1.4.2";
+import { state } from "./store.js?v=1.4.6";
+import { localHas, localText, localImage } from "./localtts.js?v=1.4.6";
+import { t } from "./i18n.js?v=1.4.6";
 
 // 文字 LLM 供應商（標 cors 者較可能可在瀏覽器直接呼叫）
 export const LLM_PROVIDERS = {
@@ -41,6 +41,36 @@ async function geminiText(entry, sys, user, temp=0.5){
   if(!r.ok) throw new Error("Gemini "+r.status);
   const j = await r.json(); return (j.candidates?.[0]?.content?.parts?.[0]?.text||"").trim();
 }
+/**
+ * 原生音訊理解：把錄音直接餵給模型，不經語音轉文字。
+ *
+ * 為什麼要有這條路：失語症患者的發音常常不標準，STT 會先把它「聽錯成別的字」，
+ * 之後的重組就是在錯的文字上猜，錯誤被放大兩次。讓模型直接聽原始聲音，
+ * 語調、停頓、含糊的音節都還在，判斷反而更準。
+ *
+ * 目前只有 Gemini 風格的供應商吃 inline audio；沒有這種金鑰時由呼叫端退回
+ * 原本的「瀏覽器 STT → 文字重組」流程。
+ */
+export function hasNativeAudio(){
+  return llmEntries().some(e => e.provider === "gemini");
+}
+
+export async function runAudioLlm(sys, audioBase64, mime){
+  const entry = llmEntries().find(e => e.provider === "gemini");
+  if(!entry) throw new Error(t("err.noNativeAudio"));
+  const model = entry.model || LLM_PROVIDERS.gemini.model;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(entry.key)}`;
+  const r = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      system_instruction:{ parts:[{ text: sys }] },
+      contents:[{ parts:[{ inline_data:{ mime_type: mime, data: audioBase64 } }] }],
+      generationConfig:{ temperature:0.4, maxOutputTokens:160 }
+    }) });
+  if(!r.ok) throw new Error("Gemini audio " + r.status);
+  const j = await r.json();
+  return (j.candidates?.[0]?.content?.parts?.[0]?.text || "").trim().replace(/^[「"']|[」"']$/g,"");
+}
+
 async function openaiText(entry, sys, user, temp=0.5){
   const base = OPENAI_BASE[entry.provider]; const model = entry.model || LLM_PROVIDERS[entry.provider].model;
   const r = await fetch(base+"/chat/completions",{ method:"POST",

@@ -10,9 +10,9 @@
 //   4. 1925 安心專線與 119 直撥
 //
 // 呼吸引導不是裝飾：等待家人回應的那幾分鐘最難熬，給一個節奏可以跟著做。
-import { t } from "./i18n.js?v=1.4.2";
-import { state } from "./store.js?v=1.4.2";
-import { telegramNotify } from "./extras.js?v=1.4.2";
+import { t } from "./i18n.js?v=1.4.6";
+import { state } from "./store.js?v=1.4.6";
+import { telegramNotify } from "./extras.js?v=1.4.6";
 
 const $ = s => document.querySelector(s);
 

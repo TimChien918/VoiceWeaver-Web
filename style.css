@@ -21,9 +21,9 @@ html[data-style="anime"]{   /* 動漫風（青少年）：深紫黑 + 櫻粉 */
 html[data-style="minimal"]{ /* 簡約風：iOS 淺色系統色，高對比低干擾 */
   --bg:#f2f2f7; --card:#fff; --fg:#1c1c1e; --muted:#8e8e93; --line:#e2e2e7;
   --accent:#007aff; --accent2:#34c759; --danger:#ff3b30; }
-html[data-style="tech"]{    /* 科技風（預設）：近黑 + iOS 系統藍 */
-  --bg:#000; --card:#1c1c1e; --fg:#fff; --muted:#98989f; --line:#2c2c2e;
-  --accent:#0a84ff; --accent2:#30d158; --danger:#ff453a; }
+/* 科技風（預設）刻意「不覆寫任何顏色」——它就是原本那套 iOS 系統色，深淺交給
+   上面的 prefers-color-scheme 與 data-theme 決定。若在這裡把 --bg 寫死成 #000，
+   「跟隨系統」和「淺色」就會全部失效（曾經如此）。 */
 
 /* 高對比（無障礙）：純黑底＋最高彩度文字，給視力弱、低視能使用者。
    放在最後並用 !important——它必須壓過任何風格，這是無障礙保底。 */
@@ -331,3 +331,74 @@ body.sev-moderate .complex, body.sev-severe .complex{ display:none !important; }
 #headCursor.armed i{ background:var(--accent2); }
 /* 游標停在上面的元素：放大一點點並高亮，降低頭控誤差的感知 */
 .head-hover{ outline:3px solid var(--accent); outline-offset:2px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   響應式：小手機 / 橫向 / 平板 / 桌機
+   原本整份樣式只有一種版面（單欄、680px），橫向手機（約 812×375）會把圖卡
+   推到畫面外 500px 處——主要靠圖卡說話的使用者等於不能用。
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── 窄機（≤360px，如 iPhone SE）：縮排距換空間給內容 ── */
+@media (max-width: 360px){
+  main{ padding:10px; }
+  .card{ padding:12px; }
+  .cards-grid{ grid-template-columns:repeat(auto-fill,minmax(80px,1fr)); gap:6px; }
+}
+
+/* ── 矮螢幕（橫向手機）：壓縮固定佔位的東西，把高度讓給內容 ── */
+@media (max-height: 500px){
+  .topbar{ padding:6px 14px; }
+  .title{ font-size:1rem; }
+  .tabs{ padding:4px 10px; top:37px; }   /* top 要跟著 topbar 變矮一起改，否則會蓋住 */
+  .tab{ padding:5px 2px; }
+  main{ padding:10px; }
+  .card{ padding:12px; }
+  .panel{ gap:10px; }
+  /* 對話框在矮螢幕要能捲，否則按鈕會掉到畫面外按不到 */
+  .modal{ padding:10px; }
+  .modal-card{ max-height:94dvh; }
+  .confirm-emoji{ font-size:40px; margin:2px 0; }
+  .confirm-text{ font-size:1.1rem; margin:4px 0 10px; }
+  .crisis-orb{ width:60px; height:60px; }
+}
+
+/* ── 橫向且夠寬：圖卡分頁改雙欄，右欄整片留給圖卡（同 App 的做法）── */
+@media (min-width: 700px) and (max-height: 500px){
+  /* 字級調整在橫向先收起來——它不是溝通用的控制項，而這裡每一列都在跟圖卡搶高度。
+     直向仍然找得到。 */
+  #tab-aac .aac-scale-chip, #tab-aac .aac-scale-chip + .chip, #tab-aac [data-i18n="aac.fontSize"]{ display:none; }
+  /* 12 個分類 chip 原本會折成三行，改成單行橫向捲動，省下約 70px 給圖卡 */
+  #aacCats{ flex-wrap:nowrap; overflow-x:auto; margin-bottom:6px; padding-bottom:2px; }
+  #aacCats .chip{ flex:0 0 auto; }
+  #tab-aac{
+    display:grid;
+    grid-template-columns:300px 1fr;
+    align-items:start;
+    gap:12px;
+  }
+  /* 組合區與自訂圖卡留在左欄；中間那張（搜尋＋分類＋圖卡）獨佔右欄並可捲 */
+  #tab-aac > .card:nth-child(2){
+    grid-column:2; grid-row:1 / span 3;
+    max-height:calc(100dvh - 110px); overflow-y:auto;
+  }
+  /* 左欄的組合區不要被拉高 */
+  #tab-aac > .card:nth-child(1),
+  #tab-aac > .card:nth-child(3){ grid-column:1; }
+}
+
+/* ── 平板／桌機：放寬主欄，圖卡自然變多欄 ── */
+@media (min-width: 900px){
+  main{ max-width:900px; padding:20px; }
+  .cards-grid{ grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); }
+  .story-grid{ gap:10px; }
+}
+@media (min-width: 1200px){
+  main{ max-width:1040px; }
+}
+
+/* 直接說給 AI 聽：錄音中用紅色脈動提示「還在錄」——這顆鈕是切換式的，
+   使用者要看得出現在是哪個狀態才知道要不要再按一次。 */
+#btnAudioDirect.recording{ background:var(--danger); color:#fff; border-color:var(--danger);
+  animation:recpulse 1.4s ease-in-out infinite; }
+@keyframes recpulse{ 50%{ filter:brightness(.82); } }
+@media (prefers-reduced-motion: reduce){ #btnAudioDirect.recording{ animation:none; } }

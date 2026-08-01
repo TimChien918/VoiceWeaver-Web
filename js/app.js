@@ -1,22 +1,23 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge } from "./store.js?v=1.4.2";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.4.2";
-import { reconstruct, composeAac, hasAnyLlmKey } from "./llm.js?v=1.4.2";
-import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.4.2";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.4.2";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.4.2";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.4.2";
-import { bindTap } from "./interaction.js?v=1.4.2";
-import { orderCards } from "./predict.js?v=1.4.2";
-import { CLINICAL_BANK } from "./clinical.js?v=1.4.2";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.4.2";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.4.2";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.4.2";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.4.2";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.4.2";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.4.2";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.4.2";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare } from "./localtts.js?v=1.4.2";
-import { applyI18n, t } from "./i18n.js?v=1.4.2";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge } from "./store.js?v=1.4.6";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.4.6";
+import { reconstruct, composeAac, hasAnyLlmKey } from "./llm.js?v=1.4.6";
+import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.4.6";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.4.6";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.4.6";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.4.6";
+import { bindTap } from "./interaction.js?v=1.4.6";
+import { orderCards } from "./predict.js?v=1.4.6";
+import { CLINICAL_BANK } from "./clinical.js?v=1.4.6";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.4.6";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.4.6";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.4.6";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.4.6";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.4.6";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.4.6";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.4.6";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.4.6";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare } from "./localtts.js?v=1.4.6";
+import { applyI18n, t } from "./i18n.js?v=1.4.6";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -32,11 +33,17 @@ function applyTheme(){
   const t = state.settings.theme;
   if(t==="auto") el.removeAttribute("data-theme");
   else el.setAttribute("data-theme", t);
-  // 視覺風格（科技／可愛／動漫／簡約，同 App）。風格自帶深淺，所以套了風格
-  // 就不再讓 data-theme 決定底色——只有「科技風」以外才需要標記。
+  // 視覺風格（科技／可愛／動漫／簡約，同 App）。
+  // 科技風＝不覆寫顏色，深淺完全由上面的 theme 決定（跟隨系統／淺色／深色都有效）。
+  // 其餘三種本身就綁定了深淺（可愛與簡約是淺色、動漫是深色），套用時才移除
+  // data-theme，避免深淺設定跟風格互相打架。
   const style = state.settings.style || "tech";
-  el.setAttribute("data-style", style);
-  if(style !== "tech") el.removeAttribute("data-theme");
+  if(style === "tech"){
+    el.removeAttribute("data-style");
+  }else{
+    el.setAttribute("data-style", style);
+    el.removeAttribute("data-theme");
+  }
   // 高對比是無障礙保底，壓過任何風格
   if(state.settings.highContrast) el.setAttribute("data-contrast","high");
   else el.removeAttribute("data-contrast");
@@ -289,6 +296,7 @@ function bindSettings(){
     renderWho();                              // 頂端使用者名（匿名／本機）也要跟著新語言
     applyTheme();                             // 風格說明文字（blurb）也是動態產生
     renderQuickSos();                         // 快速求救三顆鈕的字
+    { const b=$("#btnAudioDirect"); if(b && !isRecording()){ b.textContent=t("btn.audioDirect"); b.classList.toggle("hidden", !hasNativeAudio()); } }
     renderStory();                            // 故事題目與提示字
     renderCcList();                           // 自訂圖卡的空狀態文字
     renderProviderList("#llmList", "llmApis", LLM_PROVIDERS);   // 供應商清單的空狀態／免金鑰標示
@@ -460,6 +468,48 @@ async function doCompose(){
     speak(lastResult);
   }catch(e){ toast(t("toast.composeFail") + (e.message||e)); }
   finally{ $("#btnCompose").disabled=false; $("#btnCompose").textContent=t("btn.compose"); }
+}
+
+// ── 直接說給 AI 聽（跳過語音轉文字）──
+// 講完直接得到句子：模型聽的是原始聲音，不是 STT 猜過一輪的文字。
+function setupAudioDirect(){
+  const btn = $("#btnAudioDirect");
+  if(!btn) return;
+  // 沒有支援原生音訊的金鑰就不顯示——按了只會報錯，不如不要出現
+  btn.classList.toggle("hidden", !hasNativeAudio());
+  const hint = $("#audioHint");
+  const reset = () => { btn.textContent = t("btn.audioDirect"); btn.classList.remove("recording"); if(hint) hint.textContent=""; };
+
+  btn.addEventListener("click", async ()=>{
+    if(!isRecording()){
+      try{
+        await startAudioCapture();
+        btn.textContent = t("btn.audioStop");
+        btn.classList.add("recording");
+        if(hint) hint.textContent = t("audio.recording");
+      }catch{ toast(t("audio.needMic")); reset(); }
+      return;
+    }
+    // 第二次按＝說完了
+    btn.disabled = true;
+    if(hint) hint.textContent = t("audio.thinking");
+    try{
+      const sentence = await stopAndInterpret(ctxText);
+      lastResult = sentence;
+      altList = [{ text: sentence, confidence: 0 }];   // 直接聽只有一個結果，不提供「換一個說法」
+      altIndex = 0;
+      $("#resultText").textContent = sentence;
+      $("#result").classList.remove("hidden");
+      $("#resultImg").classList.add("hidden");
+      renderAltButton();
+      addHistory({ original: t("btn.audioDirect"), reconstructed: sentence });
+      markFirstSpeak(); recordInputSource(false);
+      speak(sentence);
+    }catch(e){
+      cancelAudioCapture();
+      toast(e.message || String(e));
+    }finally{ btn.disabled = false; reset(); }
+  });
 }
 
 // ── 相機（拍照→雲端辨識）──
@@ -847,8 +897,10 @@ function showApp(user){
   $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
   _user = user; renderWho();
   applyTheme(); applyI18n(state.settings.lang); fillSettings(); renderFavorites();
-  // 雲端設定載入後重繪 AAC：帳號裡的字級/自訂圖卡/「📷 我的」分類才會立即出現
-  renderAac(); renderCcList(); renderQuickSos(); setupCrisis();
+  // 雲端設定載入後重繪 AAC：帳號裡的字級/自訂圖卡/「📷 我的」分類才會立即出現。
+  // renderCombo 也要在這裡重跑一次——setupAac() 在登入完成前就先畫過一次，
+  // 那時 applyI18n 還沒跑，組合區的空狀態會卡在預設的中文。
+  renderAac(); renderCombo(); renderCcList(); renderQuickSos(); setupCrisis();
   setStoryToast(toast); setupStory();
   setupHeadControl(msg=>{ const el=$("#headStatus"); if(el) el.textContent = msg; });
   // 臨床題庫點一下＝填進目標句欄位並捲到練習區
@@ -873,7 +925,7 @@ function renderFavorites(){
 
 function main(){
   applyI18n(state.settings.lang);   // 登入畫面也先翻譯
-  setupTabs(); setupActions(); setupAac(); setupCamera(); bindSettings();
+  setupTabs(); setupActions(); setupAac(); setupCamera(); setupAudioDirect(); bindSettings();
   setupKiosk({ onExit: ()=>toast(t("care.exited")) });
   setRehabToast(toast); setReportToast(toast); setSpeechToast(toast);
   setupRehab(); setupReport();
