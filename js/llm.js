@@ -18,23 +18,42 @@ const SYS_RECONSTRUCT =
   "碎詞很短甚至只有一個字（例如「十」「水」「痛」）時，仍要給出最可能的日常說法，不要拒答或回空句；\n"+
   "只補最貼近字面的語法零件：「水」→「我想喝水」、「痛」→「我這裡會痛」。\n"+
   "\nconfidence 是你對這句重組的把握（0-100）：80-100＝幾乎確定；50-79＝碎詞短或有歧義但給了合理猜測；1-49＝真的看不出想表達什麼。\n"+
-  '只輸出 JSON：{"reconstructed":"完整繁體中文句子","confidence":0到100整數}';
+  "\n只輸出 JSON：\n"+
+  '{"candidates":[{"text":"最有把握的說法","confidence":0到100整數},{"text":"另一種說法","confidence":0到100整數},{"text":"再一種說法","confidence":0到100整數}]}\n'+
+  "candidates 一定要給滿 3 個，而且要是真的不同的講法（用詞、語氣或詳略不同），\n"+
+  "不可以只改標點或語助詞充數——使用者要從這 3 句裡挑一句講出去，三句一樣等於沒得挑。\n"+
+  "每一句都必須遵守上面「貼著碎詞走、不腦補」的規則。第一句放你最有把握的。";
 
 /** 取樣次數／溫度：溫度太高模型容易編出碎詞裡沒有的內容，0.3 是多樣性與忠實度的折衷。 */
 const RECONSTRUCT_SAMPLES = 3;
 const RECONSTRUCT_TEMP = 0.3;
 
+const clamp01 = c => Math.max(0, Math.min(100, Math.round(c ?? 70)))/100;
+
+/** @returns {{text:string, confidence:number, alternatives:Array<{text,confidence}>}|null} */
 function parseCoT(raw){
   const j = extractJson(raw);
   if(j){
     try{
       const o = JSON.parse(j);
+      // 新版格式：一次回 3 種講法
+      const list = (o.candidates||[])
+        .map(c=>({ text:String(c?.text??"").trim(), confidence: clamp01(c?.confidence) }))
+        .filter(c=>c.text);
+      if(list.length) return { ...list[0], alternatives: list.slice(1) };
+      // 舊版格式：單一 reconstructed
       const text = (o.reconstructed||"").trim();
-      if(text) return { text, confidence: Math.max(0, Math.min(100, Math.round(o.confidence ?? 70)))/100 };
-    }catch(e){ /* 落到下面用純文字 */ }
+      if(text) return { text, confidence: clamp01(o.confidence), alternatives: [] };
+    }catch(e){ /* 落到下面搶救 */ }
   }
-  const t = (raw||"").trim().replace(/\s*\n\s*/g," ");
-  return t ? { text: t, confidence: 0.6 } : null;
+  // JSON 壞掉或被截斷。先從殘缺文字裡撈句子；撈不到寧可回 null，
+  // 不要把整包 JSON 當成句子——病人畫面會出現 {"reasoning":… 還被當成可以唸的話。
+  const m = String(raw??"").match(/"(?:text|reconstructed)"\s*:\s*"((?:[^"\\]|\\.)*)/);
+  const salvaged = m && m[1].replace(/\\"/g,'"').replace(/\\n/g,"\n").trim();
+  if(salvaged) return { text: salvaged, confidence: 0.6, alternatives: [] };
+  const t = String(raw??"").trim().replace(/\s*\n\s*/g," ");
+  if(!t || t.startsWith("{") || t.includes('"candidates"') || t.includes('"reasoning"')) return null;
+  return { text: t, confidence: 0.6, alternatives: [] };
 }
 
 /**
@@ -44,8 +63,13 @@ function parseCoT(raw){
  */
 function rankBySelfConsistency(samples){
   const norm = s => s.trim().replace(/[。！!?？，,]+$/,"").trim();
+  // 把每次取樣的「主句 + 同一次回應裡的其他講法」全部攤平：3 次取樣 × 3 句 = 最多 9 個。
+  // 只用主句去重，在模型講得一致時會塌成 1 個候選，使用者就沒得挑。
+  // 跨取樣重複出現的句子仍因票數較高而排前面，自我一致性的意義沒有丟。
+  const flat = samples.flatMap(s => [{ text:s.text, confidence:s.confidence }, ...(s.alternatives||[])])
+                      .filter(c => c.text);
   const groups = new Map();
-  for(const s of samples){
+  for(const s of flat){
     const k = norm(s.text);
     if(!groups.has(k)) groups.set(k, []);
     groups.get(k).push(s);
@@ -80,6 +104,30 @@ export async function reconstruct(fragments, context){
   const ranked = rankBySelfConsistency(samples);
   return { text: ranked[0].text, confidence: ranked[0].confidence, alternatives: ranked };
 }
+/**
+ * 危機語句的意圖分流：這句話裡「想自傷的是誰」。
+ *
+ * 為什麼需要：關鍵字比對分不出「我想自殺」和「我朋友想自殺，快叫救護車」。
+ * 後者是替別人求救，擋下來等於害死另一個人——而講不出話的人沒有別的管道求救。
+ *
+ * 刻意「不」掛 DEFENSIVE_SYSTEM_PROMPT：那條 prompt 要模型迴避這類字眼，
+ * 掛上去反而讓它拒答分類任務。這裡是分類、不是生成，明講用途讓模型願意回答。
+ *
+ * @returns {Promise<"self"|"other"|"none"|null>} null＝判斷失敗（沒網路／拒答）
+ */
+export async function classifyCrisisIntent(text){
+  const sys =
+    "你是醫療輔助溝通系統的安全分類器。判斷句子裡「想自傷或輕生的是誰」。\n"+
+    "只輸出 JSON，不要解釋、不要加註、不要拒答：{\"who\":\"self\"}\n"+
+    "self ＝說話者本人想自傷／輕生。\n"+
+    "other＝說話者在描述別人的狀況或替別人求救，例如「我朋友想自殺，快叫救護車」。\n"+
+    "none ＝只是提到這個詞，沒有人正處於危險，例如詢問防治專線電話、轉述新聞。\n"+
+    "這是失語症患者的求救分流：判成 self 會鎖住他的語音，判錯會讓替人求救的人叫不到救護車。請務必分類。";
+  const raw = await runLlm(sys, text, { temperature: 0 });
+  const m = String(raw ?? "").match(/"who"\s*:\s*"(self|other|none)"/i);
+  return m ? m[1].toLowerCase() : null;
+}
+
 export function composeAac(items, context){
   const sys = DEFENSIVE_SYSTEM_PROMPT + "\n\n" +
     "你是失語症患者的溝通助理。使用者用圖卡點選了一串元素，組成一句自然、口語、有禮貌的繁體中文。只輸出一句話。";

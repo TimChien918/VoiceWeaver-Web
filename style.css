@@ -237,6 +237,12 @@ body.kiosk-on{ overflow:hidden; }
 .kcard .kword{ font-size:9vmin; font-weight:800; color:#4a3f28; word-break:keep-all; }
 .kcard.tapped{ animation:ktap .35s ease; }
 @keyframes ktap{ 30%{ transform:scale(1.06); } 100%{ transform:scale(1); } }
+/* 語音鎖定彈窗：紅字大標，一眼看出「這件事被擋下來了」。 */
+.lock-card{ text-align:center; max-width:min(360px,88vw); }
+.lock-icon{ font-size:2.6rem; line-height:1; margin-bottom:6px; }
+.lock-title{ color:var(--danger); font-size:1.6rem; font-weight:800; margin:0 0 10px; }
+.lock-body{ font-size:.95rem; line-height:1.6; color:var(--fg); margin:0 0 16px; white-space:pre-line; }
+
 /* 關閉鈕：必須一眼看得到。
    這個模式會全螢幕鎖住畫面，找不到出口的人就是真的出不去——所以寧可醒目也不要低調。
    用實心高對比（不要半透明：卡片底色是淺奶油，半透明深色在上面幾乎看不見），

@@ -422,6 +422,18 @@
       <button id="crisisClose" class="btn link block" data-i18n="crisis.close">關閉</button>
     </div>
   </div>
+  <!-- 語音鎖定：偵測到自傷／拒絕治療語句時蓋掉整個畫面。
+       用彈窗而不是 toast——toast 幾秒就消失，這種時刻必須擋在使用者面前、
+       而且要讓照護者看得到「已經通報家人了」。與 App 的鎖定畫面同一套。 -->
+  <div id="lockDlg" class="modal hidden">
+    <div class="modal-card lock-card">
+      <div class="lock-icon">🚫</div>
+      <h3 id="lockTitle" class="lock-title" data-i18n="safety.lockTitle">語音輸出已鎖定</h3>
+      <p id="lockBody" class="lock-body"></p>
+      <button id="lockOk" class="btn primary block" data-i18n="safety.lockOk">我知道了</button>
+    </div>
+  </div>
+
   <!-- 意圖確認大圖卡：AI 組完句子先讓使用者確認，按「對」才唸出來。
        不識字的使用者靠 emoji + 大字判斷；連續選錯 3 次會提議聯絡家人。 -->
   <div id="confirmDlg" class="modal hidden">

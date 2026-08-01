@@ -40,11 +40,17 @@ export function listVoices(lang){
     .sort((a,b)=>_scoreVoice(b,lang||"")-_scoreVoice(a,lang||""));
 }
 
-export function speak(text){
+/**
+ * @param {object} [opt]
+ * @param {boolean} [opt.safetyChecked] 上游已用 AI 判定這句是「替別人求救／中性提及」。
+ *   這種句子不可以消毒——「我朋友想自殺」被改成「我朋友想（請與家屬聯絡）」
+ *   就求不了救了。預設 false，其餘所有路徑照樣消毒。
+ */
+export function speak(text, { safetyChecked = false } = {}){
   if(!text) return;
   // 第三層防禦：模型萬一還是吐出禁字，唸出來之前替換掉。
   // 放在 speak() 內是刻意的——所有發聲路徑都經過這裡，繞不過去。
-  text = sanitizeForSpeech(text);
+  if(!safetyChecked) text = sanitizeForSpeech(text);
   // 本地 GPT-SoVITS 角色語音優先；失敗則自動退回瀏覽器原生語音。
   if(localTtsEnabled()){
     localSpeak(text).catch(e=>{

@@ -1,6 +1,6 @@
 import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge } from "./store.js?v=1.4.7";
 import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.4.7";
-import { reconstruct, composeAac, hasAnyLlmKey } from "./llm.js?v=1.4.7";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.4.7";
 import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.4.7";
 import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.4.7";
 import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.4.7";
@@ -24,6 +24,9 @@ const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
 let ctxText = "";          // 地點 / 相機辨識附加情境
 let lastResult = "";
+// 這批結果的來源碎詞已被 AI 判定為「替別人求救／中性提及」。
+// 用來讓後續發聲跳過關鍵字消毒——求救句被消毒掉就求不了救。
+let crisisCleared = false;
 
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.remove("hidden");
   clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.add("hidden"),2200); }
@@ -454,6 +457,21 @@ async function doCompose(){
   const frag = $("#fragments").value.trim();
   if(!frag){ toast(t("toast.enterFragments")); return; }
   if(!hasAnyLlmKey()){ toast(t("toast.needLlm")); return; }
+  // 輸入端攔截：只在「按朗讀」才擋是不夠的——打完字沒按朗讀就放著，家人永遠不會知道。
+  // 但只有「本人想自傷」才停止重組；替別人求救的句子必須讓它組出來、講出去。
+  crisisCleared = false;
+  if(containsCrisisSignal(frag)){
+    const who = await judgeCrisis(frag);
+    if(who === "self"){
+      showLock(t("safety.blockedCompose"));
+      openCrisis();                              // 通報家人＋視訊＋專線
+      return;
+    }
+    if(who === "unknown") notifyFamilyQuietly(frag);   // 判不出來：通報但不擋
+    // 已判定成替人求救／中性提及 → 後面不可以再把關鍵字消毒掉，
+    // 否則「我朋友想自殺」會變成「我朋友想（請與家屬聯絡）」，求救句就毀了。
+    crisisCleared = true;
+  }
   $("#btnCompose").disabled = true; $("#btnCompose").textContent = t("btn.composing");
   try{
     lastFrag = frag;
@@ -466,7 +484,7 @@ async function doCompose(){
     $("#resultImg").classList.add("hidden");
     renderAltButton();
     addHistory({ original: frag + (ctxText?(" | "+ctxText):""), reconstructed: lastResult });
-    speak(lastResult);
+    speak(lastResult, { safetyChecked: crisisCleared });
   }catch(e){ toast(t("toast.composeFail") + (e.message||e)); }
   finally{ $("#btnCompose").disabled=false; $("#btnCompose").textContent=t("btn.compose"); }
 }
@@ -741,16 +759,18 @@ function setupAac(){
   bindTap($("#amountCancel"), ()=>$("#amountDlg").classList.add("hidden"));
 
   // 意圖確認大圖卡
-  bindTap($("#confirmYes"), ()=>{
+  bindTap($("#confirmYes"), async ()=>{
     $("#confirmDlg").classList.add("hidden");
     recordCandidateChoice(rejectStreak === 0);   // 沒退過＝第一候選就對
     rejectStreak = 0;
     // 仍要過閘門：確認卡只擋「意思對不對」，擋不了「這句話該不該說出口」
-    if(_pendingSpeak && passesSpeechGate(_pendingSpeak, { fromConfirmCard:true })){
+    if(_pendingSpeak && await passesSpeechGate(_pendingSpeak, { fromConfirmCard:true })){
       markFirstSpeak(); recordInputSource(true); speak(_pendingSpeak);
     }
   });
   bindTap($("#confirmNo"), onConfirmReject);
+  // 鎖定彈窗只能關掉，不提供任何「還是唸出來」的出口
+  bindTap($("#lockOk"), ()=>$("#lockDlg").classList.add("hidden"));
 }
 
 /**
@@ -761,18 +781,56 @@ function setupAac(){
  *
  * @returns true＝可以繼續唸；false＝已攔下並處理，呼叫端不要再唸。
  */
-function passesSpeechGate(text, { fromConfirmCard = false } = {}){
+/**
+ * 鎖定彈窗。用彈窗不用 toast——toast 幾秒就消失，
+ * 這種時刻必須擋在使用者面前，也要讓照護者看得到「已經通報家人了」。
+ */
+function showLock(bodyText){
+  $("#confirmDlg").classList.add("hidden");     // 別讓確認卡停在底下
+  $("#lockBody").textContent = bodyText;
+  $("#lockDlg").classList.remove("hidden");
+}
+
+/**
+ * 危機語句的兩階段判定。
+ *
+ * 關鍵字只是**快速預篩**，它分不出這兩句：
+ *   「我想自殺」                → 本人求救，該鎖
+ *   「我朋友想自殺，快叫救護車」→ 替別人求救，擋下來等於害死另一個人
+ * 所以命中之後再讓 AI 判斷「想自傷的是誰」。
+ *
+ * @returns {Promise<"self"|"other"|"none"|"unknown">}
+ */
+async function judgeCrisis(text){
+  if(!containsCrisisSignal(text)) return "none";
+  const who = await classifyCrisisIntent(text).catch(()=>null);
+  if(who) return who;
+  // AI 判不出來（沒網路／金鑰失效／模型拒答）→ 通報家人，但讓他把話講出來。
+  // 真的是本人求救：家人仍收到通報，最重要的一步沒漏。
+  // 是替別人求救：話送得出去，救護車叫得到。兩邊的最壞情況都不致命。
+  return "unknown";
+}
+
+/** 靜默通報家人，不打斷使用者。用在「判不出來」時。 */
+function notifyFamilyQuietly(text){
+  telegramNotify(t("safety.uncertainAlert") + "\n" + text.slice(0, 120)).catch(()=>{});
+}
+
+async function passesSpeechGate(text, { fromConfirmCard = false } = {}){
   if(!text) return false;
   const risk = classifyRisk(text);
   if(risk === "lock"){
-    $("#confirmDlg").classList.add("hidden");   // 別讓確認卡停在畫面上
     if(containsCrisisSignal(text)){
-      // 自傷訊號：不唸出來，直接把人接到危機視窗（通知家人＋視訊＋1925／119）
-      toast(t("safety.lockedCrisis"));
+      const who = await judgeCrisis(text);
+      // 替別人求救、或只是提到這個詞 → 放行。這種話擋下來才是害人。
+      if(who === "other" || who === "none") return true;
+      if(who === "unknown"){ notifyFamilyQuietly(text); return true; }
+      // 本人想自傷：不唸出來，鎖定畫面並接到危機視窗（通知家人＋視訊＋1925／119）
+      showLock(t("safety.lockedCrisis"));
       openCrisis();
     } else {
       // 拒絕治療類：同樣不唸，但不驚動家人
-      toast(t("safety.lockedRefusal"));
+      showLock(t("safety.lockedRefusal"));
     }
     return false;
   }
@@ -800,8 +858,11 @@ function comboHasStrong(){
 }
 function confirmThenSpeak(text){
   if(!text) return;
-  // 鎖定級的句子連確認卡都不該出現——直接攔在這裡
-  if(classifyRisk(text) === "lock"){ passesSpeechGate(text); return; }
+  // 鎖定級的句子連確認卡都不該出現——交給閘門處理（它會再問 AI 是不是替別人求救）
+  if(classifyRisk(text) === "lock"){
+    passesSpeechGate(text).then(ok=>{ if(ok) speak(text); });
+    return;
+  }
   if(!state.settings.confirmCard){ speak(text); return; }   // 設定可關（預設開）
   _pendingSpeak = text;
   const all = allCards();
@@ -868,12 +929,12 @@ function setupActions(){
     const open = box.classList.toggle("hidden") === false;
     $("#btnMore").textContent = open ? t("btn.less") : t("btn.more");
   });
-  $("#btnSpeak").addEventListener("click", ()=>{
-    if(!passesSpeechGate(lastResult)) return;
+  $("#btnSpeak").addEventListener("click", async ()=>{
+    if(!await passesSpeechGate(lastResult)) return;
     markFirstSpeak();
     recordInputSource(false);                 // 這條路徑是打字／語音輸入
     recordCandidateChoice(altIndex === 0);    // 還停在第一候選＝AI 一次就命中
-    speak(lastResult);
+    speak(lastResult, { safetyChecked: crisisCleared });
   });
   $("#btnRegen").addEventListener("click", doCompose);
   $("#btnImg").addEventListener("click", async ()=>{
