@@ -8,6 +8,33 @@
 html[data-theme="light"]{ --bg:#f2f2f7; --card:#fff; --fg:#1c1c1e; --muted:#6c6c70; --line:#e2e2e7; }
 html[data-theme="dark"]{ --bg:#000; --card:#1c1c1e; --fg:#fff; --muted:#98989f; --line:#2c2c2e; }
 
+/* ── 視覺風格（與 App 的 AppPalette 同色值）──
+   科技風＝預設深色，另外三種各自對應 App 的 Cute / Anime / Minimal。
+   主題與深淺是兩件事：科技風與動漫風本來就是深色，可愛風與簡約風是淺色，
+   所以這裡直接把 bg/card/fg 一起定死，不再吃 prefers-color-scheme。 */
+html[data-style="cute"]{    /* 可愛風（兒童）：奶油粉底 + 玫瑰粉 */
+  --bg:#fff5f7; --card:#fff; --fg:#4a2e3a; --muted:#a68a95; --line:#f2dfe5;
+  --accent:#ff5c8a; --accent2:#42c98e; --danger:#ff3b30; }
+html[data-style="anime"]{   /* 動漫風（青少年）：深紫黑 + 櫻粉 */
+  --bg:#0d0b1a; --card:#1c1830; --fg:#f6f2ff; --muted:#b6a6d6; --line:#2b2445;
+  --accent:#ff6fb5; --accent2:#3de0a0; --danger:#ff453a; }
+html[data-style="minimal"]{ /* 簡約風：iOS 淺色系統色，高對比低干擾 */
+  --bg:#f2f2f7; --card:#fff; --fg:#1c1c1e; --muted:#8e8e93; --line:#e2e2e7;
+  --accent:#007aff; --accent2:#34c759; --danger:#ff3b30; }
+html[data-style="tech"]{    /* 科技風（預設）：近黑 + iOS 系統藍 */
+  --bg:#000; --card:#1c1c1e; --fg:#fff; --muted:#98989f; --line:#2c2c2e;
+  --accent:#0a84ff; --accent2:#30d158; --danger:#ff453a; }
+
+/* 高對比（無障礙）：純黑底＋最高彩度文字，給視力弱、低視能使用者。
+   放在最後並用 !important——它必須壓過任何風格，這是無障礙保底。 */
+html[data-contrast="high"]{
+  --bg:#000 !important; --card:#000 !important; --fg:#fff !important;
+  --muted:#e0e0e0 !important; --line:#666 !important;
+  --accent:#ffe600 !important; --accent2:#00ff66 !important; --danger:#ff3b30 !important; }
+html[data-contrast="high"] .card{ border-width:2px; }
+html[data-contrast="high"] .btn.primary{ color:#000; font-weight:700; }
+html[data-contrast="high"] .tab.active{ color:#000; font-weight:700; }
+
 *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
 body{ margin:0; font-family:-apple-system,"PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
   background:var(--bg); color:var(--fg); font-size:var(--font); }
@@ -258,3 +285,7 @@ body.sev-moderate .complex, body.sev-severe .complex{ display:none !important; }
 .confirm-text{ font-size:1.35rem; font-weight:700; margin:6px 0 14px; word-break:break-word; }
 .confirm-card .row{ gap:10px; }
 .confirm-card .btn{ flex:1; padding:14px 10px; font-size:1.05rem; }
+
+/* 快速求救：三顆等寬紅鈕，字要大、點擊區要夠——急的時候手會抖 */
+.sos-btn{ flex:1; background:var(--danger); color:#fff; font-size:1.05rem; font-weight:700;
+  min-height:52px; padding:0 4px; }

@@ -42,6 +42,11 @@
     <main>
       <!-- 重組 -->
       <section id="tab-compose" class="panel">
+        <!-- 一鍵發聲：講不出話又急的時候，不該還要先組句。放最上面。 -->
+        <div class="card">
+          <label class="lbl" style="color:var(--danger);font-weight:700" data-i18n="sos.quickTitle">🏥 快速求救（一鍵發聲）</label>
+          <div id="quickSos" class="row"></div>
+        </div>
         <div class="card">
           <label class="lbl" data-i18n="compose.label">碎詞／想說的（可用語音輸入）</label>
           <textarea id="fragments" rows="3" placeholder="例：水 休息 現在" data-i18n-ph="compose.ph"></textarea>
@@ -92,6 +97,9 @@
             <button id="rehabSuggest" class="btn ghost" style="white-space:nowrap" data-i18n="rehab.suggest">AI 推薦</button>
           </div>
           <div id="rehabSuggestions" class="chips hidden" style="margin-top:10px"></div>
+          <!-- 臨床常用題庫：不需要 LLM 金鑰，離線也能直接開始練 -->
+          <label class="lbl" data-i18n="rehab.bank">臨床常用題庫（點一下開始練）</label>
+          <div id="rehabBank"></div>
           <button id="rehabStart" class="btn primary big" data-i18n="rehab.start">開始練習</button>
           <button id="rehabParagraph" class="btn ghost" style="width:100%;margin-top:8px" data-i18n="rehab.paragraph">📖 整段練習（自動分句逐句練）</button>
         </div>
@@ -239,6 +247,17 @@
           <h3 data-i18n="set.prefs">偏好</h3>
           <label class="lbl" data-i18n="set.theme">介面主題</label>
           <select id="s_theme"><option value="auto" data-i18n="theme.auto">跟隨系統</option><option value="light" data-i18n="theme.light">淺色</option><option value="dark" data-i18n="theme.dark">深色</option></select>
+          <label class="lbl" data-i18n="set.style">視覺風格</label>
+          <select id="s_style">
+            <option value="tech" data-i18n="style.tech">科技風</option>
+            <option value="cute" data-i18n="style.cute">可愛風</option>
+            <option value="anime" data-i18n="style.anime">動漫風</option>
+            <option value="minimal" data-i18n="style.minimal">簡約風</option>
+          </select>
+          <p id="styleBlurb" class="tiny muted" style="margin:4px 0 0"></p>
+          <label class="row"><input id="s_contrast" type="checkbox" />
+            <span><span data-i18n="set.highContrast">高對比模式</span>
+            <br><span class="tiny muted" data-i18n="set.highContrastDesc">純黑底＋高彩文字，視力弱者用。</span></span></label>
           <label class="lbl" data-i18n="set.lang">語言（介面＋朗讀）</label>
           <select id="s_lang"><option value="zh-TW">中文</option><option value="en-US">English</option><option value="ja-JP">日本語</option><option value="ko-KR">한국어</option></select>
           <label class="lbl"><span data-i18n="set.rate">朗讀語速</span> <span id="rateVal" class="muted"></span></label>

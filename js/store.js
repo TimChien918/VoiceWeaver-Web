@@ -21,6 +21,8 @@ const DEFAULTS = {
               // 預設開——對不識字的使用者，這是發聲前唯一能攔下錯誤的一關。
               confirmCard: true,
               currency: "NTD",        // 自訂金額的預設幣別
+              style: "tech",          // 視覺風格：tech／cute／anime／minimal（同 App）
+              highContrast: false,    // 高對比（無障礙）：純黑底＋高彩文字
               currentLocationTag: "", // 最近一次定位的地點標籤（圖卡推薦排序的情境加成用）
               // 本地 GPT-SoVITS 語音引擎（透過語音中心橋接）
               localTtsEnabled: false, localTtsUrl: "", localComputeServers: [], localVoiceName: "", localVoiceLang: "", voiceEmotion: "" },

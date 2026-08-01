@@ -7,6 +7,7 @@ import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacr
 import { setupKiosk, enterKiosk } from "./kiosk.js";
 import { bindTap } from "./interaction.js";
 import { orderCards } from "./predict.js";
+import { CLINICAL_BANK } from "./clinical.js";
 import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js";
 import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js";
 import { setupReport, loadReport, setReportToast } from "./report.js";
@@ -23,11 +24,24 @@ function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.remove(
 
 // ── 主題 / 字體 ──
 function applyTheme(){
+  const el = document.documentElement;
   const t = state.settings.theme;
-  if(t==="auto") document.documentElement.removeAttribute("data-theme");
-  else document.documentElement.setAttribute("data-theme", t);
-  document.documentElement.style.setProperty("--font", (state.settings.font||1)+"rem");
+  if(t==="auto") el.removeAttribute("data-theme");
+  else el.setAttribute("data-theme", t);
+  // 視覺風格（科技／可愛／動漫／簡約，同 App）。風格自帶深淺，所以套了風格
+  // 就不再讓 data-theme 決定底色——只有「科技風」以外才需要標記。
+  const style = state.settings.style || "tech";
+  el.setAttribute("data-style", style);
+  if(style !== "tech") el.removeAttribute("data-theme");
+  // 高對比是無障礙保底，壓過任何風格
+  if(state.settings.highContrast) el.setAttribute("data-contrast","high");
+  else el.removeAttribute("data-contrast");
+  el.style.setProperty("--font", (state.settings.font||1)+"rem");
+  const blurb = $("#styleBlurb");
+  if(blurb) blurb.textContent = t2("blurb."+style);
 }
+// applyTheme 在 t() 之前就會被呼叫（初始化順序），包一層避免未定義時炸掉
+function t2(k){ try{ return t(k); }catch{ return ""; } }
 
 // 使用模式（依嚴重程度，對齊 App 三段）
 const SEV_MODES = [
@@ -67,6 +81,8 @@ function fillSettings(){
   $("#s_rate").value = state.settings.rate; $("#rateVal").textContent = state.settings.rate+"x";
   $("#s_font").value = state.settings.font; $("#fontVal").textContent = state.settings.font+"x";
   if($("#s_confirmCard")) $("#s_confirmCard").checked = state.settings.confirmCard !== false;
+  if($("#s_style")) $("#s_style").value = state.settings.style || "tech";
+  if($("#s_contrast")) $("#s_contrast").checked = !!state.settings.highContrast;
   // 使用模式（依嚴重程度）三段選單 + 重度退出 PIN
   renderSevModes();
   if($("#care_pin")) $("#care_pin").value = state.settings.kioskPin || "1234";
@@ -266,6 +282,9 @@ function bindSettings(){
     renderCombo();                            // AAC 組合區空狀態文字跟著新語言重繪
     renderSevModes();                         // 使用模式三段（名稱與說明都是動態產生）
     renderWho();                              // 頂端使用者名（匿名／本機）也要跟著新語言
+    applyTheme();                             // 風格說明文字（blurb）也是動態產生
+    renderQuickSos();                         // 快速求救三顆鈕的字
+    renderClinicalBank(s=>{ const inp=$("#rehabTarget"); if(inp){ inp.value=s; $('.tab[data-tab="rehab"]')?.click(); } });
     renderAac();                              // AAC 分類 chip（「我的」分類名要跟著翻）
     // 成績單內容是「載入當下」畫出來的（含圖表裡的「尚無資料」與空狀態），
     // 正在看報表時要重跑一次，否則畫面會留著舊語言的字。
@@ -274,6 +293,8 @@ function bindSettings(){
   $("#s_rate").addEventListener("input", e=>{ state.settings.rate=+e.target.value; $("#rateVal").textContent=e.target.value+"x"; save(); });
   $("#s_font").addEventListener("input", e=>{ state.settings.font=+e.target.value; $("#fontVal").textContent=e.target.value+"x"; applyTheme(); save(); });
   $("#s_confirmCard")?.addEventListener("change", e=>{ state.settings.confirmCard = e.target.checked; save(); });
+  $("#s_style")?.addEventListener("change", e=>{ state.settings.style = e.target.value; applyTheme(); save(); });
+  $("#s_contrast")?.addEventListener("change", e=>{ state.settings.highContrast = e.target.checked; applyTheme(); save(); });
   // 使用模式（三段選單在 renderSevModes 內綁 tap）＋重度退出 PIN
   if($("#care_pin")){
     $("#care_pin").addEventListener("change", e=>{
@@ -708,6 +729,28 @@ async function onConfirmReject(){
   }
 }
 
+// ── 快速求救：一鍵發聲 ──
+// 直接唸，不經過意圖確認卡：這三句是使用者自己按的、內容固定，
+// 急的時候多一關確認反而害事。
+const QUICK_SOS = [["sos.pain","sos.painMsg"],["sos.water","sos.waterMsg"],["sos.toilet","sos.toiletMsg"]];
+function renderQuickSos(){
+  const box = $("#quickSos"); if(!box) return;
+  box.innerHTML = QUICK_SOS.map(([k],i)=>
+    `<button class="btn sos-btn" data-i="${i}">${escapeHtml(t(k))}</button>`).join("");
+  $$("#quickSos .sos-btn").forEach(b=>bindTap(b, ()=>speak(t(QUICK_SOS[+b.dataset.i][1]))));
+}
+
+// ── 臨床常用題庫：不需 LLM 金鑰，離線可用 ──
+function renderClinicalBank(onPick){
+  const box = $("#rehabBank"); if(!box) return;
+  box.innerHTML = CLINICAL_BANK.map((g,gi)=>
+    `<div style="margin-top:8px"><div class="tiny muted">${escapeHtml(t(g.key))}</div>
+      <div class="chips" style="margin-top:4px">${g.items.map((s,i)=>
+        `<span class="chip" data-g="${gi}" data-i="${i}">${escapeHtml(s)}</span>`).join("")}</div></div>`).join("");
+  $$("#rehabBank .chip").forEach(c=>bindTap(c, ()=>
+    onPick(CLINICAL_BANK[+c.dataset.g].items[+c.dataset.i]), 250));
+}
+
 // ── 歷史 ──
 async function renderHistory(){
   const list = await listHistory();
@@ -794,7 +837,11 @@ function showApp(user){
   _user = user; renderWho();
   applyTheme(); applyI18n(state.settings.lang); fillSettings(); renderFavorites();
   // 雲端設定載入後重繪 AAC：帳號裡的字級/自訂圖卡/「📷 我的」分類才會立即出現
-  renderAac(); renderCcList();
+  renderAac(); renderCcList(); renderQuickSos();
+  // 臨床題庫點一下＝填進目標句欄位並捲到練習區
+  renderClinicalBank(s=>{ const inp=$("#rehabTarget"); if(!inp) return;
+    inp.value = s; $('.tab[data-tab="rehab"]')?.click();
+    $("#rehabStart")?.scrollIntoView({ behavior:"smooth", block:"center" }); });
   restoreLastTab();   // 回到上次使用的分頁
   // 上次是重症防呆模式 → 開頁直接回到全螢幕圖卡（長輩重新整理也不會迷路）
   if(state.settings.severityMode === "severe") enterKiosk();
