@@ -186,7 +186,10 @@ label.row{ margin-top:0; cursor:pointer; }
 .stats{ display:flex; gap:10px; }
 .stat{ flex:1; text-align:center; background:var(--bg); border:1px solid var(--line); border-radius:12px; padding:12px 6px; }
 .stat-val{ font-size:26px; font-weight:800; color:var(--accent); }
-.stat-lbl{ font-size:.74rem; color:var(--muted); margin-top:2px; }
+/* 四格並排時每格只有 ~75px：詞不要斷在中間（「練習次/數」很難讀），
+   字太長就整體縮一級而不是硬折。 */
+.stat-lbl{ font-size:.72rem; color:var(--muted); margin-top:2px;
+  word-break:keep-all; line-height:1.25; }
 
 /* ── 重症／高齡防呆模式（Kiosk）：去科技化全螢幕圖卡 ──
    視覺目標：不像軟體，像一張「米色塑膠墊板」上擺著 2–4 張實體圖卡。

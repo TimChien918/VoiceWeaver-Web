@@ -5,7 +5,7 @@
 // 省略＝中性（時間詞、問句、社交詞不上色）。視覺錨點幫助語法訓練（輕症模式）。
 // App 的資料沒有這一欄，依分類給預設值——同一類的詞性絕大多數一致，
 // 少數例外（動作類裡的「好」）比整片不上色好。
-import { AAC_CATEGORIES, AAC_ITEMS, CURRENCIES } from "./aacdata.js";
+import { AAC_CATEGORIES, AAC_ITEMS, CURRENCIES } from "./aacdata.js?v=1.4.1";
 
 export { AAC_CATEGORIES, AAC_ITEMS, CURRENCIES };
 

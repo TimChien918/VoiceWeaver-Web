@@ -1,18 +1,19 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge } from "./store.js";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js";
-import { reconstruct, composeAac, hasAnyLlmKey } from "./llm.js";
-import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, ALL_CARDS, searchCards, CURRENCIES } from "./aac.js";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js";
-import { setupKiosk, enterKiosk } from "./kiosk.js";
-import { bindTap } from "./interaction.js";
-import { orderCards } from "./predict.js";
-import { CLINICAL_BANK } from "./clinical.js";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js";
-import { setupReport, loadReport, setReportToast } from "./report.js";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare } from "./localtts.js";
-import { applyI18n, t } from "./i18n.js";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge } from "./store.js?v=1.4.1";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.4.1";
+import { reconstruct, composeAac, hasAnyLlmKey } from "./llm.js?v=1.4.1";
+import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.4.1";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, ALL_CARDS, searchCards, CURRENCIES } from "./aac.js?v=1.4.1";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.4.1";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.4.1";
+import { bindTap } from "./interaction.js?v=1.4.1";
+import { orderCards } from "./predict.js?v=1.4.1";
+import { CLINICAL_BANK } from "./clinical.js?v=1.4.1";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.4.1";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.4.1";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.4.1";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.4.1";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare } from "./localtts.js?v=1.4.1";
+import { applyI18n, t } from "./i18n.js?v=1.4.1";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -586,7 +587,7 @@ function openAmountDialog(){
 }
 function renderCombo(){
   $("#aacCombo").innerHTML = combo.map((c,i)=>`<span class="chip on" data-i="${i}">${escapeHtml(c.word)} ✕</span>`).join("") || `<span class="tiny muted">${t("combo.empty")}</span>`;
-  $$("#aacCombo .chip").forEach(c=>bindTap(c, ()=>{ combo.splice(+c.dataset.i,1); renderCombo(); }, 250));
+  $$("#aacCombo .chip").forEach(c=>bindTap(c, ()=>{ combo.splice(+c.dataset.i,1); recordUndo(); renderCombo(); }, 250));
   // 沒設 LLM 金鑰時「✨組成句子」按了只會報錯 → 直接隱藏，少一顆干擾按鈕
   $("#aacCompose")?.classList.toggle("hidden", !hasAnyLlmKey());
 }
@@ -682,8 +683,9 @@ function setupAac(){
   // 意圖確認大圖卡
   bindTap($("#confirmYes"), ()=>{
     $("#confirmDlg").classList.add("hidden");
+    recordCandidateChoice(rejectStreak === 0);   // 沒退過＝第一候選就對
     rejectStreak = 0;
-    if(_pendingSpeak) speak(_pendingSpeak);
+    if(_pendingSpeak){ markFirstSpeak(); recordInputSource(true); speak(_pendingSpeak); }
   });
   bindTap($("#confirmNo"), onConfirmReject);
 }
@@ -737,7 +739,7 @@ function renderQuickSos(){
   const box = $("#quickSos"); if(!box) return;
   box.innerHTML = QUICK_SOS.map(([k],i)=>
     `<button class="btn sos-btn" data-i="${i}">${escapeHtml(t(k))}</button>`).join("");
-  $$("#quickSos .sos-btn").forEach(b=>bindTap(b, ()=>speak(t(QUICK_SOS[+b.dataset.i][1]))));
+  $$("#quickSos .sos-btn").forEach(b=>bindTap(b, ()=>{ markFirstSpeak(); speak(t(QUICK_SOS[+b.dataset.i][1])); }));
 }
 
 // ── 臨床常用題庫：不需 LLM 金鑰，離線可用 ──
@@ -765,14 +767,19 @@ function escapeHtml(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;"
 // ── 其他按鈕 ──
 function setupActions(){
   $("#btnCompose").addEventListener("click", doCompose);
-  $("#btnAlt").addEventListener("click", cycleAlt);
+  $("#btnAlt").addEventListener("click", ()=>{ recordUndo(); cycleAlt(); });
   // 「更多」展開／收起次要動作
   $("#btnMore").addEventListener("click", ()=>{
     const box = $("#moreActions");
     const open = box.classList.toggle("hidden") === false;
     $("#btnMore").textContent = open ? t("btn.less") : t("btn.more");
   });
-  $("#btnSpeak").addEventListener("click", ()=>speak(lastResult));
+  $("#btnSpeak").addEventListener("click", ()=>{
+    markFirstSpeak();
+    recordInputSource(false);                 // 這條路徑是打字／語音輸入
+    recordCandidateChoice(altIndex === 0);    // 還停在第一候選＝AI 一次就命中
+    speak(lastResult);
+  });
   $("#btnRegen").addEventListener("click", doCompose);
   $("#btnImg").addEventListener("click", async ()=>{
     if(!lastResult) return;

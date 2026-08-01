@@ -1,7 +1,8 @@
 // 成績單：讀 Firestore rehabLogs，三段時間維度，統計 + 折線趨勢 + Telegram 匯出。
-import { state } from "./store.js";
-import { listRehabLogs } from "./store.js";
-import { t } from "./i18n.js";
+import { state } from "./store.js?v=1.4.1";
+import { listRehabLogs } from "./store.js?v=1.4.1";
+import { t } from "./i18n.js?v=1.4.1";
+import { behaviorSummary } from "./behavior.js?v=1.4.1";
 
 const esc = (x)=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
@@ -36,6 +37,7 @@ export function setupReport(){
   }));
   $("#reportTg").addEventListener("click", sendTelegram);
   $("#reportCsv")?.addEventListener("click", exportCsv);
+  $("#reportPdf")?.addEventListener("click", exportPdf);
 }
 
 function computeStreak(timestamps){
@@ -67,11 +69,70 @@ async function exportCsv(){
   toast(t("report.csvDone"));
 }
 
+// PDF 匯出：開一個乾淨的列印視窗讓瀏覽器產生 PDF。
+// 不引第三方函式庫——這頁本來就沒有打包流程，而且列印對話框本身就能存成 PDF，
+// 中日韓字型也直接沿用系統的，不必自己嵌字型。
+async function exportPdf(){
+  const logs = await listRehabLogs(rangeFrom(curRange));
+  if(!logs.length){ toast(t("report.nothingToExport")); return; }
+  const label = t({ today:"report.today", month:"report.month", year:"report.year" }[curRange]);
+  const bm = behaviorSummary();
+  const lang = document.documentElement.lang || "zh-TW";
+  const rows = logs.sort((a,b)=>b.timestamp-a.timestamp).map(l=>
+    `<tr><td>${esc(new Date(l.timestamp).toLocaleString(lang))}</td>
+         <td>${esc(l.locationTag||"")}</td>
+         <td>${esc(l.targetSentence||"")}</td>
+         <td style="text-align:right">${esc(l.score)}</td></tr>`).join("");
+  const sessions = logs.length;
+  const avg = Math.round(logs.reduce((s,l)=>s+(l.score||0),0)/sessions);
+  const w = window.open("", "_blank");
+  if(!w){ toast(t("report.nothingToExport")); return; }
+  w.document.write(`<!doctype html><html lang="${esc(lang)}"><head><meta charset="utf-8">
+    <title>${esc(t("report.pdfTitle"))} · ${esc(label)}</title>
+    <style>
+      body{ font-family:-apple-system,"PingFang TC","Hiragino Sans","Malgun Gothic",system-ui,sans-serif;
+            margin:32px; color:#111; }
+      h1{ font-size:20px; margin:0 0 4px; } .sub{ color:#666; font-size:12px; margin-bottom:18px; }
+      .grid{ display:flex; gap:24px; margin-bottom:18px; font-size:13px; }
+      .grid div b{ display:block; font-size:20px; }
+      table{ width:100%; border-collapse:collapse; font-size:12px; }
+      th,td{ border-bottom:1px solid #ddd; padding:6px 4px; text-align:left; }
+      th{ background:#f4f4f6; }
+    </style></head><body>
+    <h1>${esc(t("report.pdfTitle"))}</h1>
+    <div class="sub">${esc(label)} · ${esc(new Date().toLocaleString(lang))}</div>
+    <div class="grid">
+      <div>${esc(t("report.sessions"))}<b>${sessions}</b></div>
+      <div>${esc(t("report.avg"))}<b>${avg}</b></div>
+      <div>${esc(t("report.bmReaction"))}<b>${bm.reactionSec==null?"—":bm.reactionSec.toFixed(1)+"s"}</b></div>
+      <div>${esc(t("report.bmPick"))}<b>${bm.firstHitPct==null?"—":bm.firstHitPct+"%"}</b></div>
+      <div>${esc(t("report.bmCard"))}<b>${bm.aacPct==null?"—":bm.aacPct+"%"}</b></div>
+    </div>
+    <table><thead><tr>
+      <th>${esc(t("report.csvHeader").split(",")[0])}</th>
+      <th>${esc(t("report.csvHeader").split(",")[1])}</th>
+      <th>${esc(t("report.csvHeader").split(",")[2])}</th>
+      <th style="text-align:right">${esc(t("report.csvHeader").split(",")[3])}</th>
+    </tr></thead><tbody>${rows}</tbody></table>
+    </body></html>`);
+  w.document.close();
+  w.focus();
+  setTimeout(()=>w.print(), 300);   // 等字型與版面就緒再叫列印
+}
+
 export async function loadReport(){
   const logs = await listRehabLogs(rangeFrom(curRange));
   const sessions = logs.length;
   const avg = sessions ? Math.round(logs.reduce((s,l)=>s+(l.score||0),0)/sessions) : 0;
   const positive = logs.reduce((s,l)=>s+countPositive(l.targetSentence||""),0);
+
+  // 行為數據（全期累計，不隨上面的期間切換）。沒有樣本顯示「—」，不假裝有 0。
+  const bm = behaviorSummary();
+  const setBm = (id, v) => { const el = $(id); if(el) el.textContent = v; };
+  setBm("#bmReaction", bm.reactionSec == null ? "—" : bm.reactionSec.toFixed(1) + "s");
+  setBm("#bmPick",     bm.firstHitPct == null ? "—" : bm.firstHitPct + "%");
+  setBm("#bmEdit",     bm.undoCount);
+  setBm("#bmCard",     bm.aacPct == null ? "—" : bm.aacPct + "%");
 
   $("#statSessions").textContent = sessions;
   $("#statAvg").textContent = sessions ? avg : "—";

@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 <title>VoiceWeaver 網頁版</title>
-<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="style.css?v=1.4.1" />
 </head>
 <body>
   <!-- 登入閘 -->
@@ -124,13 +124,14 @@
       <!-- 成績單 -->
       <section id="tab-report" class="panel hidden">
         <div class="card">
-          <div class="row" style="margin:0;justify-content:space-between">
+          <div class="row wrap" style="margin:0;justify-content:space-between">
             <div id="reportRange" class="chips" style="margin:0">
               <span class="chip" data-r="today" data-i18n="report.today">今日</span>
               <span class="chip on" data-r="month" data-i18n="report.month">本月</span>
               <span class="chip" data-r="year" data-i18n="report.year">本年度</span>
             </div>
             <button id="reportCsv" class="btn ghost" style="white-space:nowrap">📄 CSV</button>
+            <button id="reportPdf" class="btn ghost" style="white-space:nowrap">🖨 PDF</button>
             <button id="reportTg" class="btn ghost" style="white-space:nowrap">📤 Telegram</button>
           </div>
         </div>
@@ -141,6 +142,17 @@
             <div class="stat"><div class="stat-val" id="statStreak">—</div><div class="stat-lbl" data-i18n="report.streak">連續天數</div></div>
             <div class="stat"><div class="stat-val" id="statPositive">—</div><div class="stat-lbl" data-i18n="report.positive">正向字眼</div></div>
           </div>
+        </div>
+        <!-- 行為數據：治療師評估用，全期累計，不隨上面的期間切換 -->
+        <div class="card">
+          <label class="lbl" data-i18n="report.behavior">🧭 行為數據（治療師評估用，全期累計）</label>
+          <div class="stats">
+            <div class="stat"><div class="stat-val" id="bmReaction">—</div><div class="stat-lbl" data-i18n="report.bmReaction">⏱ 反應</div></div>
+            <div class="stat"><div class="stat-val" id="bmPick">—</div><div class="stat-lbl" data-i18n="report.bmPick">🎯 選句</div></div>
+            <div class="stat"><div class="stat-val" id="bmEdit">—</div><div class="stat-lbl" data-i18n="report.bmEdit">✏️ 修改</div></div>
+            <div class="stat"><div class="stat-val" id="bmCard">—</div><div class="stat-lbl" data-i18n="report.bmCard">🖼 圖卡</div></div>
+          </div>
+          <p class="tiny muted" style="margin-top:8px" data-i18n="report.bmNote">反應＝開 App 到第一次發聲的平均耗時 · 選句＝AI 第一候選被採用率 · 修改＝退回／刪卡累計 · 圖卡＝圖卡輸入佔總輸入比例</p>
         </div>
         <div class="card">
           <label class="lbl" data-i18n="report.trend">分數趨勢</label>
@@ -369,7 +381,7 @@
 
   <!-- 你的 Firebase 設定（複製 config.example.js 為 config.js 並填入）。沒有 config.js 時為純本機模式。 -->
   <script>window.__FIREBASE_CONFIG__ = null;</script>
-  <script src="config.js" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
-  <script type="module" src="js/app.js"></script>
+  <script src="config.js?v=1.4.1" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
+  <script type="module" src="js/app.js?v=1.4.1"></script>
 </body>
 </html>

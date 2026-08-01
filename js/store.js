@@ -6,7 +6,7 @@ import {
 import {
   getFirestore, doc, getDoc, setDoc, collection, addDoc, getDocs, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { t } from "./i18n.js";
+import { t } from "./i18n.js?v=1.4.1";
 
 const DEFAULTS = {
   settings: { theme: "auto", lang: "zh-TW", rate: 0.95, font: 1.0,
@@ -67,6 +67,8 @@ export const state = {
   llmApis: [],
   imageApis: [],
   favorites: [],   // 我的最愛常用句
+  // 行為數據彙總（治療師評估用）：只存彙總不存逐筆；清歷史不影響它。
+  behavior: {},
   // 自訂圖卡（拍照建檔）：[{id, word, pos, img(dataURL 縮圖)}]。
   // 讓長輩看到「自己熟悉的物品照片」建立信任；照片壓成小縮圖存設定文件。
   customCards: [],
@@ -103,6 +105,7 @@ function applyLoaded(d){
   state.imageApis= Array.isArray(d.imageApis) ? d.imageApis : [];
   state.favorites= Array.isArray(d.favorites) ? d.favorites : [];
   state.customCards = Array.isArray(d.customCards) ? d.customCards : [];
+  state.behavior = (d.behavior && typeof d.behavior === "object") ? d.behavior : {};
   // 相容：舊版只有單一 localTtsUrl → 遷移成清單第一筆（只做一次）
   if(!Array.isArray(state.settings.localComputeServers)) state.settings.localComputeServers = [];
   if(!state.settings.localComputeServers.length && (state.settings.localTtsUrl||"").trim()){
@@ -172,7 +175,7 @@ export async function logout(){
 // ── 載入 ───────────────────────────────────────────
 function snapshot(){
   return { settings:state.settings, apiKeys:state.apiKeys, llmApis:state.llmApis, imageApis:state.imageApis,
-           favorites:state.favorites, customCards:state.customCards };
+           favorites:state.favorites, customCards:state.customCards, behavior:state.behavior };
 }
 function loadLocal(){
   try{ applyLoaded(migrate(JSON.parse(localStorage.getItem(LS) || "{}"))); }
