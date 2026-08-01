@@ -11,6 +11,7 @@ import { CLINICAL_BANK } from "./clinical.js?v=1.4.1";
 import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.4.1";
 import { openCrisis, setupCrisis } from "./crisis.js?v=1.4.1";
 import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.4.1";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.4.1";
 import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.4.1";
 import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.4.1";
 import { setupReport, loadReport, setReportToast } from "./report.js?v=1.4.1";
@@ -845,6 +846,7 @@ function showApp(user){
   // 雲端設定載入後重繪 AAC：帳號裡的字級/自訂圖卡/「📷 我的」分類才會立即出現
   renderAac(); renderCcList(); renderQuickSos(); setupCrisis();
   setStoryToast(toast); setupStory();
+  setupHeadControl(msg=>{ const el=$("#headStatus"); if(el) el.textContent = msg; });
   // 臨床題庫點一下＝填進目標句欄位並捲到練習區
   renderClinicalBank(s=>{ const inp=$("#rehabTarget"); if(!inp) return;
     inp.value = s; $('.tab[data-tab="rehab"]')?.click();

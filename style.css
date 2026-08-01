@@ -316,3 +316,18 @@ body.sev-moderate .complex, body.sev-severe .complex{ display:none !important; }
   padding:12px 4px 8px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:2px; }
 .story-frame .emoji{ font-size:30px; line-height:1.1; }
 .story-idx{ position:absolute; top:3px; left:5px; font-size:.62rem; color:var(--muted); font-weight:700; }
+
+/* ── 頭控游標：中央一點 + 外圈 dwell 進度環 ──
+   進度環用 stroke-dashoffset 畫，--p 由 JS 每幀更新（0→1）。 */
+#headCursor{ position:fixed; left:0; top:0; width:44px; height:44px; margin:-22px 0 0 -22px;
+  pointer-events:none; z-index:9999; display:none; }
+#headCursor.on{ display:block; }
+#headCursor svg{ width:100%; height:100%; transform:rotate(-90deg); }
+#headCursor .ring-bg{ fill:none; stroke:rgba(0,0,0,.18); stroke-width:3; }
+#headCursor .ring{ fill:none; stroke:var(--accent); stroke-width:3;
+  stroke-dasharray:100.5; stroke-dashoffset:calc(100.5 * (1 - var(--p, 0))); }
+#headCursor i{ position:absolute; left:50%; top:50%; width:8px; height:8px; margin:-4px 0 0 -4px;
+  border-radius:50%; background:var(--accent); box-shadow:0 0 0 2px #fff; }
+#headCursor.armed i{ background:var(--accent2); }
+/* 游標停在上面的元素：放大一點點並高亮，降低頭控誤差的感知 */
+.head-hover{ outline:3px solid var(--accent); outline-offset:2px; }

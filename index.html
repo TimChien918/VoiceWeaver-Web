@@ -288,6 +288,13 @@
             <option value="minimal" data-i18n="style.minimal">簡約風</option>
           </select>
           <p id="styleBlurb" class="tiny muted" style="margin:4px 0 0"></p>
+          <label class="row"><input id="s_head" type="checkbox" />
+            <span><span data-i18n="set.headControl">鼻子頭控</span>
+            <br><span class="tiny muted" data-i18n="set.headControlDesc">前鏡頭追鼻尖，轉頭移動游標，停在按鈕上約一秒自動點擊。</span></span></label>
+          <label class="lbl" data-i18n="set.headSens">鼻控靈敏度</label>
+          <input id="s_headSens" type="range" min="0.4" max="2.5" step="0.1" />
+          <button id="s_headRecenter" class="btn ghost block" data-i18n="set.headRecenter">重新置中（頭部歸零）</button>
+          <p id="headStatus" class="tiny muted" style="margin:6px 0 0"></p>
           <label class="row"><input id="s_contrast" type="checkbox" />
             <span><span data-i18n="set.highContrast">高對比模式</span>
             <br><span class="tiny muted" data-i18n="set.highContrastDesc">純黑底＋高彩文字，視力弱者用。</span></span></label>
