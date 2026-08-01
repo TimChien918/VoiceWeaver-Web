@@ -103,6 +103,25 @@
           <button id="rehabStart" class="btn primary big" data-i18n="rehab.start">開始練習</button>
           <button id="rehabParagraph" class="btn ghost" style="width:100%;margin-top:8px" data-i18n="rehab.paragraph">📖 整段練習（自動分句逐句練）</button>
         </div>
+        <!-- 圖片說故事：比跟讀單句更高階的練習（要自己組織語意順序）-->
+        <div class="card">
+          <h3 data-i18n="story.title">▌ 圖片說故事</h3>
+          <div class="row" style="margin:0 0 8px;justify-content:space-between">
+            <span id="storyTitle" class="tiny muted" style="flex:1"></span>
+            <button id="storyShuffle" class="btn ghost tiny" style="white-space:nowrap" data-i18n="story.shuffle">換一組</button>
+          </div>
+          <div id="storyFrames" class="story-grid"></div>
+          <textarea id="storyInput" rows="3" data-i18n-ph="story.ph" placeholder="用文字或語音說出這個故事…"></textarea>
+          <div class="row wrap">
+            <button id="storyMic" class="btn ghost" data-i18n="story.mic">🎤 語音輸入</button>
+            <button id="storyReview" class="btn primary" style="flex:1" data-i18n="story.review">請 AI 評論</button>
+          </div>
+          <div id="storyFeedback" class="hidden" style="margin-top:10px">
+            <div class="lbl" data-i18n="story.teacher">AI 老師</div>
+            <p id="storyFeedbackText" style="margin:0 0 4px"></p>
+            <p id="storyScore" class="tiny muted" style="margin:0"></p>
+          </div>
+        </div>
         <div id="rehabPractice" class="card hidden">
           <div id="rehabQueueBar" class="hidden" style="font-size:.85rem;font-weight:600;color:var(--accent);margin-bottom:8px"></div>
           <label class="lbl" data-i18n="rehab.targetDisplay">目標句（點字卡可單獨發音）</label>

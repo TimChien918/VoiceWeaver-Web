@@ -118,6 +118,21 @@ const SYS_REHAB_SUGGEST =
   "你是失語症語言復健助理。產生 4 句適合跟讀練習的繁體中文短句（5-10 字、日常生活情境、實用）。"+
   '只回傳 JSON：{"sentences":["...","...","...","..."]}';
 
+/**
+ * 故事講評：對患者說的故事給一句鼓勵＋一個具體的下一步建議。
+ *
+ * 分數不交給模型算（呼叫端用關鍵字命中率算好再傳進來）——同一段話讓模型打兩次
+ * 會給不同分，患者看到分數跳動會失去信心。模型只負責「講評文字」。
+ */
+export async function reviewStory(storyTitle, userText, score){
+  const sys = "你是失語症語言治療師，正在看患者「看圖說故事」的練習。"+
+    "請用繁體中文回一句話（40 字以內）：先肯定他說出來的部分，再給一個具體、"+
+    "做得到的下一步建議。語氣溫暖、不說教，不要提到分數，不要條列。";
+  const u = `故事主題：${storyTitle}\n患者說的：${userText}\n（系統評分：${score}/100，僅供你判斷難度，別在回覆中提到）`;
+  const raw = await runLlm(sys, u);
+  return (raw || "").trim().replace(/^["「]|["」]$/g, "");
+}
+
 export async function suggestRehab(){
   try{
     const raw = await runLlm(SYS_REHAB_SUGGEST, "請給適合失語症患者的中等難度練習句。");

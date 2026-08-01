@@ -309,3 +309,10 @@ body.sev-moderate .complex, body.sev-severe .complex{ display:none !important; }
 .crisis-msg{ background:var(--bg); border:1px solid var(--line); border-radius:12px;
   padding:7px 10px; font-size:.82rem; }
 .crisis-msg.mine{ background:color-mix(in srgb,#5b9dd9 18%,var(--bg)); align-self:flex-end; }
+
+/* 圖片說故事：四格橫排，格子要夠大讓 emoji 看得清楚 */
+.story-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:10px; }
+.story-frame{ position:relative; background:var(--bg); border:1px solid var(--line); border-radius:12px;
+  padding:12px 4px 8px; text-align:center; display:flex; flex-direction:column; align-items:center; gap:2px; }
+.story-frame .emoji{ font-size:30px; line-height:1.1; }
+.story-idx{ position:absolute; top:3px; left:5px; font-size:.62rem; color:var(--muted); font-weight:700; }

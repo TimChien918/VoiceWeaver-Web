@@ -10,6 +10,7 @@ import { orderCards } from "./predict.js?v=1.4.1";
 import { CLINICAL_BANK } from "./clinical.js?v=1.4.1";
 import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.4.1";
 import { openCrisis, setupCrisis } from "./crisis.js?v=1.4.1";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.4.1";
 import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.4.1";
 import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.4.1";
 import { setupReport, loadReport, setReportToast } from "./report.js?v=1.4.1";
@@ -287,6 +288,7 @@ function bindSettings(){
     renderWho();                              // 頂端使用者名（匿名／本機）也要跟著新語言
     applyTheme();                             // 風格說明文字（blurb）也是動態產生
     renderQuickSos();                         // 快速求救三顆鈕的字
+    renderStory();                            // 故事題目與提示字
     renderClinicalBank(s=>{ const inp=$("#rehabTarget"); if(inp){ inp.value=s; $('.tab[data-tab="rehab"]')?.click(); } });
     renderAac();                              // AAC 分類 chip（「我的」分類名要跟著翻）
     // 成績單內容是「載入當下」畫出來的（含圖表裡的「尚無資料」與空狀態），
@@ -842,6 +844,7 @@ function showApp(user){
   applyTheme(); applyI18n(state.settings.lang); fillSettings(); renderFavorites();
   // 雲端設定載入後重繪 AAC：帳號裡的字級/自訂圖卡/「📷 我的」分類才會立即出現
   renderAac(); renderCcList(); renderQuickSos(); setupCrisis();
+  setStoryToast(toast); setupStory();
   // 臨床題庫點一下＝填進目標句欄位並捲到練習區
   renderClinicalBank(s=>{ const inp=$("#rehabTarget"); if(!inp) return;
     inp.value = s; $('.tab[data-tab="rehab"]')?.click();
