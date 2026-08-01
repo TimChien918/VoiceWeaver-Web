@@ -103,6 +103,9 @@ label.row{ margin-top:0; cursor:pointer; }
    觸控目標放大到 44px（iOS HIG 最小值），手抖也按得中。 */
 .chip.sos-chip{ background:var(--danger); color:#fff; border-color:var(--danger);
   font-weight:700; min-height:44px; padding:5px 16px; margin-right:8px; }
+/* 復健題庫的題目在英文介面會是整句英文，比中文長很多；
+   維持 nowrap 會直接撐爆一行，這裡允許換行並限制單一 chip 的寬度。 */
+#rehabBank .chip{ white-space:normal; max-width:100%; text-align:center; line-height:1.35; }
 
 .result-text{ font-size:1.4rem; font-weight:600; line-height:1.5; padding:6px 2px 12px; }
 .result-img{ width:100%; border-radius:12px; margin-top:10px; }

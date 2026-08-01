@@ -6,7 +6,7 @@ import {
 import {
   getFirestore, doc, getDoc, setDoc, collection, addDoc, getDocs, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { t } from "./i18n.js?v=1.4.7";
+import { t } from "./i18n.js?v=1.4.8";
 
 const DEFAULTS = {
   settings: { theme: "auto", lang: "zh-TW", rate: 0.95, font: 1.0,

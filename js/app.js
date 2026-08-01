@@ -1,25 +1,25 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge } from "./store.js?v=1.4.7";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.4.7";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.4.7";
-import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.4.7";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.4.7";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.4.7";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.4.7";
-import { bindTap } from "./interaction.js?v=1.4.7";
-import { orderCards } from "./predict.js?v=1.4.7";
-import { CLINICAL_BANK } from "./clinical.js?v=1.4.7";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.4.7";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.4.7";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.4.7";
-import { preloadZhConv } from "./zhconv.js?v=1.4.7";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.4.7";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.4.7";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.4.7";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.4.7";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.4.7";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.4.7";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare } from "./localtts.js?v=1.4.7";
-import { applyI18n, t } from "./i18n.js?v=1.4.7";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge } from "./store.js?v=1.4.8";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.4.8";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.4.8";
+import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.4.8";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.4.8";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.4.8";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.4.8";
+import { bindTap } from "./interaction.js?v=1.4.8";
+import { orderCards } from "./predict.js?v=1.4.8";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.4.8";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.4.8";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.4.8";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.4.8";
+import { preloadZhConv } from "./zhconv.js?v=1.4.8";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.4.8";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.4.8";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.4.8";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.4.8";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.4.8";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.4.8";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare } from "./localtts.js?v=1.4.8";
+import { applyI18n, t } from "./i18n.js?v=1.4.8";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -901,12 +901,15 @@ function renderQuickSos(){
 // ── 臨床常用題庫：不需 LLM 金鑰，離線可用 ──
 function renderClinicalBank(onPick){
   const box = $("#rehabBank"); if(!box) return;
+  // 題目跟著介面語言走：英文介面就練英文句子（辨識也是英文，見 speech.js 的 rec.lang）。
+  // 顯示的字和送去練習的字是同一個字串，不然唸的跟比對的不一樣，分數會永遠是 0。
   box.innerHTML = CLINICAL_BANK.map((g,gi)=>
     `<div style="margin-top:8px"><div class="tiny muted">${escapeHtml(t(g.key))}</div>
       <div class="chips" style="margin-top:4px">${g.items.map((s,i)=>
-        `<span class="chip" data-g="${gi}" data-i="${i}">${escapeHtml(s)}</span>`).join("")}</div></div>`).join("");
+        `<span class="chip" data-g="${gi}" data-i="${i}">${escapeHtml(practiceItem(s))}</span>`
+      ).join("")}</div></div>`).join("");
   $$("#rehabBank .chip").forEach(c=>bindTap(c, ()=>
-    onPick(CLINICAL_BANK[+c.dataset.g].items[+c.dataset.i]), 250));
+    onPick(practiceItem(CLINICAL_BANK[+c.dataset.g].items[+c.dataset.i])), 250));
 }
 
 // ── 歷史 ──

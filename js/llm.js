@@ -1,8 +1,8 @@
 // 重組 / 組句：走多供應商輪詢（providers.js）。
-import { runLlm, hasLlm } from "./providers.js?v=1.4.7";
-import { t as tr } from "./i18n.js?v=1.4.7";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
-import { DEFENSIVE_SYSTEM_PROMPT } from "./safety.js?v=1.4.7";
-import { toTraditionalSync } from "./zhconv.js?v=1.4.7";
+import { runLlm, hasLlm } from "./providers.js?v=1.4.8";
+import { t as tr } from "./i18n.js?v=1.4.8";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
+import { DEFENSIVE_SYSTEM_PROMPT } from "./safety.js?v=1.4.8";
+import { toTraditionalSync } from "./zhconv.js?v=1.4.8";
 
 // 第一層防禦：黏在所有 system prompt 最前面，先要求模型別生成自傷／絕望字眼。
 // 這只是「請求」不是保證——真正擋住的是 app.js 的分級閘門與 speech.js 的輸出消毒。
@@ -138,12 +138,23 @@ export function composeAac(items, context){
   return runLlm(sys, `圖卡序列：${items.join(" → ")}\n${context?("場景："+context):""}`.trim()).then(zh);
 }
 
-const SYS_REHAB_EVAL =
-  "你是失語症語言治療師，評估患者的口語跟讀表現。不要用字元差異計算，要從語意傳達與流暢自然的角度判斷。\n"+
+/**
+ * 提示詞維持中文（模型對中文指令的遵從度實測比較穩），只把「要用哪種語言回覆」
+ * 抽出來——英文介面的使用者練英文句子，評語不該跳出中文。
+ */
+const LANG_NAME = { "zh-TW":"繁體中文", "en":"英文", "ja":"日文", "ko":"韓文" };
+function outLang(){
+  const L = document.documentElement.getAttribute("data-lang") || "zh-TW";
+  return LANG_NAME[L] || LANG_NAME[L.split("-")[0]] || LANG_NAME["zh-TW"];
+}
+
+function sysRehabEval(){
+  return "你是失語症語言治療師，評估患者的口語跟讀表現。不要用字元差異計算，要從語意傳達與流暢自然的角度判斷。\n"+
   "這是一次完全獨立的評估：只依據下面「這一次」的目標句與患者語音判分，沒有任何先前的練習、分數或對話——不得參考、比較或延續任何過去的評估。\n"+
   "評分細則：語意完整性（50%，核心意思有沒有傳達、關鍵詞有沒有說到，即使用詞稍異但意思相同可給高分）；"+
   "流暢性（30%，有無重複、結巴、語氣是否連貫自然）；語氣語調（20%，是否符合句型如問句/請求/感謝）。\n"+
-  '只回傳 JSON：{"score":整數0到100,"feedback":"一句繁體中文鼓勵或指引（20字以內）","wrongChars":["說得不準或漏掉的字"]}';
+  `只回傳 JSON：{"score":整數0到100,"feedback":"一句${outLang()}鼓勵或指引（20字以內）","wrongChars":["說得不準或漏掉的字或詞"]}`;
+}
 
 function extractJson(raw){
   const c = raw.replace(/```json/g,"").replace(/```/g,"").trim();
@@ -155,25 +166,31 @@ function extractJson(raw){
 export async function scoreRehab(target, recognized){
   const user = `目標句：${target}\n患者說出的：${recognized || "（未偵測到聲音）"}`;
   try{
-    const raw = await runLlm(SYS_REHAB_EVAL, user, { temperature: 0.1, stable: true });
+    const raw = await runLlm(sysRehabEval(), user, { temperature: 0.1, stable: true });
     const j = JSON.parse(extractJson(raw) || "{}");
     const score = Math.max(0, Math.min(100, Math.round(j.score)));
     if(Number.isFinite(score)) return { score, feedback: (j.feedback||"").trim(), wrongChars: Array.isArray(j.wrongChars)?j.wrongChars:[] };
     throw new Error("分數無效");
   }catch(e){
-    // 備援：純中文字重疊比例 + 找出沒被辨識到的字
-    const t = (target||"").replace(/[^一-鿿]/g,"");
-    const r = (recognized||"").replace(/[^一-鿿]/g,"");
+    // 備援（沒金鑰或 LLM 掛掉時）：重疊比例 + 找出沒被辨識到的部分。
+    // 中文按「字」比、拉丁語言按「詞」比——英文題目若照中文那樣先濾掉非漢字，
+    // 目標句會變成空字串，分數會永遠是 0。
+    const hasHan = /[一-鿿]/.test(target||"");
+    const units = str => hasHan
+      ? [...(str||"").replace(/[^一-鿿]/g,"")]
+      : (str||"").toLowerCase().replace(/[^\p{L}\p{N}\s']/gu," ").split(/\s+/).filter(Boolean);
+    const t = units(target), r = units(recognized);
     let m = 0; const wrong = [];
-    for(const ch of t){ if(r.includes(ch)) m++; else if(!wrong.includes(ch)) wrong.push(ch); }
+    for(const u of t){ if(r.includes(u)) m++; else if(!wrong.includes(u)) wrong.push(u); }
     const score = t.length ? Math.round(m/t.length*100) : 0;
     return { score, feedback: tr("llm.fallbackFeedback"), wrongChars: wrong };
   }
 }
 
-const SYS_REHAB_SUGGEST =
-  "你是失語症語言復健助理。產生 4 句適合跟讀練習的繁體中文短句（5-10 字、日常生活情境、實用）。"+
+function sysRehabSuggest(){
+  return `你是失語症語言復健助理。產生 4 句適合跟讀練習的${outLang()}短句（長度相當於中文 5-10 字、日常生活情境、實用）。`+
   '只回傳 JSON：{"sentences":["...","...","...","..."]}';
+}
 
 /**
  * 故事講評：對患者說的故事給一句鼓勵＋一個具體的下一步建議。
@@ -192,10 +209,16 @@ export async function reviewStory(storyTitle, userText, score){
 
 export async function suggestRehab(){
   try{
-    const raw = await runLlm(SYS_REHAB_SUGGEST, "請給適合失語症患者的中等難度練習句。");
+    const raw = await runLlm(sysRehabSuggest(), "請給適合失語症患者的中等難度練習句。");
     const j = JSON.parse(extractJson(raw) || "{}");
     const arr = (j.sentences||[]).filter(s=>s && s.trim());
     if(arr.length) return arr;
   }catch(e){ console.warn("suggestRehab", e); }
-  return ["幫我倒一杯水","我想要去廁所","謝謝你的幫忙","可以開窗嗎"];
+  // LLM 不可用時的離線備援，跟著介面語言走
+  const L = (document.documentElement.getAttribute("data-lang") || "zh-TW").split("-")[0];
+  return ({
+    en: ["Please pour me a glass of water","I would like to go to the toilet","Thank you for your help","Could you open the window"],
+    ja: ["水を一杯ください","トイレに行きたいです","手伝ってくれてありがとう","窓を開けてもらえますか"],
+    ko: ["물 한 잔 주세요","화장실에 가고 싶어요","도와줘서 고마워요","창문을 열어 주시겠어요"],
+  })[L] || ["幫我倒一杯水","我想要去廁所","謝謝你的幫忙","可以開窗嗎"];
 }
