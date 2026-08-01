@@ -6,8 +6,8 @@
 //
 // 只有支援原生音訊的供應商（目前是 Gemini）走得通；沒有這種金鑰時
 // 呼叫端會退回原本的「瀏覽器 STT → 文字重組」。
-import { t } from "./i18n.js?v=1.4.6";
-import { runAudioLlm, hasNativeAudio } from "./providers.js?v=1.4.6";
+import { t } from "./i18n.js?v=1.4.7";
+import { runAudioLlm, hasNativeAudio } from "./providers.js?v=1.4.7";
 
 export { hasNativeAudio };
 

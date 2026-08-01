@@ -226,6 +226,8 @@ export const STRINGS = {
   "care.next": { "zh-TW":"下一張 ▶", "en":"Next ▶", "ja":"次へ ▶", "ko":"다음 ▶" },
   "care.severeHint": { "zh-TW":"重度＝全螢幕逐張掃描大圖卡；要離開時點右上角的「退出」鈕再輸入密碼。圖卡內容用「AAC 圖卡」分頁的自訂圖卡（拍家人／熟悉的東西最好）。", "en":"Severe = fullscreen one-card-at-a-time scan of the big cards; to exit, tap the Exit button at the top right then enter the PIN. Cards come from your custom cards in the AAC tab (photos of family/familiar things work best).", "ja":"重度＝大きなカードを全画面で1枚ずつスキャン。退出は右上の「退出」ボタン→暗証番号。カードはAACタブの自作カード（家族・身近な物の写真が最適）。", "ko":"중증＝큰 카드를 전체화면에서 한 장씩 스캔. 종료는 오른쪽 위 '종료' 버튼을 누른 뒤 비밀번호. 카드는 AAC 탭의 사용자 카드(가족·익숙한 물건 사진 권장).", },
   "kiosk.exitBtn": { "zh-TW":"✕ 關閉", "en":"✕ Close", "ja":"✕ 閉じる", "ko":"✕ 닫기" },
+  "safety.lockedCrisis":  { "zh-TW":"這句話不會唸出來。我們先聯絡家人陪你。", "en":"This won't be spoken. Let's reach your family first.", "ja":"この文は読み上げません。まずご家族に連絡します。", "ko":"이 문장은 읽지 않아요. 먼저 가족에게 연락할게요." },
+  "safety.lockedRefusal": { "zh-TW":"這句涉及治療決定，語音已鎖定，請與照護者或醫師當面確認。", "en":"This involves a treatment decision — speech is locked. Please confirm with a caregiver or doctor.", "ja":"治療の判断に関わるため読み上げを停止しました。介護者か医師と直接ご確認ください。", "ko":"치료 결정과 관련되어 음성이 잠겼습니다. 보호자나 의사와 직접 확인하세요." },
   "care.customScenario": { "zh-TW":"📷 我的照片卡", "en":"📷 My photo cards", "ja":"📷 わたしの写真カード", "ko":"📷 내 사진 카드" },
   "care.entered": { "zh-TW":"已進入防呆模式。要離開：點右上角「退出」鈕，再輸入密碼", "en":"Fail-safe mode on. To exit: tap the Exit button at the top right, then enter the PIN", "ja":"あんしんモード開始。終了は右上の「退出」ボタン→暗証番号", "ko":"안심 모드 시작. 종료: 오른쪽 위 '종료' 버튼을 누른 뒤 비밀번호 입력" },
   "aac.fontSize": { "zh-TW":"字體：", "en":"Font:", "ja":"文字：", "ko":"글자:" },

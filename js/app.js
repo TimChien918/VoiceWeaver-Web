@@ -1,23 +1,24 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge } from "./store.js?v=1.4.6";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.4.6";
-import { reconstruct, composeAac, hasAnyLlmKey } from "./llm.js?v=1.4.6";
-import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.4.6";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.4.6";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.4.6";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.4.6";
-import { bindTap } from "./interaction.js?v=1.4.6";
-import { orderCards } from "./predict.js?v=1.4.6";
-import { CLINICAL_BANK } from "./clinical.js?v=1.4.6";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.4.6";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.4.6";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.4.6";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.4.6";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.4.6";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.4.6";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.4.6";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.4.6";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare } from "./localtts.js?v=1.4.6";
-import { applyI18n, t } from "./i18n.js?v=1.4.6";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge } from "./store.js?v=1.4.7";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.4.7";
+import { reconstruct, composeAac, hasAnyLlmKey } from "./llm.js?v=1.4.7";
+import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.4.7";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.4.7";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.4.7";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.4.7";
+import { bindTap } from "./interaction.js?v=1.4.7";
+import { orderCards } from "./predict.js?v=1.4.7";
+import { CLINICAL_BANK } from "./clinical.js?v=1.4.7";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.4.7";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.4.7";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.4.7";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.4.7";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.4.7";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.4.7";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.4.7";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.4.7";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.4.7";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare } from "./localtts.js?v=1.4.7";
+import { applyI18n, t } from "./i18n.js?v=1.4.7";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -744,9 +745,43 @@ function setupAac(){
     $("#confirmDlg").classList.add("hidden");
     recordCandidateChoice(rejectStreak === 0);   // 沒退過＝第一候選就對
     rejectStreak = 0;
-    if(_pendingSpeak){ markFirstSpeak(); recordInputSource(true); speak(_pendingSpeak); }
+    // 仍要過閘門：確認卡只擋「意思對不對」，擋不了「這句話該不該說出口」
+    if(_pendingSpeak && passesSpeechGate(_pendingSpeak, { fromConfirmCard:true })){
+      markFirstSpeak(); recordInputSource(true); speak(_pendingSpeak);
+    }
   });
   bindTap($("#confirmNo"), onConfirmReject);
+}
+
+/**
+ * 發聲前的安全閘門（第二層防禦，規則與 App 的 SafetyGuard.classifyRisk 完全相同）。
+ *
+ * 為什麼一定要有：使用者在碎詞欄打「自殺」，AI 會老實重組成「我想自殺」，
+ * 然後畫面就給一顆朗讀鈕——等於幫一個講不出話的人把最不該說出口的話唸出來。
+ *
+ * @returns true＝可以繼續唸；false＝已攔下並處理，呼叫端不要再唸。
+ */
+function passesSpeechGate(text, { fromConfirmCard = false } = {}){
+  if(!text) return false;
+  const risk = classifyRisk(text);
+  if(risk === "lock"){
+    $("#confirmDlg").classList.add("hidden");   // 別讓確認卡停在畫面上
+    if(containsCrisisSignal(text)){
+      // 自傷訊號：不唸出來，直接把人接到危機視窗（通知家人＋視訊＋1925／119）
+      toast(t("safety.lockedCrisis"));
+      openCrisis();
+    } else {
+      // 拒絕治療類：同樣不唸，但不驚動家人
+      toast(t("safety.lockedRefusal"));
+    }
+    return false;
+  }
+  // 醫療／疼痛：先跳確認卡。已經是從確認卡按「對」進來的就別再跳一次，否則會無限迴圈。
+  if(risk === "confirm" && !fromConfirmCard && state.settings.confirmCard){
+    confirmThenSpeak(text);
+    return false;
+  }
+  return true;
 }
 
 // ── 意圖確認大圖卡 ──
@@ -765,6 +800,8 @@ function comboHasStrong(){
 }
 function confirmThenSpeak(text){
   if(!text) return;
+  // 鎖定級的句子連確認卡都不該出現——直接攔在這裡
+  if(classifyRisk(text) === "lock"){ passesSpeechGate(text); return; }
   if(!state.settings.confirmCard){ speak(text); return; }   // 設定可關（預設開）
   _pendingSpeak = text;
   const all = allCards();
@@ -832,6 +869,7 @@ function setupActions(){
     $("#btnMore").textContent = open ? t("btn.less") : t("btn.more");
   });
   $("#btnSpeak").addEventListener("click", ()=>{
+    if(!passesSpeechGate(lastResult)) return;
     markFirstSpeak();
     recordInputSource(false);                 // 這條路徑是打字／語音輸入
     recordCandidateChoice(altIndex === 0);    // 還停在第一候選＝AI 一次就命中

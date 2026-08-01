@@ -1,8 +1,12 @@
 // 重組 / 組句：走多供應商輪詢（providers.js）。
-import { runLlm, hasLlm } from "./providers.js?v=1.4.6";
-import { t as tr } from "./i18n.js?v=1.4.6";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
+import { runLlm, hasLlm } from "./providers.js?v=1.4.7";
+import { t as tr } from "./i18n.js?v=1.4.7";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
+import { DEFENSIVE_SYSTEM_PROMPT } from "./safety.js?v=1.4.7";
 
+// 第一層防禦：黏在所有 system prompt 最前面，先要求模型別生成自傷／絕望字眼。
+// 這只是「請求」不是保證——真正擋住的是 app.js 的分級閘門與 speech.js 的輸出消毒。
 const SYS_RECONSTRUCT =
+  DEFENSIVE_SYSTEM_PROMPT + "\n\n"+
   "你是輔助失語症患者溝通的語言助理。請用碎詞、地點與看到的物品，重組患者最可能想表達的句子。\n"+
   "\n【最重要的原則：貼著碎詞走，不要腦補新內容】\n"+
   "句子裡每個實詞（名詞、動詞、形容詞）都必須能對應回碎詞本身，或明確對應到給定的地點／物件情境；\n"+
@@ -77,7 +81,8 @@ export async function reconstruct(fragments, context){
   return { text: ranked[0].text, confidence: ranked[0].confidence, alternatives: ranked };
 }
 export function composeAac(items, context){
-  const sys = "你是失語症患者的溝通助理。使用者用圖卡點選了一串元素，組成一句自然、口語、有禮貌的繁體中文。只輸出一句話。";
+  const sys = DEFENSIVE_SYSTEM_PROMPT + "\n\n" +
+    "你是失語症患者的溝通助理。使用者用圖卡點選了一串元素，組成一句自然、口語、有禮貌的繁體中文。只輸出一句話。";
   return runLlm(sys, `圖卡序列：${items.join(" → ")}\n${context?("場景："+context):""}`.trim());
 }
 

@@ -1,8 +1,9 @@
 // TTS / STT：預設用瀏覽器原生 Web Speech API（免金鑰）；
 // 若開啟「本地語音引擎」且連得上語音中心，則改用 GPT-SoVITS 角色語音。
-import { state } from "./store.js?v=1.4.6";
-import { localTtsEnabled, localSpeak, stopLocalSpeak } from "./localtts.js?v=1.4.6";
-import { t } from "./i18n.js?v=1.4.6";
+import { state } from "./store.js?v=1.4.7";
+import { localTtsEnabled, localSpeak, stopLocalSpeak } from "./localtts.js?v=1.4.7";
+import { t } from "./i18n.js?v=1.4.7";
+import { sanitizeForSpeech } from "./safety.js?v=1.4.7";
 
 // 讓上層（app.js）注入 toast，好把「本地語音失敗、已退回瀏覽器語音」的原因顯示出來，
 // 不再靜默吞錯——否則使用者只覺得「連上了卻無法合成」，看不到真正原因。
@@ -41,6 +42,9 @@ export function listVoices(lang){
 
 export function speak(text){
   if(!text) return;
+  // 第三層防禦：模型萬一還是吐出禁字，唸出來之前替換掉。
+  // 放在 speak() 內是刻意的——所有發聲路徑都經過這裡，繞不過去。
+  text = sanitizeForSpeech(text);
   // 本地 GPT-SoVITS 角色語音優先；失敗則自動退回瀏覽器原生語音。
   if(localTtsEnabled()){
     localSpeak(text).catch(e=>{
