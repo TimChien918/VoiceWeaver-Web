@@ -290,6 +290,9 @@ function bindSettings(){
     applyTheme();                             // 風格說明文字（blurb）也是動態產生
     renderQuickSos();                         // 快速求救三顆鈕的字
     renderStory();                            // 故事題目與提示字
+    renderCcList();                           // 自訂圖卡的空狀態文字
+    renderProviderList("#llmList", "llmApis", LLM_PROVIDERS);   // 供應商清單的空狀態／免金鑰標示
+    renderProviderList("#imgList", "imageApis", IMAGE_PROVIDERS);
     renderClinicalBank(s=>{ const inp=$("#rehabTarget"); if(inp){ inp.value=s; $('.tab[data-tab="rehab"]')?.click(); } });
     renderAac();                              // AAC 分類 chip（「我的」分類名要跟著翻）
     // 成績單內容是「載入當下」畫出來的（含圖表裡的「尚無資料」與空狀態），

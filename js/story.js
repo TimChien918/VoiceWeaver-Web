@@ -7,7 +7,7 @@
 // 打兩次會給不同分，患者看到分數跳動會失去信心。分數用規則算（穩定可複現），
 // 只有講評文字交給 AI；沒有金鑰時退回依分數的固定鼓勵語，離線也能練。
 import { t } from "./i18n.js?v=1.4.1";
-import { STORY_PROMPTS } from "./storydata.js?v=1.4.1";
+import { STORY_PROMPTS, pickLang } from "./storydata.js?v=1.4.1";
 import { reviewStory } from "./llm.js?v=1.4.1";
 import { speak, listen, sttSupported } from "./speech.js?v=1.4.1";
 import { addRehabLog } from "./store.js?v=1.4.1";
@@ -21,23 +21,29 @@ export function setStoryToast(fn) { toast = fn; }
 let idx = 0;   // 目前題目
 
 function prompt_() { return STORY_PROMPTS[idx % STORY_PROMPTS.length]; }
+const curLang = () => document.documentElement.getAttribute("data-lang") || "zh-TW";
+const titleOf = p => pickLang(p.title, curLang());
+const kwOf    = p => pickLang(p.keywords, curLang()) || [];
 
 export function renderStory() {
   const p = prompt_();
   const title = $("#storyTitle");
   if (!title) return;
-  title.textContent = t("story.ask").replace("{title}", p.title);
+  title.textContent = t("story.ask").replace("{title}", titleOf(p));
   $("#storyFrames").innerHTML = p.frames.map((f, i) =>
     `<div class="story-frame"><span class="story-idx">${i + 1}</span>
-       <span class="emoji">${f.emoji}</span><span class="tiny muted">${esc(f.hint)}</span></div>`).join("");
+       <span class="emoji">${f.emoji}</span><span class="tiny muted">${esc(pickLang(f.hint, curLang()))}</span></div>`).join("");
   $("#storyFeedback").classList.add("hidden");
 }
 
 /** 命中的期望關鍵字比例＝分數（0–100）。 */
 function scoreOf(text, p) {
-  if (!p.keywords.length) return 0;
-  const hits = p.keywords.filter(k => text.includes(k)).length;
-  return Math.max(0, Math.min(100, Math.round(hits * 100 / p.keywords.length)));
+  // 關鍵字要用「使用者當下的語言」比對，否則英日韓使用者永遠命中 0 分
+  const kw = kwOf(p);
+  if (!kw.length) return 0;
+  const hay = text.toLowerCase();
+  const hits = kw.filter(k => hay.includes(String(k).toLowerCase())).length;
+  return Math.max(0, Math.min(100, Math.round(hits * 100 / kw.length)));
 }
 
 async function review() {
@@ -51,12 +57,12 @@ async function review() {
   btn.textContent = t("story.reviewing");
   let feedback = "";
   try {
-    feedback = await reviewStory(p.title, text, score);
+    feedback = await reviewStory(titleOf(p), text, score);
   } catch { /* 沒金鑰或連不上：下面退回依分數的固定鼓勵語，離線也能練 */ }
 
   if (!feedback) {
     feedback = score >= 80 ? t("story.great")
-      : score >= 50 ? t("story.ok").replace("{kw}", p.keywords[0] || "")
+      : score >= 50 ? t("story.ok").replace("{kw}", kwOf(p)[0] || "")
       : t("story.tryAgain");
   }
   btn.disabled = false;
@@ -68,7 +74,7 @@ async function review() {
   speak(feedback);
 
   // 落一筆紀錄，讓成績單看得到故事練習
-  try { await addRehabLog({ target: p.title, recognized: text, score, feedback }); } catch { }
+  try { await addRehabLog({ target: titleOf(p), recognized: text, score, feedback }); } catch { }
 }
 
 export function setupStory() {
