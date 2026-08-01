@@ -164,8 +164,30 @@
             <span class="chip aac-scale-chip" data-s="3">A＋＋</span>
             <span class="chip aac-scale-chip" data-s="4">A＋＋＋</span>
           </div>
+          <input id="aacSearch" type="search" data-i18n-ph="aac.search" placeholder="搜尋圖卡" style="margin:0 0 8px" />
+          <!-- 「常用」推薦列：依使用頻率×時間衰減×情境排出來的前 8 張。
+               冷啟動（還沒按滿 3 張）不顯示，不硬塞猜測。 -->
+          <div id="aacFeedWrap" class="hidden" style="margin-bottom:10px">
+            <label class="lbl" data-i18n="aac.feed">常用</label>
+            <div id="aacFeed" class="cards-grid"></div>
+          </div>
           <div id="aacCats" class="chips"></div>
           <div id="aacItems" class="cards-grid"></div>
+        </div>
+
+        <!-- 自訂金額：金額類專用（找零、報價講不出來時直接打數字）-->
+        <div id="amountDlg" class="modal hidden">
+          <div class="modal-card">
+            <h3 data-i18n="aac.customAmount">自訂金額</h3>
+            <label class="lbl" data-i18n="aac.amountLabel">金額</label>
+            <input id="amountVal" type="number" inputmode="numeric" min="0" step="1" />
+            <label class="lbl" data-i18n="aac.currencyLabel">幣別</label>
+            <select id="amountCur"></select>
+            <div class="row" style="margin-top:12px">
+              <button id="amountAdd" class="btn primary" data-i18n="aac.amountAdd">加入句子</button>
+              <button id="amountCancel" class="btn ghost" data-i18n="btn.cancel">取消</button>
+            </div>
+          </div>
         </div>
         <div class="card">
           <h3 data-i18n="cc.title">📷 自訂圖卡（拍熟悉的東西）</h3>
@@ -223,6 +245,9 @@
           <input id="s_rate" type="range" min="0.5" max="1.5" step="0.05" />
           <label class="lbl"><span data-i18n="set.font">字體大小</span> <span id="fontVal" class="muted"></span></label>
           <input id="s_font" type="range" min="0.9" max="1.6" step="0.05" />
+          <label class="row"><input id="s_confirmCard" type="checkbox" />
+            <span><span data-i18n="set.confirmCard">AAC 確認卡</span>
+            <br><span class="tiny muted" data-i18n="set.confirmCardDesc">組句後跳出大圖卡供確認，按「對」才朗讀。</span></span></label>
         </div>
         <div class="card">
           <h3 data-i18n="care.title">🧑‍⚕️ 使用模式（依嚴重程度）</h3>
@@ -305,7 +330,22 @@
       </div>
     </div>
 
-    <div id="toast" class="toast hidden"></div>
+    <!-- 意圖確認大圖卡：AI 組完句子先讓使用者確認，按「對」才唸出來。
+       不識字的使用者靠 emoji + 大字判斷；連續選錯 3 次會提議聯絡家人。 -->
+  <div id="confirmDlg" class="modal hidden">
+    <div class="modal-card confirm-card">
+      <p id="confirmWarn" class="tiny hidden" style="color:var(--danger)" data-i18n="confirm.medical">醫療相關內容，請確認</p>
+      <h3 data-i18n="confirm.title">是這個意思嗎？</h3>
+      <div id="confirmEmoji" class="confirm-emoji"></div>
+      <p id="confirmText" class="confirm-text"></p>
+      <p id="confirmReject" class="tiny muted hidden"></p>
+      <div class="row">
+        <button id="confirmYes" class="btn primary" data-i18n="confirm.yes">對，朗讀</button>
+        <button id="confirmNo" class="btn ghost" data-i18n="confirm.no">不對</button>
+      </div>
+    </div>
+  </div>
+  <div id="toast" class="toast hidden"></div>
   </div>
 
   <!-- 你的 Firebase 設定（複製 config.example.js 為 config.js 並填入）。沒有 config.js 時為純本機模式。 -->

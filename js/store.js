@@ -17,6 +17,11 @@ const DEFAULTS = {
               severityMode: "mild",
               kioskPin: "1234",       // 重度退出 PIN（4 位數字）
               aacScale: 1,            // 圖卡字級 1~4（3=特大→2欄、4=巨大→1欄，網格自動降級）
+              // 意圖確認大圖卡：組完句子先跳大 emoji＋大字確認，按「對」才唸出來。
+              // 預設開——對不識字的使用者，這是發聲前唯一能攔下錯誤的一關。
+              confirmCard: true,
+              currency: "NTD",        // 自訂金額的預設幣別
+              currentLocationTag: "", // 最近一次定位的地點標籤（圖卡推薦排序的情境加成用）
               // 本地 GPT-SoVITS 語音引擎（透過語音中心橋接）
               localTtsEnabled: false, localTtsUrl: "", localComputeServers: [], localVoiceName: "", localVoiceLang: "", voiceEmotion: "" },
   // 單一欄位的金鑰（通報用）

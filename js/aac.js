@@ -1,19 +1,43 @@
-// AAC 圖卡資料（內建常用集，emoji + 詞 + 詞性）。
-// 第 3 欄＝費茲傑羅詞性色碼（Fitzgerald Key）："n"名詞→黃、"v"動詞→綠、"a"形容詞→藍；
+// AAC 圖卡：資料來自 aacdata.js（由 App 的 AacData.kt 轉出，兩邊逐字一致），
+// 這裡只負責轉成畫面要的形狀，並補上網頁特有的詞性色碼。
+//
+// 詞性色碼＝費茲傑羅（Fitzgerald Key）："n"名詞→黃、"v"動詞→綠、"a"形容詞→藍，
 // 省略＝中性（時間詞、問句、社交詞不上色）。視覺錨點幫助語法訓練（輕症模式）。
-export const AAC = {
-  "需求": [["💧","喝水","v"],["🍚","吃飯","v"],["🚻","上廁所","v"],["😴","休息","v"],["💊","吃藥","v"],["🤕","不舒服","a"],["🆘","救命","v"],["🧊","太熱","a"],["🧥","太冷","a"],["🔆","開燈","v"]],
-  "情緒": [["🙂","開心","a"],["😢","難過","a"],["😣","痛","a"],["😖","累","a"],["😟","害怕","a"],["😡","生氣","a"],["😌","還好","a"],["🤗","想抱抱","v"]],
-  "動作": [["🚶","走","v"],["🛌","躺","v"],["🪑","坐","v"],["🙋","幫忙","v"],["👀","看","v"],["👂","聽","v"],["✋","停","v"],["👍","好"],["👎","不要"]],
-  "人物": [["👩‍⚕️","醫生","n"],["👨‍⚕️","護理師","n"],["👨‍👩‍👧","家人","n"],["🧑","朋友","n"],["👮","警察","n"]],
-  "地點": [["🏠","家","n"],["🏥","醫院","n"],["🛏️","房間","n"],["🍴","餐廳","n"],["🚪","門口","n"]],
-  "時間": [["⏰","現在"],["🌅","早上"],["🌙","晚上"],["⏳","等一下"],["🔜","快"]],
-  "問句": [["❓","什麼"],["📍","哪裡"],["🕐","什麼時候"],["🤔","為什麼"],["🙏","可以嗎"]],
+// App 的資料沒有這一欄，依分類給預設值——同一類的詞性絕大多數一致，
+// 少數例外（動作類裡的「好」）比整片不上色好。
+import { AAC_CATEGORIES, AAC_ITEMS, CURRENCIES } from "./aacdata.js";
+
+export { AAC_CATEGORIES, AAC_ITEMS, CURRENCIES };
+
+const POS_BY_CAT = {
+  Products:"n", FoodDrink:"n", People:"n", Places:"n", Medical:"n",
+  Actions:"v", Needs:"v",
+  Emotions:"a",
+  Money:"", Time:"", Questions:"", Emergency:"",
 };
-export const AAC_CATS = Object.keys(AAC);
+
+/** 分類 id 清單（順序＝App 的 enum 順序，患者靠位置記憶找卡，不可重排）。 */
+export const AAC_CATS = AAC_CATEGORIES.map(c => c.id);
+export const CAT_EMOJI = Object.fromEntries(AAC_CATEGORIES.map(c => [c.id, c.emoji]));
+
+/** 某分類的卡片，統一成畫面用的形狀。 */
+export function cardsOfCat(catId) {
+  return AAC_ITEMS.filter(i => i.cat === catId).map(toCard);
+}
+export function toCard(i) {
+  return { id: i.id, emoji: i.emoji, word: i.label, pos: POS_BY_CAT[i.cat] || "", strong: !!i.strong };
+}
+/** 全庫（推薦列與搜尋用）。 */
+export const ALL_CARDS = AAC_ITEMS.map(toCard);
+
+/** 搜尋：比對詞面，與 App 的 filterAacItems 同語意。 */
+export function searchCards(query) {
+  const q = (query || "").trim().toLowerCase();
+  if (!q) return [];
+  return ALL_CARDS.filter(c => c.word.toLowerCase().includes(q));
+}
 
 // 重度模式「逐張掃描」的備胎核心卡（純生活必需）：家人沒自建照片卡時用這組。
-// 已不再有獨立情境卡系統——重度直接用「大圖卡」（家人自建照片卡優先，否則這組）。
 export const SEVERE_CORE = [
   ["💧","喝水"],["🍚","吃飯"],["🚻","上廁所"],["😴","休息"],
   ["🤕","不舒服"],["😣","痛"],["🙋","要人幫忙"],["🆘","救命"],

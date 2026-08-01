@@ -244,3 +244,17 @@ body.sev-moderate .complex, body.sev-severe .complex{ display:none !important; }
   font-size:6vmin; font-weight:800; padding:2.5vmin 6vmin; border-radius:4vmin;
   border:3px solid #d8cdb4; background:#fffdf6; color:#6b5d3e; box-shadow:0 5px 0 #d8cdb4; cursor:pointer; }
 .kiosk-next:active{ transform:translateY(2px); box-shadow:0 3px 0 #d8cdb4; }
+
+/* ── 對話框（自訂金額／意圖確認大圖卡）──
+   意圖確認是給不識字的使用者用的：emoji 要夠大、句子要夠大，
+   兩顆按鈕左右分明，避免手抖按錯。 */
+.modal{ position:fixed; inset:0; z-index:50; display:flex; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.55); padding:20px; }
+.modal-card{ background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+  padding:20px; width:100%; max-width:380px; max-height:90dvh; overflow-y:auto; }
+.modal-card h3{ margin:0 0 10px; }
+.confirm-card{ text-align:center; }
+.confirm-emoji{ font-size:64px; line-height:1.2; margin:6px 0; }
+.confirm-text{ font-size:1.35rem; font-weight:700; margin:6px 0 14px; word-break:break-word; }
+.confirm-card .row{ gap:10px; }
+.confirm-card .btn{ flex:1; padding:14px 10px; font-size:1.05rem; }

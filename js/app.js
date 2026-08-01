@@ -2,7 +2,8 @@ import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistor
 import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js";
 import { reconstruct, composeAac, hasAnyLlmKey } from "./llm.js";
 import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js";
-import { AAC, AAC_CATS } from "./aac.js";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, ALL_CARDS, searchCards, CURRENCIES } from "./aac.js";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js";
 import { setupKiosk, enterKiosk } from "./kiosk.js";
 import { bindTap } from "./interaction.js";
 import { orderCards } from "./predict.js";
@@ -65,6 +66,7 @@ function fillSettings(){
   $("#s_lang").value = state.settings.lang;
   $("#s_rate").value = state.settings.rate; $("#rateVal").textContent = state.settings.rate+"x";
   $("#s_font").value = state.settings.font; $("#fontVal").textContent = state.settings.font+"x";
+  if($("#s_confirmCard")) $("#s_confirmCard").checked = state.settings.confirmCard !== false;
   // 使用模式（依嚴重程度）三段選單 + 重度退出 PIN
   renderSevModes();
   if($("#care_pin")) $("#care_pin").value = state.settings.kioskPin || "1234";
@@ -271,6 +273,7 @@ function bindSettings(){
     save(); });
   $("#s_rate").addEventListener("input", e=>{ state.settings.rate=+e.target.value; $("#rateVal").textContent=e.target.value+"x"; save(); });
   $("#s_font").addEventListener("input", e=>{ state.settings.font=+e.target.value; $("#fontVal").textContent=e.target.value+"x"; applyTheme(); save(); });
+  $("#s_confirmCard")?.addEventListener("change", e=>{ state.settings.confirmCard = e.target.checked; save(); });
   // 使用模式（三段選單在 renderSevModes 內綁 tap）＋重度退出 PIN
   if($("#care_pin")){
     $("#care_pin").addEventListener("change", e=>{
@@ -467,42 +470,101 @@ let aacCat = AAC_CATS[0];
 let lastPos = "";             // 上一個點的詞性 → 候選詞預測（動詞後名詞優先…）
 const combo = [];             // 整句緩衝（輕症：點卡只進緩衝，按「朗讀」才整句連貫唸）
 
+const AMOUNT_CAT = "Money";   // 只有金額類顯示「自訂金額」入口
+let aacSearch = "";           // 搜尋字串（有字時蓋掉分類瀏覽）
+
 function aacCats(){
   return (state.customCards||[]).length ? [CC_CAT, ...AAC_CATS] : AAC_CATS;
 }
-// 目前分類的卡片，統一成 {emoji?, img?, word, pos}
+const catLabel = c => c === CC_CAT ? t("cc.myCards") : (t("aac.cat."+c) + " " + (CAT_EMOJI[c]||""));
+
+// 目前要顯示的卡片，統一成 {id?, emoji?, img?, word, pos}
 function aacCards(cat){
   if(cat === CC_CAT) return (state.customCards||[]).map(c=>({ img:c.img, word:c.word, pos:c.pos||"" }));
-  return (AAC[cat]||[]).map(([emoji, word, pos])=>({ emoji, word, pos:pos||"" }));
+  // 類別內也依推薦指數排（有分數的往前、沒分數的維持原順序）——
+  // 但類別「結構」不動：患者靠位置記憶找卡，整片大風吹反而找不到。
+  return rankWithin(cardsOfCat(cat), state.settings.currentLocationTag || "");
 }
-function renderAac(){
-  const cats = aacCats();
-  if(!cats.includes(aacCat)) aacCat = cats[0];
-  const catLabel = c => c === CC_CAT ? t("cc.myCards") : c;
-  $("#aacCats").innerHTML = cats.map(c=>`<span class="chip ${c===aacCat?'on':''}" data-c="${escapeHtml(c)}">${escapeHtml(catLabel(c))}</span>`).join("");
-  $$("#aacCats .chip").forEach(ch=>bindTap(ch, ()=>{ aacCat=ch.dataset.c; renderAac(); }, 250));
-  // 字級：s2~s4 加在網格上（s3 兩欄、s4 一欄，自動降級）；字級切換 chip 同步高亮
-  const s = Math.max(1, Math.min(4, +state.settings.aacScale || 1));
-  $("#aacItems").className = "cards-grid" + (s > 1 ? ` aac-s${s}` : "");
-  $$(".aac-scale-chip").forEach(ch=>ch.classList.toggle("on", +ch.dataset.s === s));
-  // 動態候選詞預測：依上一個點的詞性重排（動詞後名詞優先…），引導 SVO 語序
-  $("#aacItems").innerHTML = orderCards(aacCards(aacCat), lastPos).map(c=>
-    `<div class="acard${c.pos?` pos-${c.pos}`:""}" data-w="${escapeHtml(c.word)}" data-pos="${c.pos||""}">${
-      c.img ? `<img class="aphoto" src="${c.img}" alt="" draggable="false" />`
-            : `<span class="emoji">${c.emoji}</span>`
-    }${escapeHtml(c.word)}</div>`).join("");
-  // 輕症＝語法訓練：點卡「只進整句緩衝」不即時朗讀（整句組完按朗讀一次連貫唸）；
-  // 放大微動畫給視覺回饋，220ms 後才依預測重排（讓動畫看得到）。
-  $$("#aacItems .acard").forEach(a=>bindTap(a, ()=>{
+
+function cardHtml(c){
+  return `<div class="acard${c.pos?` pos-${c.pos}`:""}" data-w="${escapeHtml(c.word)}" data-pos="${c.pos||""}" data-id="${escapeHtml(c.id||"")}">${
+    c.img ? `<img class="aphoto" src="${c.img}" alt="" draggable="false" />`
+          : `<span class="emoji">${c.emoji}</span>`
+  }${escapeHtml(c.word)}</div>`;
+}
+// 點一張卡：進整句緩衝、記使用統計（含與句中其他卡的共現關聯，供推薦排序學習）
+function bindCards(sel){
+  // 只綁真正的詞卡：金額類尾巴那顆「自訂金額」入口雖然長得像卡，但它開的是
+  // 對話框，若一起綁會在組合區多推一個空白詞。
+  $$(sel+" .acard[data-w]").forEach(a=>bindTap(a, ()=>{
     a.classList.add("tapped");
-    combo.push(a.dataset.w);
+    const id = a.dataset.id || "";
+    if(id) recordUse(id, state.settings.currentLocationTag || "", combo.map(x=>x.id).filter(Boolean));
+    combo.push({ word:a.dataset.w, id });
     const pos = a.dataset.pos || "";
     renderCombo();
     setTimeout(()=>{ const changed = pos !== lastPos; lastPos = pos; if(changed) renderAac(); }, 220);
   }));
 }
+
+function renderAac(){
+  const cats = aacCats();
+  if(!cats.includes(aacCat)) aacCat = cats[0];
+  $("#aacCats").innerHTML = cats.map(c=>`<span class="chip ${c===aacCat?'on':''}" data-c="${escapeHtml(c)}">${escapeHtml(catLabel(c))}</span>`).join("");
+  $$("#aacCats .chip").forEach(ch=>bindTap(ch, ()=>{ aacCat=ch.dataset.c; renderAac(); }, 250));
+  // 字級：s2~s4 加在網格上（s3 兩欄、s4 一欄，自動降級）；字級切換 chip 同步高亮
+  const s = Math.max(1, Math.min(4, +state.settings.aacScale || 1));
+  const gridCls = "cards-grid" + (s > 1 ? ` aac-s${s}` : "");
+  $("#aacItems").className = gridCls;
+  $$(".aac-scale-chip").forEach(ch=>ch.classList.toggle("on", +ch.dataset.s === s));
+
+  // ── 「常用」推薦列：冷啟動（有效統計 < 3 張）不顯示，不硬塞猜測 ──
+  const feedWrap = $("#aacFeedWrap");
+  if(feedWrap){
+    const showFeed = !aacSearch && activeItemCount() >= 3;
+    const items = showFeed ? rankFeed(ALL_CARDS, state.settings.currentLocationTag || "") : [];
+    feedWrap.classList.toggle("hidden", !items.length);
+    if(items.length){
+      $("#aacFeed").className = gridCls;
+      $("#aacFeed").innerHTML = items.map(cardHtml).join("");
+      bindCards("#aacFeed");
+    }
+  }
+
+  // ── 主網格：搜尋中就顯示全庫比對結果，否則顯示目前分類 ──
+  let list;
+  if(aacSearch){
+    list = searchCards(aacSearch);
+    $("#aacCats").classList.add("hidden");
+  } else {
+    $("#aacCats").classList.remove("hidden");
+    // 動態候選詞預測：依上一個點的詞性重排（動詞後名詞優先…），引導 SVO 語序
+    list = orderCards(aacCards(aacCat), lastPos);
+  }
+  if(!list.length){
+    $("#aacItems").innerHTML = `<p class="tiny muted center" style="grid-column:1/-1">${t("aac.noMatch")}<br>${t("aac.searchHint")}</p>`;
+    return;
+  }
+  $("#aacItems").innerHTML = list.map(cardHtml).join("")
+    // 金額類尾巴掛「自訂金額」入口（找零／報價講不出來時直接打數字）
+    + (!aacSearch && aacCat === AMOUNT_CAT
+        ? `<div class="acard" id="aacAmountBtn"><span class="emoji">🔢</span>${escapeHtml(t("aac.customAmount"))}</div>` : "");
+  bindCards("#aacItems");
+  const ab = $("#aacAmountBtn");
+  if(ab) bindTap(ab, openAmountDialog, 250);
+}
+
+// ── 自訂金額 ──
+function openAmountDialog(){
+  const sel = $("#amountCur");
+  sel.innerHTML = CURRENCIES.map(c=>`<option value="${c.code}">${c.symbol} ${c.code} · ${escapeHtml(t("cur."+c.code))}</option>`).join("");
+  sel.value = state.settings.currency || "NTD";
+  $("#amountVal").value = "";
+  $("#amountDlg").classList.remove("hidden");
+  $("#amountVal").focus();
+}
 function renderCombo(){
-  $("#aacCombo").innerHTML = combo.map((w,i)=>`<span class="chip on" data-i="${i}">${w} ✕</span>`).join("") || `<span class="tiny muted">${t("combo.empty")}</span>`;
+  $("#aacCombo").innerHTML = combo.map((c,i)=>`<span class="chip on" data-i="${i}">${escapeHtml(c.word)} ✕</span>`).join("") || `<span class="tiny muted">${t("combo.empty")}</span>`;
   $$("#aacCombo .chip").forEach(c=>bindTap(c, ()=>{ combo.splice(+c.dataset.i,1); renderCombo(); }, 250));
   // 沒設 LLM 金鑰時「✨組成句子」按了只會報錯 → 直接隱藏，少一顆干擾按鈕
   $("#aacCompose")?.classList.toggle("hidden", !hasAnyLlmKey());
@@ -566,17 +628,84 @@ function setupAac(){
   $$(".aac-scale-chip").forEach(ch=>bindTap(ch, ()=>{
     state.settings.aacScale = +ch.dataset.s; save(); renderAac();
   }, 250));
-  bindTap($("#aacSpeak"), ()=>{ if(combo.length) speak(combo.join("")); });   // 整句緩衝一次連貫朗讀（Speak All）
+  // 整句緩衝一次連貫朗讀（Speak All）。強烈意圖（醫療／緊急）先跳確認大圖卡再唸。
+  bindTap($("#aacSpeak"), ()=>{ if(combo.length) confirmThenSpeak(comboText()); });
   bindTap($("#aacClear"), ()=>{ combo.length=0; renderCombo(); });
   bindTap($("#aacCompose"), async ()=>{
     if(!combo.length){ toast(t("toast.pickCards")); return; }
     if(!hasAnyLlmKey()){ toast(t("toast.needLlmCompose")); return; }
     toast(t("toast.composing"));
-    try{ const s = await composeAac(combo, ctxText); speak(s);
+    try{ const s = await composeAac(combo.map(c=>c.word), ctxText);
+      confirmThenSpeak(s);
       $("#fragments").value = s; toast(t("toast.composed"));
-      addHistory({ original:"AAC: "+combo.join("+"), reconstructed:s });
+      addHistory({ original:"AAC: "+combo.map(c=>c.word).join("+"), reconstructed:s });
     }catch(e){ toast(t("toast.aacFail")+(e.message||e)); }
   });
+
+  // 搜尋：輸入即篩（跨全部分類比對詞面）
+  const sb = $("#aacSearch");
+  if(sb) sb.addEventListener("input", e=>{ aacSearch = e.target.value; renderAac(); });
+
+  // 自訂金額
+  bindTap($("#amountAdd"), ()=>{
+    const v = ($("#amountVal").value||"").trim();
+    if(!v) return;
+    const cur = CURRENCIES.find(c=>c.code === $("#amountCur").value) || CURRENCIES[0];
+    state.settings.currency = cur.code; save();
+    combo.push({ word: cur.symbol + v, id: "" });   // 自訂金額不進使用統計（每次數字都不同）
+    $("#amountDlg").classList.add("hidden");
+    renderCombo();
+  });
+  bindTap($("#amountCancel"), ()=>$("#amountDlg").classList.add("hidden"));
+
+  // 意圖確認大圖卡
+  bindTap($("#confirmYes"), ()=>{
+    $("#confirmDlg").classList.add("hidden");
+    rejectStreak = 0;
+    if(_pendingSpeak) speak(_pendingSpeak);
+  });
+  bindTap($("#confirmNo"), onConfirmReject);
+}
+
+// ── 意圖確認大圖卡 ──
+// AI 或圖卡組出句子後，先用大 emoji ＋大字問「是這個意思嗎？」，按「對」才唸出來。
+// 對不識字的使用者，這是唯一能在發聲前攔下錯誤的一關。
+let _pendingSpeak = "";
+let rejectStreak = 0;              // 連續按「不對」的次數
+const REJECT_LIMIT = 3;            // 連續 3 次 → 提議聯絡家人（同 App）
+
+function comboText(){ return combo.map(c=>c.word).join(""); }
+
+// 句中有強烈意圖卡（醫療／緊急）→ 額外標紅提醒確認
+function comboHasStrong(){
+  const ids = new Set(combo.map(c=>c.id).filter(Boolean));
+  return ALL_CARDS.some(c => ids.has(c.id) && c.strong);
+}
+function confirmThenSpeak(text){
+  if(!text) return;
+  if(!state.settings.confirmCard){ speak(text); return; }   // 設定可關（預設開）
+  _pendingSpeak = text;
+  $("#confirmEmoji").textContent = combo.map(c=>{
+    const hit = ALL_CARDS.find(x=>x.id===c.id); return hit ? hit.emoji : "";
+  }).join("").slice(0, 6) || "💬";
+  $("#confirmText").textContent = text;
+  $("#confirmWarn").classList.toggle("hidden", !comboHasStrong());
+  const rj = $("#confirmReject");
+  rj.classList.toggle("hidden", rejectStreak === 0);
+  if(rejectStreak) rj.textContent = t("confirm.reject")
+    .replace("{n}", rejectStreak).replace("{m}", REJECT_LIMIT - rejectStreak);
+  $("#confirmDlg").classList.remove("hidden");
+}
+async function onConfirmReject(){
+  $("#confirmDlg").classList.add("hidden");
+  rejectStreak++;
+  if(rejectStreak < REJECT_LIMIT) return;
+  // 連續選錯 3 次：可能是 AI 一直組錯、或使用者狀況不對 → 提議聯絡家人
+  rejectStreak = 0;
+  if(confirm(t("confirm.alertTitle") + "\n\n" + t("confirm.alertBody"))){
+    try{ await telegramNotify(t("sos.default")); toast(t("toast.sosSent")); }
+    catch(e){ toast(t("toast.sosFail")+(e.message||e)); }
+  }
 }
 
 // ── 歷史 ──
@@ -618,7 +747,9 @@ function setupActions(){
   $$(".lang-btn").forEach(b=>b.addEventListener("click", ()=>{ if(lastResult) speakIn(lastResult, b.dataset.lang); }));
   $("#btnLoc").addEventListener("click", async ()=>{
     toast(t("toast.locating"));
-    try{ const l = await detectLocation(); ctxText = (ctxText?ctxText+"；":"")+(t("ctx.loc")+l); $("#ctx").textContent="📍 "+l; }
+    try{ const l = await detectLocation(); ctxText = (ctxText?ctxText+"；":"")+(t("ctx.loc")+l);
+      // 地點也給圖卡推薦排序當情境（醫療卡在醫院會浮上來）
+      state.settings.currentLocationTag = l; save(); $("#ctx").textContent="📍 "+l; }
     catch(e){ toast(t("toast.locateFail")+(e.message||e)); }
   });
   // 麥克風
