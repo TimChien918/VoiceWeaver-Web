@@ -11,6 +11,7 @@ import { CLINICAL_BANK } from "./clinical.js?v=1.4.7";
 import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.4.7";
 import { openCrisis, setupCrisis } from "./crisis.js?v=1.4.7";
 import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.4.7";
+import { preloadZhConv } from "./zhconv.js?v=1.4.7";
 import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.4.7";
 import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.4.7";
 import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.4.7";
@@ -1004,6 +1005,7 @@ function showApp(user){
   // 雲端設定載入後重繪 AAC：帳號裡的字級/自訂圖卡/「📷 我的」分類才會立即出現。
   // renderCombo 也要在這裡重跑一次——setupAac() 在登入完成前就先畫過一次，
   // 那時 applyI18n 還沒跑，組合區的空狀態會卡在預設的中文。
+  preloadZhConv();   // 簡繁對照表：背景載入，第一次重組時就有得用
   renderAac(); renderCombo(); renderCcList(); renderQuickSos(); setupCrisis();
   setStoryToast(toast); setupStory();
   setupHeadControl(msg=>{ const el=$("#headStatus"); if(el) el.textContent = msg; });

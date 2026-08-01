@@ -2,6 +2,7 @@
 import { runLlm, hasLlm } from "./providers.js?v=1.4.7";
 import { t as tr } from "./i18n.js?v=1.4.7";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
 import { DEFENSIVE_SYSTEM_PROMPT } from "./safety.js?v=1.4.7";
+import { toTraditionalSync } from "./zhconv.js?v=1.4.7";
 
 // 第一層防禦：黏在所有 system prompt 最前面，先要求模型別生成自傷／絕望字眼。
 // 這只是「請求」不是保證——真正擋住的是 app.js 的分級閘門與 speech.js 的輸出消毒。
@@ -29,6 +30,9 @@ const RECONSTRUCT_SAMPLES = 3;
 const RECONSTRUCT_TEMP = 0.3;
 
 const clamp01 = c => Math.max(0, Math.min(100, Math.round(c ?? 70)))/100;
+// 雲端模型就算 prompt 明寫繁體還是會偶爾漏簡體字（實測組出「請去医院」），
+// 在解析出口統一轉一次，所有候選句都涵蓋。
+const zh = s => toTraditionalSync(s);
 
 /** @returns {{text:string, confidence:number, alternatives:Array<{text,confidence}>}|null} */
 function parseCoT(raw){
@@ -38,11 +42,11 @@ function parseCoT(raw){
       const o = JSON.parse(j);
       // 新版格式：一次回 3 種講法
       const list = (o.candidates||[])
-        .map(c=>({ text:String(c?.text??"").trim(), confidence: clamp01(c?.confidence) }))
+        .map(c=>({ text: zh(String(c?.text??"").trim()), confidence: clamp01(c?.confidence) }))
         .filter(c=>c.text);
       if(list.length) return { ...list[0], alternatives: list.slice(1) };
       // 舊版格式：單一 reconstructed
-      const text = (o.reconstructed||"").trim();
+      const text = zh((o.reconstructed||"").trim());
       if(text) return { text, confidence: clamp01(o.confidence), alternatives: [] };
     }catch(e){ /* 落到下面搶救 */ }
   }
@@ -50,10 +54,10 @@ function parseCoT(raw){
   // 不要把整包 JSON 當成句子——病人畫面會出現 {"reasoning":… 還被當成可以唸的話。
   const m = String(raw??"").match(/"(?:text|reconstructed)"\s*:\s*"((?:[^"\\]|\\.)*)/);
   const salvaged = m && m[1].replace(/\\"/g,'"').replace(/\\n/g,"\n").trim();
-  if(salvaged) return { text: salvaged, confidence: 0.6, alternatives: [] };
+  if(salvaged) return { text: zh(salvaged), confidence: 0.6, alternatives: [] };
   const t = String(raw??"").trim().replace(/\s*\n\s*/g," ");
   if(!t || t.startsWith("{") || t.includes('"candidates"') || t.includes('"reasoning"')) return null;
-  return { text: t, confidence: 0.6, alternatives: [] };
+  return { text: zh(t), confidence: 0.6, alternatives: [] };
 }
 
 /**
@@ -131,7 +135,7 @@ export async function classifyCrisisIntent(text){
 export function composeAac(items, context){
   const sys = DEFENSIVE_SYSTEM_PROMPT + "\n\n" +
     "你是失語症患者的溝通助理。使用者用圖卡點選了一串元素，組成一句自然、口語、有禮貌的繁體中文。只輸出一句話。";
-  return runLlm(sys, `圖卡序列：${items.join(" → ")}\n${context?("場景："+context):""}`.trim());
+  return runLlm(sys, `圖卡序列：${items.join(" → ")}\n${context?("場景："+context):""}`.trim()).then(zh);
 }
 
 const SYS_REHAB_EVAL =
