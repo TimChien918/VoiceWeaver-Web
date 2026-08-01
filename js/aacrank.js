@@ -77,8 +77,10 @@ const CONCEPTS = [
   ["冷","熱","溫"],
   ["救","警","緊急","危險","跌倒","呼吸","噎"],
 ];
-// 卡片的詞面：網頁的卡用 .word，App 轉出的原始資料用 .label——兩種都吃。
-const labelOf = it => it.word ?? it.label ?? "";
+// 概念詞群是用繁體中文策劃的，所以語意相似一律拿**繁中原文**（label）比對。
+// 卡片上的 word 是目前語言的詞面（顯示與朗讀用），拿它比對會讓英日韓語系
+// 整組語意相似失效——換了語言，「喝水」就再也拉不出「杯子」。
+const labelOf = it => it.label ?? it.word ?? "";
 
 const _conceptCache = new Map();
 function conceptsOf(label) {

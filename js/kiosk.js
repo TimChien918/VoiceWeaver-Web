@@ -5,10 +5,10 @@
 //   • 怎麼按都不會跳走：唯一出口是照護者「右上角隱形區連點 5 下 → 輸入 PIN」。
 //   • 點卡片＝立即朗讀＋放大微動畫（建立因果關係與信任）。
 //   • 所有觸發都綁 pointerup + 防連點（顫抖誤觸只算一次），全面禁止長按。
-import { state, save } from "./store.js?v=1.4.1";
-import { speakUpbeat } from "./speech.js?v=1.4.1";
-import { SEVERE_CORE } from "./aac.js?v=1.4.1";
-import { bindTap } from "./interaction.js?v=1.4.1";   // 共用觸控防呆（pointerup + 防連點 + 禁長按）
+import { state, save } from "./store.js?v=1.4.2";
+import { speakUpbeat } from "./speech.js?v=1.4.2";
+import { severeCore } from "./aac.js?v=1.4.2";
+import { bindTap } from "./interaction.js?v=1.4.2";   // 共用觸控防呆（pointerup + 防連點 + 禁長按）
 
 const $ = (s)=>document.querySelector(s);
 const esc = (s)=>String(s??"").replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -35,7 +35,7 @@ export function kioskActive(){ return !$("#kiosk").classList.contains("hidden");
  *  家人自建照片卡優先（最貼近病人、只有家人懂）；沒有就用核心生活必需卡。 */
 function severeCards(){
   if((state.customCards||[]).length) return state.customCards.map(c=>({ img: c.img, word: c.word }));
-  return SEVERE_CORE.map(([emoji, word])=>({ emoji, word }));
+  return severeCore().map(({ emoji, word })=>({ emoji, word }));
 }
 
 // 螢幕常亮：長輩盯著板子時螢幕不熄滅（熄了會恐慌）。頁面被切走再回來時自動續約。

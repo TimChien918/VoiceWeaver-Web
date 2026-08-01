@@ -1,22 +1,22 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge } from "./store.js?v=1.4.1";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.4.1";
-import { reconstruct, composeAac, hasAnyLlmKey } from "./llm.js?v=1.4.1";
-import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.4.1";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, ALL_CARDS, searchCards, CURRENCIES } from "./aac.js?v=1.4.1";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.4.1";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.4.1";
-import { bindTap } from "./interaction.js?v=1.4.1";
-import { orderCards } from "./predict.js?v=1.4.1";
-import { CLINICAL_BANK } from "./clinical.js?v=1.4.1";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.4.1";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.4.1";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.4.1";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.4.1";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.4.1";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.4.1";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.4.1";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare } from "./localtts.js?v=1.4.1";
-import { applyI18n, t } from "./i18n.js?v=1.4.1";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge } from "./store.js?v=1.4.2";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.4.2";
+import { reconstruct, composeAac, hasAnyLlmKey } from "./llm.js?v=1.4.2";
+import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.4.2";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.4.2";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.4.2";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.4.2";
+import { bindTap } from "./interaction.js?v=1.4.2";
+import { orderCards } from "./predict.js?v=1.4.2";
+import { CLINICAL_BANK } from "./clinical.js?v=1.4.2";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.4.2";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.4.2";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.4.2";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.4.2";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.4.2";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.4.2";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.4.2";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare } from "./localtts.js?v=1.4.2";
+import { applyI18n, t } from "./i18n.js?v=1.4.2";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -553,7 +553,7 @@ function renderAac(){
   const feedWrap = $("#aacFeedWrap");
   if(feedWrap){
     const showFeed = !aacSearch && activeItemCount() >= 3;
-    const items = showFeed ? rankFeed(ALL_CARDS, state.settings.currentLocationTag || "") : [];
+    const items = showFeed ? rankFeed(allCards(), state.settings.currentLocationTag || "") : [];
     feedWrap.classList.toggle("hidden", !items.length);
     if(items.length){
       $("#aacFeed").className = gridCls;
@@ -711,14 +711,15 @@ function comboText(){ return combo.map(c=>c.word).join(""); }
 // 句中有強烈意圖卡（醫療／緊急）→ 額外標紅提醒確認
 function comboHasStrong(){
   const ids = new Set(combo.map(c=>c.id).filter(Boolean));
-  return ALL_CARDS.some(c => ids.has(c.id) && c.strong);
+  return allCards().some(c => ids.has(c.id) && c.strong);
 }
 function confirmThenSpeak(text){
   if(!text) return;
   if(!state.settings.confirmCard){ speak(text); return; }   // 設定可關（預設開）
   _pendingSpeak = text;
+  const all = allCards();
   $("#confirmEmoji").textContent = combo.map(c=>{
-    const hit = ALL_CARDS.find(x=>x.id===c.id); return hit ? hit.emoji : "";
+    const hit = all.find(x=>x.id===c.id); return hit ? hit.emoji : "";
   }).join("").slice(0, 6) || "💬";
   $("#confirmText").textContent = text;
   $("#confirmWarn").classList.toggle("hidden", !comboHasStrong());
