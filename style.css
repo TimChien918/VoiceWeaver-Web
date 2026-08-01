@@ -292,3 +292,20 @@ body.sev-moderate .complex, body.sev-severe .complex{ display:none !important; }
 /* 快速求救：三顆等寬紅鈕，字要大、點擊區要夠——急的時候手會抖 */
 .sos-btn{ flex:1; background:var(--danger); color:#fff; font-size:1.05rem; font-weight:700;
   min-height:52px; padding:0 4px; }
+
+/* ── 危機介入視窗：柔和、低刺激。這裡不用主題 accent（可能是螢光粉／亮黃），
+   固定一組安定的藍綠——人在崩潰邊緣時，高彩度會加重焦慮。 */
+.crisis-card{ text-align:center; --calm:#5b9dd9; }
+.crisis-card h3{ color:var(--calm); }
+.crisis-orb-wrap{ display:flex; flex-direction:column; align-items:center; gap:6px; margin:14px 0; }
+.crisis-orb{ width:96px; height:96px; border-radius:50%;
+  background:radial-gradient(circle at 35% 32%, #9fd0f0, #5b9dd9);
+  box-shadow:0 0 34px rgba(91,157,217,.45);
+  transition:transform 3.6s ease-in-out; }
+@media (prefers-reduced-motion: reduce){ .crisis-orb{ transition:none; } }
+.crisis-card .btn.primary{ background:var(--calm); }
+.crisis-log{ text-align:left; max-height:120px; overflow-y:auto; margin:10px 0;
+  display:flex; flex-direction:column; gap:6px; }
+.crisis-msg{ background:var(--bg); border:1px solid var(--line); border-radius:12px;
+  padding:7px 10px; font-size:.82rem; }
+.crisis-msg.mine{ background:color-mix(in srgb,#5b9dd9 18%,var(--bg)); align-self:flex-end; }

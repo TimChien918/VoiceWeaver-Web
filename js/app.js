@@ -9,6 +9,7 @@ import { bindTap } from "./interaction.js?v=1.4.1";
 import { orderCards } from "./predict.js?v=1.4.1";
 import { CLINICAL_BANK } from "./clinical.js?v=1.4.1";
 import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.4.1";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.4.1";
 import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.4.1";
 import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.4.1";
 import { setupReport, loadReport, setReportToast } from "./report.js?v=1.4.1";
@@ -84,6 +85,7 @@ function fillSettings(){
   if($("#s_confirmCard")) $("#s_confirmCard").checked = state.settings.confirmCard !== false;
   if($("#s_style")) $("#s_style").value = state.settings.style || "tech";
   if($("#s_contrast")) $("#s_contrast").checked = !!state.settings.highContrast;
+  if($("#k_familyPhone")) $("#k_familyPhone").value = state.settings.familyPhone || "";
   // 使用模式（依嚴重程度）三段選單 + 重度退出 PIN
   renderSevModes();
   if($("#care_pin")) $("#care_pin").value = state.settings.kioskPin || "1234";
@@ -296,6 +298,7 @@ function bindSettings(){
   $("#s_confirmCard")?.addEventListener("change", e=>{ state.settings.confirmCard = e.target.checked; save(); });
   $("#s_style")?.addEventListener("change", e=>{ state.settings.style = e.target.value; applyTheme(); save(); });
   $("#s_contrast")?.addEventListener("change", e=>{ state.settings.highContrast = e.target.checked; applyTheme(); save(); });
+  $("#k_familyPhone")?.addEventListener("input", e=>{ state.settings.familyPhone = e.target.value.trim(); save(); });
   // 使用模式（三段選單在 renderSevModes 內綁 tap）＋重度退出 PIN
   if($("#care_pin")){
     $("#care_pin").addEventListener("change", e=>{
@@ -725,10 +728,7 @@ async function onConfirmReject(){
   if(rejectStreak < REJECT_LIMIT) return;
   // 連續選錯 3 次：可能是 AI 一直組錯、或使用者狀況不對 → 提議聯絡家人
   rejectStreak = 0;
-  if(confirm(t("confirm.alertTitle") + "\n\n" + t("confirm.alertBody"))){
-    try{ await telegramNotify(t("sos.default")); toast(t("toast.sosSent")); }
-    catch(e){ toast(t("toast.sosFail")+(e.message||e)); }
-  }
+  if(confirm(t("confirm.alertTitle") + "\n\n" + t("confirm.alertBody"))) openCrisis();
 }
 
 // ── 快速求救：一鍵發聲 ──
@@ -825,10 +825,7 @@ function setupActions(){
     if(escPresses.length>=3){ escPresses=[]; sos(); }
   });
 }
-async function sos(){
-  try{ await telegramNotify(lastResult || t("sos.default")); toast(t("toast.sosSent")); }
-  catch(e){ toast(t("toast.sosFail")+(e.message||e)); }
-}
+function sos(){ openCrisis(); }
 
 // ── 登入流程 ──
 function showLogin(){ $("#login").classList.remove("hidden"); $("#app").classList.add("hidden"); }
@@ -844,7 +841,7 @@ function showApp(user){
   _user = user; renderWho();
   applyTheme(); applyI18n(state.settings.lang); fillSettings(); renderFavorites();
   // 雲端設定載入後重繪 AAC：帳號裡的字級/自訂圖卡/「📷 我的」分類才會立即出現
-  renderAac(); renderCcList(); renderQuickSos();
+  renderAac(); renderCcList(); renderQuickSos(); setupCrisis();
   // 臨床題庫點一下＝填進目標句欄位並捲到練習區
   renderClinicalBank(s=>{ const inp=$("#rehabTarget"); if(!inp) return;
     inp.value = s; $('.tab[data-tab="rehab"]')?.click();

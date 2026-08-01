@@ -252,6 +252,8 @@
           <h3 data-i18n="set.tgTitle">🆘 緊急通報（Telegram，選用）</h3>
           <label class="lbl">Bot Token</label>
           <input id="k_tgtoken" type="password" autocomplete="off" />
+          <label class="lbl" data-i18n="set.familyPhone">家人電話（危機時直撥）</label>
+          <input id="k_familyPhone" type="tel" placeholder="例 0912345678" />
           <label class="lbl" data-i18n="set.tgChat">Chat ID（接收者）</label>
           <input id="k_tgchat" type="text" autocomplete="off" />
         </div>
@@ -361,7 +363,30 @@
       </div>
     </div>
 
-    <!-- 意圖確認大圖卡：AI 組完句子先讓使用者確認，按「對」才唸出來。
+    <!-- 危機介入視窗：刻意「不像軟體」——一顆會呼吸的圓、柔和的字、少量大按鈕。
+       人在崩潰邊緣時，介面越複雜越幫倒忙。 -->
+  <div id="crisisDlg" class="modal hidden">
+    <div class="modal-card crisis-card">
+      <h3 data-i18n="crisis.title">我們在這裡陪你</h3>
+      <p id="crisisStatus" class="tiny" style="color:var(--accent)"></p>
+      <div class="crisis-orb-wrap">
+        <div id="crisisOrb" class="crisis-orb"></div>
+        <span id="crisisBreath" class="tiny muted"></span>
+      </div>
+      <button id="crisisVideo" class="btn primary block" data-i18n="crisis.video">開始即時視訊通話</button>
+      <button id="crisisCall" class="btn ghost block" data-i18n="crisis.call">改用電話打給家人</button>
+      <label class="lbl" data-i18n="crisis.quick">想對家人說（點一下傳出）</label>
+      <div id="crisisQuick" class="chips"></div>
+      <div id="crisisLog" class="crisis-log"></div>
+      <div class="row">
+        <button id="crisisHotline1925" class="btn ghost" style="flex:1" data-i18n="crisis.hotline1925">1925 安心專線</button>
+        <button id="crisisHotline119" class="btn danger" style="flex:1" data-i18n="crisis.hotline119">119 緊急</button>
+      </div>
+      <p class="tiny muted" style="margin-top:10px" data-i18n="crisis.privacy">畫面與聲音僅安全傳給家人，不會公開。</p>
+      <button id="crisisClose" class="btn link block" data-i18n="crisis.close">關閉</button>
+    </div>
+  </div>
+  <!-- 意圖確認大圖卡：AI 組完句子先讓使用者確認，按「對」才唸出來。
        不識字的使用者靠 emoji + 大字判斷；連續選錯 3 次會提議聯絡家人。 -->
   <div id="confirmDlg" class="modal hidden">
     <div class="modal-card confirm-card">
