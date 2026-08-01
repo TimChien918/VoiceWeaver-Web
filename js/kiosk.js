@@ -132,8 +132,7 @@ function restartScan(){ clearInterval(_scanTimer); _scanTimer = setInterval(()=>
 function startScan(){ _scan = severeCards(); _idx = 0; renderScanCard(); restartScan(); }
 function stopScan(){ clearInterval(_scanTimer); _scanTimer = null; }
 
-// ── 照護者退出：右上角隱形區 3 秒內連點 5 下 → PIN ──
-let _taps = [];
+// ── 照護者退出：右上角按鈕 → PIN ──
 let _pinBuf = "";
 let _onExit = null;
 
@@ -172,12 +171,9 @@ function renderPinDots(){
 /** 啟動時呼叫一次：綁退出熱區與 PIN 鍵盤。 */
 export function setupKiosk({ onExit } = {}){
   _onExit = onExit || null;
-  bindTap($("#kioskExitZone"), ()=>{
-    const now = Date.now();
-    _taps = _taps.filter(ts=>now - ts < 3000);
-    _taps.push(now);
-    if(_taps.length >= 5){ _taps = []; openPin(); }
-  }, 120);   // 熱區容許快速連點（照護者刻意動作）
+  // 點一下就跳 PIN。以前要 3 秒內連點 5 下，照護者自己也常按不出來——
+  // 而防呆本來就該由 PIN 負責，按鈕好按不影響安全性：沒有密碼一樣出不去。
+  bindTap($("#kioskExitZone"), openPin, 300);
   const pad = $("#kioskPinPad");
   pad.innerHTML = [1,2,3,4,5,6,7,8,9,"",0,"⌫"].map(d=>
     d === "" ? `<span></span>` : `<button class="kiosk-pin-key" data-d="${d}">${d}</button>`).join("");

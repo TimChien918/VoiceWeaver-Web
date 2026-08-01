@@ -26,6 +26,9 @@
     <header class="topbar">
       <span class="title">VoiceWeaver</span>
       <span class="spacer"></span>
+      <!-- 求救入口：危機視窗原本只有 Escape×3 與「連錯 3 次」兩條路，手機沒有 Escape 鍵＝按不到。
+           放 topbar 而不是重組分頁，是因為崩潰不挑分頁——在圖卡頁、復健頁也要按得到。 -->
+      <button id="btnSos" class="chip sos-chip" data-i18n="sos.help">🆘 求救</button>
       <span id="who" class="tiny muted"></span>
       <button id="btnLogout" class="chip" data-i18n="logout">登出</button>
     </header>
@@ -317,7 +320,7 @@
           <div id="sevModes"></div>
           <label class="lbl" data-i18n="care.pin">重度退出密碼（4 位數字）</label>
           <input id="care_pin" type="text" inputmode="numeric" maxlength="4" placeholder="1234" autocomplete="off" />
-          <p class="tiny muted" data-i18n="care.severeHint">重度＝全螢幕逐張掃描大圖卡；要離開時連點右上角 5 下再輸入密碼。圖卡內容用「AAC 圖卡」分頁的自訂圖卡（拍家人／熟悉的東西最好）。</p>
+          <p class="tiny muted" data-i18n="care.severeHint">重度＝全螢幕逐張掃描大圖卡；要離開時點右上角的「退出」鈕再輸入密碼。圖卡內容用「AAC 圖卡」分頁的自訂圖卡（拍家人／熟悉的東西最好）。</p>
         </div>
         <div class="card">
           <h3 data-i18n="set.computeTitle">🖥 讓電腦幫忙跑運算（語音／生圖／文字）</h3>
@@ -382,7 +385,10 @@
       <div id="kioskTrail" class="kiosk-trail"></div>
       <div id="kioskCards" class="kiosk-cards"></div>
       <button id="kioskNext" class="kiosk-next" data-i18n="care.next">下一張 ▶</button>
-      <div id="kioskExitZone" class="kiosk-exit"></div>
+      <!-- 照護者出口：看得見的按鈕，點一下就跳 PIN。
+           原本是隱形熱區要連點 5 下——照護者自己也常按不出來，急著要退出時最麻煩。
+           防呆改由 PIN 負責：按鈕好按沒關係，沒有密碼一樣出不去。 -->
+      <button id="kioskExitZone" class="kiosk-exit" data-i18n="kiosk.exitBtn" aria-label="關閉">✕ 關閉</button>
       <div id="kioskPin" class="kiosk-pin hidden">
         <div class="kiosk-pin-box">
           <p class="kiosk-pin-title" data-i18n="care.pinTitle">照護者密碼</p>

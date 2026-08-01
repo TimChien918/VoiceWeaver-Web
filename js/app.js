@@ -872,6 +872,11 @@ function setupActions(){
     });
   });
   $("#btnLogout").addEventListener("click", logout);
+  // 求救鈕：按下去會真的發 Telegram 給家人，誤觸成本高，所以先問一次再開。
+  // 防誤觸用二次確認、不用長按——interaction.js 已說明長按對手抖使用者是障礙。
+  bindTap($("#btnSos"), ()=>{
+    if(confirm(t("sos.confirmTitle") + "\n\n" + t("sos.confirmBody"))) sos();
+  });
   // SOS 快捷：1.5 秒內連按 3 次 Escape 才觸發（單按太容易誤觸——關對話框/退全螢幕都會誤發通報）
   let escPresses = [];
   document.addEventListener("keydown", e=>{

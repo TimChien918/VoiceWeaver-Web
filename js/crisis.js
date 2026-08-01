@@ -12,7 +12,7 @@
 // 呼吸引導不是裝飾：等待家人回應的那幾分鐘最難熬，給一個節奏可以跟著做。
 import { t } from "./i18n.js?v=1.4.6";
 import { state } from "./store.js?v=1.4.6";
-import { telegramNotify } from "./extras.js?v=1.4.6";
+import { telegramSend, locationLine } from "./extras.js?v=1.4.6";
 
 const $ = s => document.querySelector(s);
 
@@ -48,7 +48,9 @@ export function openCrisis() {
   box.innerHTML = QUICK.map((k, i) => `<span class="chip" data-i="${i}">${t(k)}</span>`).join("");
   box.querySelectorAll(".chip").forEach(c => c.addEventListener("click", async () => {
     const msg = t(QUICK[+c.dataset.i]);
-    try { await telegramNotify(msg); pushMsg(msg, true); }
+    // 用 telegramSend 不用 telegramNotify：位置開窗時已送過，這裡再等 6 秒定位
+    // 只會讓對話跟不上人——崩潰的人打一句話要等六秒才出去是不行的。
+    try { await telegramSend(t("sos.prefix") + msg); pushMsg(msg, true); }
     catch { $("#crisisStatus").textContent = t("crisis.sendFail"); }
   }));
 
@@ -58,9 +60,15 @@ export function openCrisis() {
 
   startBreathing();
 
-  // 通知家人（失敗不擋畫面——專線按鈕還是要能按）
-  telegramNotify(t("crisis.alertMsg") + "\n" + roomUrl())
-    .then(() => { $("#crisisStatus").textContent = t("crisis.notified"); })
+  // 通知家人（失敗不擋畫面——專線按鈕還是要能按）。
+  // 先送出、位置隨後補第二則：等定位會讓通報整整晚 6 秒才出去。
+  telegramSend(t("sos.prefix") + t("crisis.alertMsg") + "\n" + roomUrl())
+    .then(async () => {
+      $("#crisisStatus").textContent = t("crisis.notified");
+      const loc = await locationLine();
+      // 拿不到位置就不補——只寫「位置未知」的第二則對家人是雜訊，人已經通知到了
+      if(loc) telegramSend(t("sos.prefix") + loc).catch(()=>{});
+    })
     .catch(() => { $("#crisisStatus").textContent = t("crisis.sendFail"); });
 }
 

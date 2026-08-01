@@ -99,6 +99,10 @@ label.row{ margin-top:0; cursor:pointer; }
 .btn.big{ width:100%; margin-top:12px; font-size:1.05rem; }
 .chip{ border:1px solid var(--line); background:var(--card); color:var(--fg); border-radius:20px;
   padding:5px 12px; font-size:.82rem; cursor:pointer; white-space:nowrap; }
+/* 求救鈕：紅底白字。安全功能不該低調到跟「登出」長一樣——急的時候要一眼找到。
+   觸控目標放大到 44px（iOS HIG 最小值），手抖也按得中。 */
+.chip.sos-chip{ background:var(--danger); color:#fff; border-color:var(--danger);
+  font-weight:700; min-height:44px; padding:5px 16px; margin-right:8px; }
 
 .result-text{ font-size:1.4rem; font-weight:600; line-height:1.5; padding:6px 2px 12px; }
 .result-img{ width:100%; border-radius:12px; margin-top:10px; }
@@ -233,7 +237,16 @@ body.kiosk-on{ overflow:hidden; }
 .kcard .kword{ font-size:9vmin; font-weight:800; color:#4a3f28; word-break:keep-all; }
 .kcard.tapped{ animation:ktap .35s ease; }
 @keyframes ktap{ 30%{ transform:scale(1.06); } 100%{ transform:scale(1); } }
-.kiosk-exit{ position:absolute; top:0; right:0; width:76px; height:76px; z-index:2; }  /* 隱形退出熱區 */
+/* 關閉鈕：必須一眼看得到。
+   這個模式會全螢幕鎖住畫面，找不到出口的人就是真的出不去——所以寧可醒目也不要低調。
+   用實心高對比（不要半透明：卡片底色是淺奶油，半透明深色在上面幾乎看不見），
+   尺寸接近一般按鈕而不是小標籤。真正擋住誤觸的是後面的密碼，不是「難找」。 */
+.kiosk-exit{ position:absolute; top:14px; right:14px; z-index:2;
+  min-height:56px; padding:12px 22px; border-radius:28px; cursor:pointer;
+  border:2px solid #fff; background:#c0392b; color:#fff;
+  font-size:1.15rem; font-weight:800; letter-spacing:.5px;
+  box-shadow:0 3px 12px rgba(0,0,0,.35); }
+.kiosk-exit:hover{ background:#a33325; }
 
 /* 照護者 PIN（此層是給照護者的，可以有一般 UI 樣式） */
 .kiosk-pin{ position:absolute; inset:0; z-index:3; background:rgba(0,0,0,.45);

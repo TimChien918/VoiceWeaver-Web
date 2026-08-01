@@ -60,17 +60,26 @@ export async function recognizePhoto(base64Jpeg){
 }
 
 // ── Telegram 緊急通報 ──
-export async function telegramNotify(text){
+// 純送出，不等定位。危機通報要用這個——定位最慢會吃掉 6 秒 timeout，
+// 而那 6 秒是家人還不知道出事的 6 秒。
+export async function telegramSend(text){
   const { tgtoken, tgchat } = state.apiKeys;
   if(!tgtoken || !tgchat) throw new Error(t("err.needTg"));
-  let loc = "";
-  try{
-    const pos = await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{timeout:6000}));
-    loc = `\n📍 https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
-  }catch{ loc = t("sos.noLoc"); }
   const url = `https://api.telegram.org/bot${tgtoken}/sendMessage`;
   const r = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ chat_id: tgchat, text: t("sos.prefix") + text + loc }) });
+    body: JSON.stringify({ chat_id: tgchat, text }) });
   if(!r.ok) throw new Error("Telegram "+r.status);
   return true;
+}
+
+// 取一行可貼進訊息的位置連結；拿不到回 null，讓呼叫端自己決定要不要寫「位置未知」。
+export async function locationLine(){
+  try{
+    const pos = await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{timeout:6000}));
+    return `\n📍 https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
+  }catch{ return null; }
+}
+
+export async function telegramNotify(text){
+  return telegramSend(t("sos.prefix") + text + (await locationLine() ?? t("sos.noLoc")));
 }
