@@ -328,6 +328,15 @@ body.sev-moderate .complex, body.sev-severe .complex{ display:none !important; }
 .crisis-card .btn.primary{ background:var(--calm); }
 .crisis-log{ text-align:left; max-height:120px; overflow-y:auto; margin:10px 0;
   display:flex; flex-direction:column; gap:6px; }
+/* 危機視窗：家人的話要一眼跟系統提示分得開——那是「有人在」的證據。 */
+.crisis-msg.family{ background:rgba(76,141,246,.18); border:1px solid rgba(76,141,246,.45); }
+.crisis-chips{ display:flex; gap:6px; flex-wrap:wrap; margin:8px 0 2px; }
+.crisis-chip{ font-size:.72rem; padding:3px 9px; border-radius:20px;
+  background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.20); }
+.crisis-locked{ font-size:.75rem; line-height:1.5; text-align:center; opacity:.75; margin-top:10px; }
+/* 家人下了 /call 但瀏覽器擋掉彈窗時，至少讓按鈕自己喊 */
+@keyframes crisisUrgent{ 0%,100%{ transform:scale(1) } 50%{ transform:scale(1.04) } }
+.btn.urgent{ animation:crisisUrgent .9s ease-in-out infinite; }
 .crisis-msg{ background:var(--bg); border:1px solid var(--line); border-radius:12px;
   padding:7px 10px; font-size:.82rem; }
 .crisis-msg.mine{ background:color-mix(in srgb,#5b9dd9 18%,var(--bg)); align-self:flex-end; }

@@ -1,7 +1,7 @@
 // 進階功能（全部純 API / 瀏覽器）：生圖、定位、相機雲端辨識、Telegram 通報。
-import { state } from "./store.js?v=1.4.8";
-import { runImage } from "./providers.js?v=1.4.8";
-import { t } from "./i18n.js?v=1.4.8";
+import { state } from "./store.js?v=1.4.9";
+import { runImage } from "./providers.js?v=1.4.9";
+import { t } from "./i18n.js?v=1.4.9";
 
 // ── AI 生圖：走多供應商輪詢（pollinations 免金鑰保底）──
 export async function generateImage(prompt){ return runImage(prompt); }
@@ -82,4 +82,67 @@ export async function locationLine(){
 
 export async function telegramNotify(text){
   return telegramSend(t("sos.prefix") + text + (await locationLine() ?? t("sos.noLoc")));
+}
+
+// ── 危機介入用：媒體上傳與家人回覆輪詢（與 App 的 TelegramClient 同一組 API）──
+
+async function telegramUpload(method, field, blob, filename, caption){
+  const { tgtoken, tgchat } = state.apiKeys;
+  if(!tgtoken || !tgchat) throw new Error(t("err.needTg"));
+  const fd = new FormData();
+  fd.append("chat_id", tgchat);
+  fd.append("caption", (caption||"").slice(0,1000));
+  fd.append(field, blob, filename);
+  const r = await fetch(`https://api.telegram.org/bot${tgtoken}/${method}`, { method:"POST", body: fd });
+  if(!r.ok) throw new Error(`Telegram ${method} ${r.status}`);
+  const j = await r.json();
+  if(!j.ok) throw new Error(`Telegram ${method}: ${j.description || "rejected"}`);
+  return true;
+}
+
+/** 現場照片（前／後鏡頭快照）傳給家人。 */
+export function telegramSendPhoto(blob, caption){
+  return telegramUpload("sendPhoto", "photo", blob, "crisis.jpg", caption);
+}
+
+/** 使用者主動錄的語音訊息傳給家人。 */
+export function telegramSendVoice(blob, caption){
+  // 用 sendAudio 而不是 sendVoice：sendVoice 只吃 OGG/OPUS，瀏覽器 MediaRecorder
+  // 多半吐 webm/mp4，送 sendVoice 會被 Telegram 退。sendAudio 兩種都收。
+  const ext = (blob.type||"").includes("mp4") ? "m4a" : "webm";
+  return telegramUpload("sendAudio", "audio", blob, `crisis_voice.${ext}`, caption);
+}
+
+/**
+ * 輪詢家人的回覆。回傳 { offset, replies }。
+ *
+ * offset = 最後一則 update_id + 1（Telegram 規範）。傳 -1 只會取回「最後一則」，
+ * 危機一開始用它快轉略過積壓——不然上一次危機家人打的 /end 會被重播，
+ * 新視窗一開就被關掉。
+ *
+ * 注意：getUpdates 與 webhook 互斥，而且同一個 bot token 同時被手機 App 和網頁
+ * 輪詢時，訊息會被先拿到的一方吃掉。兩邊同時開著危機視窗時只會有一邊收到家人回覆。
+ */
+export async function telegramPollReplies(offset){
+  const { tgtoken, tgchat } = state.apiKeys;
+  if(!tgtoken || !tgchat) throw new Error(t("err.needTg"));
+  const url = `https://api.telegram.org/bot${tgtoken}/getUpdates?timeout=0`
+    + `&allowed_updates=${encodeURIComponent('["message"]')}`
+    + (offset ? `&offset=${offset}` : "");
+  const r = await fetch(url);
+  if(!r.ok) throw new Error("Telegram getUpdates "+r.status);
+  const j = await r.json();
+  if(!j.ok) throw new Error("getUpdates: "+(j.description||"rejected"));
+  let newOffset = offset;
+  const replies = [];
+  for(const upd of (j.result||[])){
+    if(upd.update_id + 1 > newOffset) newOffset = upd.update_id + 1;
+    const msg = upd.message;
+    if(!msg) continue;
+    // 只收緊急聯絡人那個 chat 的文字訊息
+    if(String(msg.chat?.id) === String(tgchat) && (msg.text||"").trim()){
+      replies.push(msg.text.trim());
+    }
+  }
+  return { offset: newOffset, replies };
 }
