@@ -1,14 +1,20 @@
 // 重組 / 組句：走多供應商輪詢（providers.js）。
-import { runLlm, hasLlm } from "./providers.js?v=1.4.9";
-import { t as tr } from "./i18n.js?v=1.4.9";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
-import { DEFENSIVE_SYSTEM_PROMPT } from "./safety.js?v=1.4.9";
-import { toTraditionalSync } from "./zhconv.js?v=1.4.9";
+import { runLlm, hasLlm } from "./providers.js?v=1.5.0";
+import { t as tr } from "./i18n.js?v=1.5.0";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
+import { DEFENSIVE_SYSTEM_PROMPT } from "./safety.js?v=1.5.0";
+import { toTraditionalSync } from "./zhconv.js?v=1.5.0";
 
 // 第一層防禦：黏在所有 system prompt 最前面，先要求模型別生成自傷／絕望字眼。
 // 這只是「請求」不是保證——真正擋住的是 app.js 的分級閘門與 speech.js 的輸出消毒。
-const SYS_RECONSTRUCT =
+// 提示詞主體維持中文（模型對中文指令的遵從度實測比較穩），但「輸出什麼語言」
+// 必須在執行期才決定，所以改成函式而不是常數——英文介面的使用者打英文碎詞，
+// 唸出來卻是中文，就是因為這裡以前寫死了中文範例、又沒講輸出語言。
+const sysReconstruct = () =>
   DEFENSIVE_SYSTEM_PROMPT + "\n\n"+
   "你是輔助失語症患者溝通的語言助理。請用碎詞、地點與看到的物品，重組患者最可能想表達的句子。\n"+
+  `\n【輸出語言】重組出來的句子一律用${outLang()}。使用者打什麼語言的碎詞不重要——\n`+
+  `他看到的介面是${outLang()}，唸出去的話就必須是${outLang()}。\n`+
+  "下面的說明與範例是用中文寫的，那只是給你看的指示，不是要你用中文作答。\n"+
   "\n【最重要的原則：貼著碎詞走，不要腦補新內容】\n"+
   "句子裡每個實詞（名詞、動詞、形容詞）都必須能對應回碎詞本身，或明確對應到給定的地點／物件情境；\n"+
   "你只能補上讓句子成立所需的「語法零件」——代名詞（我、你）、助動詞（請、需要、想）、語助詞（了、嗎、呢）——\n"+
@@ -23,7 +29,8 @@ const SYS_RECONSTRUCT =
   '{"candidates":[{"text":"最有把握的說法","confidence":0到100整數},{"text":"另一種說法","confidence":0到100整數},{"text":"再一種說法","confidence":0到100整數}]}\n'+
   "candidates 一定要給滿 3 個，而且要是真的不同的講法（用詞、語氣或詳略不同），\n"+
   "不可以只改標點或語助詞充數——使用者要從這 3 句裡挑一句講出去，三句一樣等於沒得挑。\n"+
-  "每一句都必須遵守上面「貼著碎詞走、不腦補」的規則。第一句放你最有把握的。";
+  "每一句都必須遵守上面「貼著碎詞走、不腦補」的規則。第一句放你最有把握的。\n"+
+  "\n" + outputLanguageDirective("candidates[].text");
 
 /** 取樣次數／溫度：溫度太高模型容易編出碎詞裡沒有的內容，0.3 是多樣性與忠實度的折衷。 */
 const RECONSTRUCT_SAMPLES = 3;
@@ -32,7 +39,9 @@ const RECONSTRUCT_TEMP = 0.3;
 const clamp01 = c => Math.max(0, Math.min(100, Math.round(c ?? 70)))/100;
 // 雲端模型就算 prompt 明寫繁體還是會偶爾漏簡體字（實測組出「請去医院」），
 // 在解析出口統一轉一次，所有候選句都涵蓋。
-const zh = s => toTraditionalSync(s);
+// 只在中文介面轉——英／日／韓的輸出裡本來就不該有簡體字要修，
+// 而日文漢字若被當成簡體字硬轉會被改壞。
+const zh = s => (curLang() === "zh" ? toTraditionalSync(s) : s);
 
 /** @returns {{text:string, confidence:number, alternatives:Array<{text,confidence}>}|null} */
 function parseCoT(raw){
@@ -100,7 +109,7 @@ export async function reconstruct(fragments, context){
   const u = `碎詞：${fragments}\n${context?("情境："+context):""}`.trim();
   const results = await Promise.all(
     Array.from({length: RECONSTRUCT_SAMPLES}, () =>
-      runLlm(SYS_RECONSTRUCT, u, { temperature: RECONSTRUCT_TEMP })
+      runLlm(sysReconstruct(), u, { temperature: RECONSTRUCT_TEMP })
         .then(parseCoT).catch(()=>null))
   );
   const samples = results.filter(Boolean);
@@ -134,7 +143,8 @@ export async function classifyCrisisIntent(text){
 
 export function composeAac(items, context){
   const sys = DEFENSIVE_SYSTEM_PROMPT + "\n\n" +
-    "你是失語症患者的溝通助理。使用者用圖卡點選了一串元素，組成一句自然、口語、有禮貌的繁體中文。只輸出一句話。";
+    `你是失語症患者的溝通助理。使用者用圖卡點選了一串元素，組成一句自然、口語、有禮貌的${outLang()}。只輸出一句話。\n` +
+    outputLanguageDirective("回覆");
   return runLlm(sys, `圖卡序列：${items.join(" → ")}\n${context?("場景："+context):""}`.trim()).then(zh);
 }
 
@@ -143,9 +153,29 @@ export function composeAac(items, context){
  * 抽出來——英文介面的使用者練英文句子，評語不該跳出中文。
  */
 const LANG_NAME = { "zh-TW":"繁體中文", "en":"英文", "ja":"日文", "ko":"韓文" };
+/** 目前介面語言的短碼（zh / en / ja / ko）。 */
+function curLang(){
+  return (document.documentElement.getAttribute("data-lang") || "zh-TW").split("-")[0];
+}
 function outLang(){
   const L = document.documentElement.getAttribute("data-lang") || "zh-TW";
   return LANG_NAME[L] || LANG_NAME[L.split("-")[0]] || LANG_NAME["zh-TW"];
+}
+
+/**
+ * 給 LLM 的輸出語言硬性指令，**用目標語言本身寫**。
+ *
+ * 為什麼不能只靠 outLang()：提示詞主體是中文，模型看到夾在中文句子裡的
+ * 「用英文回答」很容易整段跟著中文走。用該語言自己的祈使句寫，模型才會照做；
+ * 放在提示詞最後一行（recency）效果最穩。與 App 的 I18n.outputLanguageDirective 同一招。
+ */
+function outputLanguageDirective(field){
+  switch(curLang()){
+    case "en": return `IMPORTANT: the "${field}" value MUST be written in English.`;
+    case "ja": return `重要：「${field}」の値は必ず日本語で書いてください。`;
+    case "ko": return `중요: "${field}" 값은 반드시 한국어로 작성하세요.`;
+    default:   return `重要：「${field}」的內容必須用繁體中文書寫。`;
+  }
 }
 
 function sysRehabEval(){
@@ -200,8 +230,9 @@ function sysRehabSuggest(){
  */
 export async function reviewStory(storyTitle, userText, score){
   const sys = "你是失語症語言治療師，正在看患者「看圖說故事」的練習。"+
-    "請用繁體中文回一句話（40 字以內）：先肯定他說出來的部分，再給一個具體、"+
-    "做得到的下一步建議。語氣溫暖、不說教，不要提到分數，不要條列。";
+    `請用${outLang()}回一句話（40 字以內）：先肯定他說出來的部分，再給一個具體、`+
+    "做得到的下一步建議。語氣溫暖、不說教，不要提到分數，不要條列。\n"+
+    outputLanguageDirective("回覆");
   const u = `故事主題：${storyTitle}\n患者說的：${userText}\n（系統評分：${score}/100，僅供你判斷難度，別在回覆中提到）`;
   const raw = await runLlm(sys, u);
   return (raw || "").trim().replace(/^["「]|["」]$/g, "");
