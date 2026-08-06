@@ -1,25 +1,25 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge } from "./store.js?v=1.5.0";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.0";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.0";
-import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.0";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.0";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.0";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.0";
-import { bindTap } from "./interaction.js?v=1.5.0";
-import { orderCards } from "./predict.js?v=1.5.0";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.0";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.0";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.0";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.0";
-import { preloadZhConv } from "./zhconv.js?v=1.5.0";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.0";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.0";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.0";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.0";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.0";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.0";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare } from "./localtts.js?v=1.5.0";
-import { applyI18n, t } from "./i18n.js?v=1.5.0";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut } from "./store.js?v=1.5.1";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.1";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.1";
+import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.1";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.1";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.1";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.1";
+import { bindTap } from "./interaction.js?v=1.5.1";
+import { orderCards } from "./predict.js?v=1.5.1";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.1";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.1";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.1";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.1";
+import { preloadZhConv } from "./zhconv.js?v=1.5.1";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.1";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.1";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.1";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.1";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.1";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.1";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare } from "./localtts.js?v=1.5.1";
+import { applyI18n, t } from "./i18n.js?v=1.5.1";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -308,6 +308,8 @@ function bindSettings(){
     renderProviderList("#imgList", "imageApis", IMAGE_PROVIDERS);
     renderClinicalBank(s=>{ const inp=$("#rehabTarget"); if(inp){ inp.value=s; $('.tab[data-tab="rehab"]')?.click(); } });
     renderAac();                              // AAC 分類 chip（「我的」分類名要跟著翻）
+    setShortcutMsg("");                       // 舊語言的存檔／錯誤訊息不該留在畫面上
+    renderShortcuts();                        // 專屬發音的空狀態與「還沒錄音」提示
     // 成績單內容是「載入當下」畫出來的（含圖表裡的「尚無資料」與空狀態），
     // 正在看報表時要重跑一次，否則畫面會留著舊語言的字。
     if($('.tab[data-tab="report"]')?.classList.contains("active")) loadReport();
@@ -327,6 +329,7 @@ function bindSettings(){
       else toast(t("care.pinBad"));
     });
   }
+  setupShortcuts();
   $("#addLlm").addEventListener("click", ()=>{ state.llmApis.push({id:newId(),provider:Object.keys(LLM_PROVIDERS)[0],key:"",model:""}); save(); renderProviderList("#llmList","llmApis",LLM_PROVIDERS); });
   $("#addImg").addEventListener("click", ()=>{ state.imageApis.push({id:newId(),provider:"pollinations",key:"",model:""}); save(); renderProviderList("#imgList","imageApis",IMAGE_PROVIDERS); });
   // 本地語音引擎
@@ -1049,3 +1052,78 @@ function main(){
   });
 }
 main();
+
+// ── 我的專屬發音（觸發詞 → 整句話）─────────────────────
+//
+// 網頁版只做文字設定。錄音留在手機上——比對是拿使用者本人的錄音做波形對齊，
+// 照顧者在電腦上錄自己的聲音對患者完全沒用。
+// 這樣切分的價值在打字：照顧者可以在電腦上一次設好二三十句，
+// 患者只要拿手機把每句錄幾次就好。
+async function renderShortcuts(){
+  const box = $("#shortcutList");
+  if(!box) return;
+  let list = [];
+  try{ list = await listShortcuts(); }
+  catch(e){ box.innerHTML = `<p class="tiny muted">${t("set.shortcutLoadFail")}${esc(e.message)}</p>`; return; }
+
+  if(!list.length){
+    box.innerHTML = `<p class="tiny muted">${t("set.shortcutEmpty")}</p>`;
+    return;
+  }
+  box.innerHTML = list.map(x=>`
+    <div class="row" style="align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--sep,#eee)">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px">${esc(x.spokenPhrase)}</div>
+        <div class="tiny" style="color:var(--accent,#007AFF)">${t("set.shortcutHears")}${quote(esc(x.keyword))}</div>
+        ${x.hasRecording ? "" :
+          `<div class="tiny muted">${t("set.shortcutNeedsRec")}</div>`}
+      </div>
+      <button class="btn ghost sc-del" data-id="${esc(String(x.id))}" style="padding:4px 10px">🗑</button>
+    </div>`).join("");
+
+  box.querySelectorAll(".sc-del").forEach(b=>{
+    b.addEventListener("click", async ()=>{
+      try{ await deleteShortcut(b.dataset.id); await renderShortcuts(); }
+      catch(e){ setShortcutMsg(t("set.shortcutDelFail") + e.message); }
+    });
+  });
+}
+
+function setShortcutMsg(text){
+  const el = $("#shortcutMsg");
+  if(el) el.textContent = text || "";
+}
+
+function esc(s){
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+}
+
+// 引號跟著語言走：「」在英文介面裡看起來就是跑錯字型的中文標點
+function quote(s){
+  const cjk = /^(zh|ja|ko)/.test(document.documentElement.getAttribute("data-lang") || "zh-TW");
+  return cjk ? `「${s}」` : `“${s}”`;
+}
+
+function setupShortcuts(){
+  const btn = $("#addShortcut");
+  if(!btn) return;
+  btn.addEventListener("click", async ()=>{
+    const kw = $("#sc_keyword").value;
+    const ph = $("#sc_phrase").value;
+    try{
+      await saveShortcut({ keyword: kw, spokenPhrase: ph });
+      $("#sc_keyword").value = ""; $("#sc_phrase").value = "";
+      setShortcutMsg(t("set.shortcutSaved"));
+      await renderShortcuts();
+    }catch(e){ setShortcutMsg(e.message); }
+  });
+  // Enter 直接送出：照顧者要連續打很多句，每次都要移到按鈕很慢
+  ["#sc_keyword", "#sc_phrase"].forEach(sel=>{
+    const el = $(sel);
+    if(el) el.addEventListener("keydown", e=>{
+      if(e.key === "Enter"){ e.preventDefault(); btn.click(); }
+    });
+  });
+  renderShortcuts().catch(()=>{});
+}

@@ -4,9 +4,9 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, doc, getDoc, setDoc, collection, addDoc, getDocs, query, orderBy, limit, where
+  getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, getDocs, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { t } from "./i18n.js?v=1.5.0";
+import { t } from "./i18n.js?v=1.5.1";
 
 const DEFAULTS = {
   settings: { theme: "auto", lang: "zh-TW", rate: 0.95, font: 1.0,
@@ -263,3 +263,80 @@ function pushLocalRehab(rec){
   localStorage.setItem(LS+"_rehab", JSON.stringify(h.slice(0,300)));
 }
 function getLocalRehab(){ try{ return JSON.parse(localStorage.getItem(LS+"_rehab")||"[]"); }catch{ return []; } }
+
+// ── 專屬發音（觸發詞 → 整句話）─────────────────────────
+//
+// 網頁版只管「文字設定」：哪幾個字要聽、聽到之後說哪一句。
+// **聲音的部分不在這裡做。** 比對是拿使用者本人的錄音跑 DTW 波形對齊，
+// 瀏覽器沒有那套實作，而且樣板是「認人」的——照顧者在電腦上錄自己的聲音
+// 對患者完全沒用。所以這裡建的項目要在手機上補錄過才會生效。
+//
+// 這樣切分的價值是：打字這件事在電腦上快得多，照顧者可以一次把二三十句
+// 設好，患者只要拿手機把每句錄幾次。
+
+const SHORTCUTS_LS = LS + "_shortcuts";
+
+function localShortcuts(){
+  try{ return JSON.parse(localStorage.getItem(SHORTCUTS_LS) || "[]"); }catch{ return []; }
+}
+function saveLocalShortcuts(list){
+  localStorage.setItem(SHORTCUTS_LS, JSON.stringify(list));
+}
+
+/** 沒登入時也能編輯，之後登入再一起推上去——不然照顧者得先處理帳號才能開始做事。 */
+export async function listShortcuts(){
+  if(_db && state.uid && state.uid!=="local"){
+    try{
+      const snap = await getDocs(collection(_db,"users",state.uid,"acousticTemplates"));
+      return snap.docs.map(d=>({
+        id: d.id,
+        keyword: d.data().keyword || "",
+        spokenPhrase: d.data().spokenPhrase || "",
+        // 手機錄過音才有。空的＝還沒錄，手機上不會生效。
+        hasRecording: !!(d.data().exemplarBlob || "").length,
+        createdAt: d.data().createdAt || 0,
+      })).sort((a,b)=>a.createdAt-b.createdAt);
+    }catch(e){ return localShortcuts(); }
+  }
+  return localShortcuts();
+}
+
+export async function saveShortcut({ id, keyword, spokenPhrase }){
+  keyword = (keyword||"").trim();
+  spokenPhrase = (spokenPhrase||"").trim();
+  // 少了任一個就沒有意義：不知道要聽什麼，或不知道要說什麼
+  if(!keyword || !spokenPhrase) throw new Error(t("set.shortcutBlank"));
+
+  // id 用時間戳：Android 端的 key 是資料庫的 Long id，字串化之後要能對得起來
+  const docId = id || String(Date.now());
+  const rec = {
+    label: keyword,
+    keyword,
+    spokenPhrase,
+    matchMode: "Keyword",
+    // 門檻留 0：真正的值要等手機錄音之後才算得出來（那是照那支麥克風校準的）。
+    // 寫一個假的進去會讓手機以為已經校準過。
+    rejectionThreshold: 0,
+    marginThreshold: 0.15,
+    createdAt: Number(docId),
+    updatedAt: Date.now(),
+  };
+
+  if(_db && state.uid && state.uid!=="local"){
+    // merge：手機那邊已經錄過音的話，exemplarBlob 不能被這裡的空值蓋掉
+    await setDoc(doc(_db,"users",state.uid,"acousticTemplates",docId), rec, { merge:true });
+  }else{
+    const list = localShortcuts().filter(x=>x.id!==docId);
+    list.push({ id:docId, keyword, spokenPhrase, hasRecording:false, createdAt:rec.createdAt });
+    saveLocalShortcuts(list);
+  }
+  return docId;
+}
+
+export async function deleteShortcut(id){
+  if(_db && state.uid && state.uid!=="local"){
+    await deleteDoc(doc(_db,"users",state.uid,"acousticTemplates",String(id)));
+  }else{
+    saveLocalShortcuts(localShortcuts().filter(x=>String(x.id)!==String(id)));
+  }
+}
