@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 <title>VoiceWeaver 網頁版</title>
-<link rel="stylesheet" href="style.css?v=1.5.1" />
+<link rel="stylesheet" href="style.css?v=1.5.2" />
 </head>
 <body>
   <!-- 登入閘 -->
@@ -285,6 +285,13 @@
           <button id="addShortcut" class="btn ghost" style="margin-top:8px" data-i18n="set.addShortcut">＋ 新增</button>
           <p id="shortcutMsg" class="tiny muted" style="margin:6px 0 0"></p>
         </div>
+        <div class="card">
+          <h3 data-i18n="set.voicesTitle">🗣 我的專屬聲音</h3>
+          <p class="tiny muted" data-i18n="set.voicesDesc">存在你自己 Google Drive 的 VoiceWeaver/Models/ 裡，手機、電腦、網頁看到的是同一份。這裡只列出有哪些聲音，合成仍然在電腦或 Colab 上跑。</p>
+          <div id="voiceList"></div>
+          <button id="refreshVoices" class="btn ghost" style="margin-top:8px" data-i18n="set.voicesRefresh">⟳ 重新讀取</button>
+          <p id="voiceMsg" class="tiny muted" style="margin:6px 0 0"></p>
+        </div>
         <div class="card complex">
           <h3 data-i18n="set.tgTitle">🆘 緊急通報（Telegram，選用）</h3>
           <label class="lbl">Bot Token</label>
@@ -472,7 +479,7 @@
 
   <!-- 你的 Firebase 設定（複製 config.example.js 為 config.js 並填入）。沒有 config.js 時為純本機模式。 -->
   <script>window.__FIREBASE_CONFIG__ = null;</script>
-  <script src="config.js?v=1.5.1" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
-  <script type="module" src="js/app.js?v=1.5.1"></script>
+  <script src="config.js?v=1.5.2" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
+  <script type="module" src="js/app.js?v=1.5.2"></script>
 </body>
 </html>

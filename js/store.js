@@ -6,7 +6,7 @@ import {
 import {
   getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, getDocs, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { t } from "./i18n.js?v=1.5.1";
+import { t } from "./i18n.js?v=1.5.2";
 
 const DEFAULTS = {
   settings: { theme: "auto", lang: "zh-TW", rate: 0.95, font: 1.0,
@@ -283,22 +283,53 @@ function saveLocalShortcuts(list){
   localStorage.setItem(SHORTCUTS_LS, JSON.stringify(list));
 }
 
-/** 沒登入時也能編輯，之後登入再一起推上去——不然照顧者得先處理帳號才能開始做事。 */
+// Drive 用動態 import：drive.js 反過來要 store.js 的 driveToken，
+// 靜態互相 import 會踩到模組初始化順序。順便也讓沒用到 Drive 的人不必載這段。
+async function _drive(){ return import("./drive.js?v=1.5.2"); }
+
+/**
+ * 兩個雲端來源都讀：Firestore（即時、免 Drive 授權）與使用者自己 Drive 的
+ * `VoiceWeaver/AcousticModels/<uid>/`。
+ *
+ * 為什麼要兩邊：Firestore 那份使用者看不到也拿不走；Drive 那份是他自己資料夾裡的
+ * 檔案，備份得走、換帳號搬得動、也刪得掉。兩邊會不同步（匿名登入時沒有 Drive 權限），
+ * 所以取回時合併、以觸發詞去重。
+ *
+ * 沒登入時也能編輯（存 localStorage），之後登入再一起推上去——
+ * 不然照顧者得先處理帳號才能開始做事。
+ */
 export async function listShortcuts(){
-  if(_db && state.uid && state.uid!=="local"){
-    try{
-      const snap = await getDocs(collection(_db,"users",state.uid,"acousticTemplates"));
-      return snap.docs.map(d=>({
-        id: d.id,
-        keyword: d.data().keyword || "",
-        spokenPhrase: d.data().spokenPhrase || "",
-        // 手機錄過音才有。空的＝還沒錄，手機上不會生效。
-        hasRecording: !!(d.data().exemplarBlob || "").length,
-        createdAt: d.data().createdAt || 0,
-      })).sort((a,b)=>a.createdAt-b.createdAt);
-    }catch(e){ return localShortcuts(); }
-  }
-  return localShortcuts();
+  if(!(_db && state.uid && state.uid!=="local")) return localShortcuts();
+
+  let fromCloud = [];
+  try{
+    const snap = await getDocs(collection(_db,"users",state.uid,"acousticTemplates"));
+    fromCloud = snap.docs.map(d=>({
+      id: d.id,
+      keyword: d.data().keyword || "",
+      spokenPhrase: d.data().spokenPhrase || "",
+      // 手機錄過音才有。空的＝還沒錄，手機上不會生效。
+      hasRecording: !!(d.data().exemplarBlob || "").length,
+      createdAt: d.data().createdAt || 0,
+    }));
+  }catch(e){ fromCloud = localShortcuts(); }
+
+  let fromDrive = [];
+  try{
+    const d = await _drive();
+    if(d.driveReady()){
+      fromDrive = (await d.listAcoustic(state.uid)).map(x=>({
+        id: String(x.id || ""),
+        keyword: x.keyword || "",
+        spokenPhrase: x.spokenPhrase || "",
+        hasRecording: !!(x.exemplarBlob || "").length,
+        createdAt: x.createdAt || 0,
+      }));
+    }
+  }catch(e){ /* 沒授權 Drive／token 過期都很正常，Firestore 那份還在 */ }
+
+  const d = await _drive();
+  return d.mergeShortcuts(fromDrive, fromCloud);
 }
 
 export async function saveShortcut({ id, keyword, spokenPhrase }){
@@ -325,6 +356,7 @@ export async function saveShortcut({ id, keyword, spokenPhrase }){
   if(_db && state.uid && state.uid!=="local"){
     // merge：手機那邊已經錄過音的話，exemplarBlob 不能被這裡的空值蓋掉
     await setDoc(doc(_db,"users",state.uid,"acousticTemplates",docId), rec, { merge:true });
+    await _driveWrite(docId, rec);
   }else{
     const list = localShortcuts().filter(x=>x.id!==docId);
     list.push({ id:docId, keyword, spokenPhrase, hasRecording:false, createdAt:rec.createdAt });
@@ -333,10 +365,51 @@ export async function saveShortcut({ id, keyword, spokenPhrase }){
   return docId;
 }
 
+/**
+ * 順手在使用者自己的 Drive 留一份。失敗不擋存檔——Firestore 那份已經成功，
+ * 功能是完整的；為了「備份沒寫成」而告訴使用者存檔失敗，只會讓他重打一次。
+ *
+ * 這裡刻意**不覆蓋 exemplarBlob**：Drive 上那筆可能是手機錄好音寫上去的，
+ * 網頁只改了文字就把錄音清掉的話，使用者要重錄 5 次才能救回來。
+ */
+async function _driveWrite(docId, rec){
+  try{
+    const d = await _drive();
+    if(!d.driveReady()) return;
+    const existing = (await d.listAcoustic(state.uid)).find(x=>String(x.id)===String(docId));
+    await d.saveAcoustic(state.uid, {
+      ...rec,
+      id: docId,
+      exemplarBlob: (existing && existing.exemplarBlob) || "",
+      rejectionThreshold: existing ? existing.rejectionThreshold : rec.rejectionThreshold,
+    });
+  }catch(e){ /* 沒授權／離線都很正常 */ }
+}
+
 export async function deleteShortcut(id){
   if(_db && state.uid && state.uid!=="local"){
+    // 兩邊都要刪。少刪任何一邊，下次取回都會把使用者刻意刪掉的救回來——
+    // 而他刪掉多半正是因為那筆會誤觸發。
     await deleteDoc(doc(_db,"users",state.uid,"acousticTemplates",String(id)));
+    try{
+      const d = await _drive();
+      if(d.driveReady()) await d.deleteAcoustic(state.uid, id);
+    }catch(e){ /* 同上 */ }
   }else{
     saveLocalShortcuts(localShortcuts().filter(x=>String(x.id)!==String(id)));
   }
+}
+
+/**
+ * 專屬聲音（語音模型）清單，直接從 Drive 讀。
+ *
+ * **錯誤刻意往上丟**，不吞成空陣列：「沒授權」「授權過期」「真的一個都沒有」
+ * 三種情況要給使用者的話完全不同，全部畫成「還沒有語音模型」的話，
+ * 一個明明錄好了聲音的人會以為自己的東西不見了。
+ * 丟出的 message 是代碼（noDrive／driveExpired），由呼叫端翻譯。
+ */
+export async function listVoices(){
+  const d = await _drive();
+  if(!d.driveReady()) throw new Error("noDrive");
+  return await d.listVoiceModels();
 }

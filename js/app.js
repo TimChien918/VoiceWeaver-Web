@@ -1,25 +1,25 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut } from "./store.js?v=1.5.1";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.1";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.1";
-import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.1";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.1";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.1";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.1";
-import { bindTap } from "./interaction.js?v=1.5.1";
-import { orderCards } from "./predict.js?v=1.5.1";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.1";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.1";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.1";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.1";
-import { preloadZhConv } from "./zhconv.js?v=1.5.1";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.1";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.1";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.1";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.1";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.1";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.1";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare } from "./localtts.js?v=1.5.1";
-import { applyI18n, t } from "./i18n.js?v=1.5.1";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices } from "./store.js?v=1.5.2";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.2";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.2";
+import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.2";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.2";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.2";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.2";
+import { bindTap } from "./interaction.js?v=1.5.2";
+import { orderCards } from "./predict.js?v=1.5.2";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.2";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.2";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.2";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.2";
+import { preloadZhConv } from "./zhconv.js?v=1.5.2";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.2";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.2";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.2";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.2";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.2";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.2";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare } from "./localtts.js?v=1.5.2";
+import { applyI18n, t } from "./i18n.js?v=1.5.2";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -310,6 +310,7 @@ function bindSettings(){
     renderAac();                              // AAC 分類 chip（「我的」分類名要跟著翻）
     setShortcutMsg("");                       // 舊語言的存檔／錯誤訊息不該留在畫面上
     renderShortcuts();                        // 專屬發音的空狀態與「還沒錄音」提示
+    renderVoices();                           // 專屬聲音的空狀態與「缺權重」提示
     // 成績單內容是「載入當下」畫出來的（含圖表裡的「尚無資料」與空狀態），
     // 正在看報表時要重跑一次，否則畫面會留著舊語言的字。
     if($('.tab[data-tab="report"]')?.classList.contains("active")) loadReport();
@@ -330,6 +331,7 @@ function bindSettings(){
     });
   }
   setupShortcuts();
+  setupVoices();
   $("#addLlm").addEventListener("click", ()=>{ state.llmApis.push({id:newId(),provider:Object.keys(LLM_PROVIDERS)[0],key:"",model:""}); save(); renderProviderList("#llmList","llmApis",LLM_PROVIDERS); });
   $("#addImg").addEventListener("click", ()=>{ state.imageApis.push({id:newId(),provider:"pollinations",key:"",model:""}); save(); renderProviderList("#imgList","imageApis",IMAGE_PROVIDERS); });
   // 本地語音引擎
@@ -1126,4 +1128,54 @@ function setupShortcuts(){
     });
   });
   renderShortcuts().catch(()=>{});
+}
+
+// ── 我的專屬聲音（Drive 上的語音模型）──────────────────────
+//
+// 直接讀 Drive，不透過電腦端的語音服務——電腦不一定開著，而「我有哪些聲音」
+// 這個問題不需要 GPU 也答得出來。合成仍然在電腦或 Colab 上跑。
+function fmtBytes(n){
+  if(!n) return "";
+  const mb = n / (1024 * 1024);
+  return mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${Math.round(mb)} MB`;
+}
+
+async function renderVoices(){
+  const box = $("#voiceList");
+  if(!box) return;
+  box.innerHTML = `<p class="tiny muted">${t("set.voicesLoading")}</p>`;
+  let list;
+  try{
+    list = await listVoices();
+  }catch(e){
+    // 三種失敗要說三種話。全部畫成「還沒有語音模型」的話，
+    // 一個明明錄好了聲音的人會以為自己的東西不見了。
+    const msg = e.message === "noDrive"      ? t("set.voicesNoDrive")
+              : e.message === "driveExpired" ? t("set.voicesExpired")
+              : esc(e.message);
+    box.innerHTML = `<p class="tiny muted">${msg}</p>`;
+    return;
+  }
+  if(!list.length){
+    box.innerHTML = `<p class="tiny muted">${t("set.voicesEmpty")}</p>`;
+    return;
+  }
+  box.innerHTML = list.map(v=>`
+    <div class="row" style="align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--sep,#eee)">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px">${esc(v.character)} <span class="tiny muted">${esc(v.lang)}</span></div>
+        <div class="tiny" style="color:var(--accent,#007AFF)">
+          ${v.emotions.map(e=>esc(e)).join("・") || "—"}
+        </div>
+        ${v.ready ? "" : `<div class="tiny muted">${t("set.voicesNeedsFix")}</div>`}
+      </div>
+      <div class="tiny muted">${fmtBytes(v.bytes)}</div>
+    </div>`).join("");
+}
+
+function setupVoices(){
+  const btn = $("#refreshVoices");
+  if(!btn) return;
+  btn.addEventListener("click", ()=>{ renderVoices().catch(()=>{}); });
+  renderVoices().catch(()=>{});
 }
