@@ -1,25 +1,25 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices } from "./store.js?v=1.5.2";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.2";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.2";
-import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.2";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.2";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.2";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.2";
-import { bindTap } from "./interaction.js?v=1.5.2";
-import { orderCards } from "./predict.js?v=1.5.2";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.2";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.2";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.2";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.2";
-import { preloadZhConv } from "./zhconv.js?v=1.5.2";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.2";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.2";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.2";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.2";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.2";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.2";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare } from "./localtts.js?v=1.5.2";
-import { applyI18n, t } from "./i18n.js?v=1.5.2";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices } from "./store.js?v=1.5.3";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.3";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.3";
+import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.3";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.3";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.3";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.3";
+import { bindTap } from "./interaction.js?v=1.5.3";
+import { orderCards } from "./predict.js?v=1.5.3";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.3";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.3";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.3";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.3";
+import { preloadZhConv } from "./zhconv.js?v=1.5.3";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.3";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.3";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.3";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.3";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.3";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.3";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare } from "./localtts.js?v=1.5.3";
+import { applyI18n, t } from "./i18n.js?v=1.5.3";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -417,6 +417,12 @@ function setupTabs(){
     if(t.dataset.tab==="history") renderHistory();
     if(t.dataset.tab==="rehab") renderRehabLogs();
     if(t.dataset.tab==="report") loadReport();
+    if(t.dataset.tab==="settings"){
+      // 每次切進設定就重讀一次雲端，不然手機上剛錄好的東西要重新整理才看得到——
+      // 而使用者不會想到要重新整理，只會覺得兩邊沒有同步。
+      renderShortcuts().catch(()=>{});
+      renderVoices().catch(()=>{});
+    }
   }));
 }
 
