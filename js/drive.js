@@ -10,9 +10,9 @@
 //
 // 資料夾結構（三端共用）：
 //   VoiceWeaver/Models/<LANG>/<角色>/       語音模型（GPT-SoVITS 聲文權重）
-//   VoiceWeaver/AcousticModels/<uid>/*.json 聲波模型（專屬發音的關鍵字樣板）
+//   VoiceWeaver/AcousticModels/*.json      聲波模型（專屬發音的關鍵字樣板）
 
-import { driveToken } from "./store.js?v=1.5.3";
+import { driveToken } from "./store.js?v=1.5.4";
 
 const FILES = "https://www.googleapis.com/drive/v3/files";
 const UPLOAD = "https://www.googleapis.com/upload/drive/v3/files";
@@ -128,10 +128,13 @@ async function trashFile(name, parent){
 
 // ── 聲波模型（專屬發音）────────────────────────────────────
 
-function acousticPath(uid){ return [ROOT_FOLDER, ACOUSTIC_DIR, uid]; }
+// 底下不再分帳號 id：這是使用者自己的雲端硬碟，一個 Google 帳號一個，
+// 而 Firebase 身分也是同一個 Google 帳號換來的。多包一層永遠只有一個子資料夾，
+// 只是讓他多點一次、還看到一串沒有意義的亂碼。
+const ACOUSTIC_PATH = [ROOT_FOLDER, ACOUSTIC_DIR];
 
-export async function listAcoustic(uid){
-  const parent = await folderPath(acousticPath(uid), false);
+export async function listAcoustic(){
+  const parent = await folderPath(ACOUSTIC_PATH, false);
   if(!parent) return [];
   const files = (await listChildren(parent)).filter(
     f => f.mimeType !== FOLDER_MIME && /\.json$/i.test(f.name));
@@ -143,13 +146,26 @@ export async function listAcoustic(uid){
   return out;
 }
 
-export async function saveAcoustic(uid, template){
-  const parent = await folderPath(acousticPath(uid), true);
+/**
+ * 只讀一筆。存檔時要保住手機錄好的 exemplarBlob，但為了一個欄位把整個
+ * 資料夾的檔案全下載一遍太浪費——三十句就是三十次下載，而只有一句要改。
+ * 找不到回 null。
+ */
+export async function readAcoustic(id){
+  const parent = await folderPath(ACOUSTIC_PATH, false);
+  if(!parent) return null;
+  const fid = await findId(`${id}.json`, parent, false);
+  if(!fid) return null;
+  try{ return await readJson(fid); }catch{ return null; }
+}
+
+export async function saveAcoustic(template){
+  const parent = await folderPath(ACOUSTIC_PATH, true);
   await writeJson(`${template.id}.json`, parent, template);
 }
 
-export async function deleteAcoustic(uid, id){
-  const parent = await folderPath(acousticPath(uid), false);
+export async function deleteAcoustic(id){
+  const parent = await folderPath(ACOUSTIC_PATH, false);
   if(!parent) return;
   await trashFile(`${id}.json`, parent);
 }

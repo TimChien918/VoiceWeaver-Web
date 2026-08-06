@@ -15,7 +15,7 @@
 //
 // 轉換順序：先套詞組（長詞優先），再對剩下的字套單字表。
 
-const VER = "?v=1.5.3";
+const VER = "?v=1.5.4";
 
 let _chars = null;                 // Map<簡, 繁>
 let _phrases = null;               // Map<簡詞, 繁詞>

@@ -6,7 +6,7 @@ import {
 import {
   getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, getDocs, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { t } from "./i18n.js?v=1.5.3";
+import { t } from "./i18n.js?v=1.5.4";
 
 const DEFAULTS = {
   settings: { theme: "auto", lang: "zh-TW", rate: 0.95, font: 1.0,
@@ -285,11 +285,11 @@ function saveLocalShortcuts(list){
 
 // Drive 用動態 import：drive.js 反過來要 store.js 的 driveToken，
 // 靜態互相 import 會踩到模組初始化順序。順便也讓沒用到 Drive 的人不必載這段。
-async function _drive(){ return import("./drive.js?v=1.5.3"); }
+async function _drive(){ return import("./drive.js?v=1.5.4"); }
 
 /**
  * 兩個雲端來源都讀：Firestore（即時、免 Drive 授權）與使用者自己 Drive 的
- * `VoiceWeaver/AcousticModels/<uid>/`。
+ * `VoiceWeaver/AcousticModels/`。
  *
  * 為什麼要兩邊：Firestore 那份使用者看不到也拿不走；Drive 那份是他自己資料夾裡的
  * 檔案，備份得走、換帳號搬得動、也刪得掉。兩邊會不同步（匿名登入時沒有 Drive 權限），
@@ -318,7 +318,7 @@ export async function listShortcuts(){
   try{
     const d = await _drive();
     if(d.driveReady()){
-      fromDrive = (await d.listAcoustic(state.uid)).map(x=>({
+      fromDrive = (await d.listAcoustic()).map(x=>({
         id: String(x.id || ""),
         keyword: x.keyword || "",
         spokenPhrase: x.spokenPhrase || "",
@@ -376,8 +376,8 @@ async function _driveWrite(docId, rec){
   try{
     const d = await _drive();
     if(!d.driveReady()) return;
-    const existing = (await d.listAcoustic(state.uid)).find(x=>String(x.id)===String(docId));
-    await d.saveAcoustic(state.uid, {
+    const existing = await d.readAcoustic(docId);
+    await d.saveAcoustic({
       ...rec,
       id: docId,
       exemplarBlob: (existing && existing.exemplarBlob) || "",
@@ -393,7 +393,7 @@ export async function deleteShortcut(id){
     await deleteDoc(doc(_db,"users",state.uid,"acousticTemplates",String(id)));
     try{
       const d = await _drive();
-      if(d.driveReady()) await d.deleteAcoustic(state.uid, id);
+      if(d.driveReady()) await d.deleteAcoustic(id);
     }catch(e){ /* 同上 */ }
   }else{
     saveLocalShortcuts(localShortcuts().filter(x=>String(x.id)!==String(id)));
