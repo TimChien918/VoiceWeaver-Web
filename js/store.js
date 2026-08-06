@@ -6,7 +6,7 @@ import {
 import {
   getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, getDocs, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { t } from "./i18n.js?v=1.5.4";
+import { t } from "./i18n.js?v=1.5.5";
 
 const DEFAULTS = {
   settings: { theme: "auto", lang: "zh-TW", rate: 0.95, font: 1.0,
@@ -235,7 +235,10 @@ export async function listHistory(){
 }
 function pushLocalHistory(rec){
   const h = getLocalHistory(); h.unshift(rec);
-  localStorage.setItem(LS+"_hist", JSON.stringify(h.slice(0,100)));
+  // 配額滿時 setItem 會丟 QuotaExceededError（歷史帶圖時很容易滿）。
+  // 讀取端全都有 try，寫入端漏了——而這個例外會一路往上炸掉呼叫它的流程。
+  try{ localStorage.setItem(LS+"_hist", JSON.stringify(h.slice(0,100))); }
+  catch{ try{ localStorage.setItem(LS+"_hist", JSON.stringify(h.slice(0,20))); }catch{} }
 }
 function getLocalHistory(){ try{ return JSON.parse(localStorage.getItem(LS+"_hist")||"[]"); }catch{ return []; } }
 
@@ -260,7 +263,8 @@ export async function listRehabLogs(fromTs=0){
 }
 function pushLocalRehab(rec){
   const h = getLocalRehab(); h.unshift(rec);
-  localStorage.setItem(LS+"_rehab", JSON.stringify(h.slice(0,300)));
+  try{ localStorage.setItem(LS+"_rehab", JSON.stringify(h.slice(0,300))); }
+  catch{ try{ localStorage.setItem(LS+"_rehab", JSON.stringify(h.slice(0,50))); }catch{} }
 }
 function getLocalRehab(){ try{ return JSON.parse(localStorage.getItem(LS+"_rehab")||"[]"); }catch{ return []; } }
 
@@ -280,12 +284,15 @@ function localShortcuts(){
   try{ return JSON.parse(localStorage.getItem(SHORTCUTS_LS) || "[]"); }catch{ return []; }
 }
 function saveLocalShortcuts(list){
-  localStorage.setItem(SHORTCUTS_LS, JSON.stringify(list));
+  // 存不進去要讓呼叫端知道：專屬發音是使用者剛打進去的設定，
+  // 靜靜地丟掉的話他下次打開會發現東西不見了，卻沒有任何線索。
+  try{ localStorage.setItem(SHORTCUTS_LS, JSON.stringify(list)); }
+  catch(e){ throw new Error(t("set.shortcutSaveFail")); }
 }
 
 // Drive 用動態 import：drive.js 反過來要 store.js 的 driveToken，
 // 靜態互相 import 會踩到模組初始化順序。順便也讓沒用到 Drive 的人不必載這段。
-async function _drive(){ return import("./drive.js?v=1.5.4"); }
+async function _drive(){ return import("./drive.js?v=1.5.5"); }
 
 /**
  * 兩個雲端來源都讀：Firestore（即時、免 Drive 授權）與使用者自己 Drive 的

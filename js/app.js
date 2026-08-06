@@ -1,25 +1,25 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices } from "./store.js?v=1.5.4";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.4";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.4";
-import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.4";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.4";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.4";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.4";
-import { bindTap } from "./interaction.js?v=1.5.4";
-import { orderCards } from "./predict.js?v=1.5.4";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.4";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.4";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.4";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.4";
-import { preloadZhConv } from "./zhconv.js?v=1.5.4";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.4";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.4";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.4";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.4";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.4";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.4";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare } from "./localtts.js?v=1.5.4";
-import { applyI18n, t } from "./i18n.js?v=1.5.4";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices } from "./store.js?v=1.5.5";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.5";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.5";
+import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.5";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.5";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.5";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.5";
+import { bindTap } from "./interaction.js?v=1.5.5";
+import { orderCards } from "./predict.js?v=1.5.5";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.5";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.5";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.5";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.5";
+import { preloadZhConv } from "./zhconv.js?v=1.5.5";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.5";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.5";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.5";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.5";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.5";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.5";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare } from "./localtts.js?v=1.5.5";
+import { applyI18n, t } from "./i18n.js?v=1.5.5";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -259,7 +259,7 @@ function renderLibraryRows(box, chars){
     row.innerHTML =
       `<span style="width:8px;height:8px;border-radius:4px;flex:0 0 auto;background:${dl?'#3ddc84':'#8a8f98'}"></span>`+
       `<div style="flex:1;min-width:0">`+
-        `<div style="font-weight:600">${escapeHtml(c.character||c.name)}${tag?`<span class="tiny muted"> ${tag}</span>`:""}</div>`+
+        `<div style="font-weight:600">${escapeHtml(c.character||c.name)}${tag?`<span class="tiny muted"> ${escapeHtml(tag)}</span>`:""}</div>`+
         `<div class="tiny muted">${dl?t("lib.dlDone"):t("lib.dlNone")} · ${_sizeLabel(c.bytes)} · ${escapeHtml(emos)}</div>`+
       `</div>`+
       `<button class="btn ghost tiny lib_prep"${dl?" disabled":""}>${dl?t("lib.dlDone"):t("lib.prepare")}</button>`;

@@ -74,6 +74,8 @@ export const STRINGS = {
   "set.shortcutHears": { "zh-TW":"聽到：", "en":"Listens for: ", "ja":"認識する語：", "ko":"인식 단어: " },
   "set.shortcutNeedsRec": { "zh-TW":"還沒錄音——要在手機上錄過才會生效", "en":"Not recorded yet — record it on the phone to activate", "ja":"未録音 — スマホで録音すると有効になります", "ko":"미녹음 — 휴대폰에서 녹음하면 활성화됩니다" },
   "set.shortcutSaved": { "zh-TW":"已儲存。記得在手機上錄音才會生效。", "en":"Saved. Remember to record it on the phone to activate.", "ja":"保存しました。スマホで録音すると有効になります。", "ko":"저장됨. 휴대폰에서 녹음해야 활성화됩니다." },
+  "set.shortcutSaveFail": { "zh-TW":"這台裝置的儲存空間滿了，存不進去", "en":"This device's storage is full — could not save",
+                            "ja":"この端末の保存容量がいっぱいで保存できません", "ko":"이 기기의 저장 공간이 가득 차 저장할 수 없습니다" },
   "set.shortcutBlank": { "zh-TW":"觸發詞與句子都要填", "en":"Fill in both the trigger words and the sentence", "ja":"認識する語と話す文の両方を入力してください", "ko":"인식 단어와 문장을 모두 입력하세요" },
   "set.shortcutLoadFail": { "zh-TW":"讀取失敗：", "en":"Could not load: ", "ja":"読み込みに失敗：", "ko":"불러오기 실패: " },
   "set.shortcutDelFail": { "zh-TW":"刪除失敗：", "en":"Could not delete: ", "ja":"削除に失敗：", "ko":"삭제 실패: " },

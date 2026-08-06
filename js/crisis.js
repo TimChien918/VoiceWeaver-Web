@@ -15,12 +15,12 @@
 // 這是刻意的——會走到這個畫面的人，正是最不該讓他一個人把求救關掉的時候。
 //
 // 呼吸引導不是裝飾：等待家人回應的那幾分鐘最難熬，給一個節奏可以跟著做。
-import { t } from "./i18n.js?v=1.5.4";
-import { state } from "./store.js?v=1.5.4";
+import { t } from "./i18n.js?v=1.5.5";
+import { state } from "./store.js?v=1.5.5";
 import {
   telegramSend, locationLine,
   telegramSendPhoto, telegramSendVoice, telegramPollReplies
-} from "./extras.js?v=1.5.4";
+} from "./extras.js?v=1.5.5";
 
 const $ = s => document.querySelector(s);
 
@@ -147,6 +147,13 @@ function startPolling() {
     .then(r => { _pollOffset = r.offset; })
     .catch(() => {})
     .finally(() => {
+      // 這裡是非同步回來的：使用者在等 offset 的這段時間可能已經關掉危機視窗，
+      // 那時 stopPolling() 早就跑過了（而且什麼都沒清到，因為 timer 還沒建）。
+      // 不擋的話會留下一個**沒有人清得掉**的 interval，每 3 秒打一次 Telegram
+      // 打到這個分頁關掉為止；下一次危機再開，兩個 timer 會互搶同一個 offset，
+      // 家人的回覆就會有一半掉在看不到的那一個。
+      if (!_active) return;
+      stopPolling();
       _pollTimer = setInterval(async () => {
         if (!_active) return;
         try {
@@ -254,6 +261,7 @@ function startBreathing() {
     inhale = !inhale;
   };
   tick();
+  stopBreathing();          // 重複開啟時先清掉舊的，否則兩個 timer 會讓球忽大忽小
   _breathTimer = setInterval(tick, 4000);
 }
 function stopBreathing() {

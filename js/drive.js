@@ -12,7 +12,7 @@
 //   VoiceWeaver/Models/<LANG>/<角色>/       語音模型（GPT-SoVITS 聲文權重）
 //   VoiceWeaver/AcousticModels/*.json      聲波模型（專屬發音的關鍵字樣板）
 
-import { driveToken } from "./store.js?v=1.5.4";
+import { driveToken } from "./store.js?v=1.5.5";
 
 const FILES = "https://www.googleapis.com/drive/v3/files";
 const UPLOAD = "https://www.googleapis.com/upload/drive/v3/files";
