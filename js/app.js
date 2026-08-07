@@ -1,25 +1,27 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices } from "./store.js?v=1.5.9";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.9";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.9";
-import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.9";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.9";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.9";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.9";
-import { bindTap } from "./interaction.js?v=1.5.9";
-import { orderCards } from "./predict.js?v=1.5.9";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.9";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.9";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.9";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.9";
-import { preloadZhConv } from "./zhconv.js?v=1.5.9";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.9";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.9";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.9";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.9";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.9";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.9";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.9";
-import { applyI18n, t } from "./i18n.js?v=1.5.9";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices } from "./store.js?v=1.5.10";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.10";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.10";
+import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.10";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.10";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.10";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.10";
+import { bindTap } from "./interaction.js?v=1.5.10";
+import { orderCards } from "./predict.js?v=1.5.10";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.10";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.10";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.10";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.10";
+import { preloadZhConv } from "./zhconv.js?v=1.5.10";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.10";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.10";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.10";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.10";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.10";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.10";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.10";
+import * as Acoustic from "./acoustic.js?v=1.5.10";
+import * as Mic from "./acousticmic.js?v=1.5.10";
+import { applyI18n, t } from "./i18n.js?v=1.5.10";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -107,6 +109,7 @@ function fillSettings(){
   renderProviderList("#imgList", "imageApis", IMAGE_PROVIDERS);
   // 本地語音引擎
   $("#lt_enabled").checked = !!state.settings.localTtsEnabled;
+  { const el = $("#s_acoustic"); if(el) el.checked = !!state.settings.acousticMatch && Mic.isSupported(); }
   renderCloudList();
   // ngrok 雲端通道
   if($("#ng_token")){
@@ -293,6 +296,18 @@ function bindSettings(){
   $("#k_tgtoken").addEventListener("input", e=>{ state.apiKeys.tgtoken=e.target.value.trim(); save(); });
   $("#k_tgchat").addEventListener("input", e=>{ state.apiKeys.tgchat=e.target.value.trim(); save(); });
   $("#s_theme").addEventListener("change", e=>{ state.settings.theme=e.target.value; applyTheme(); save(); });
+  {
+    const el = $("#s_acoustic");
+    if(el){
+      // 瀏覽器不支援就不要讓他打開——打開了也只會在按錄音時才報錯
+      if(!Mic.isSupported()){ el.disabled = true; el.checked = false; }
+      el.addEventListener("change", e=>{
+        state.settings.acousticMatch = e.target.checked; save();
+        renderShortcuts();            // 每一列的「錄音」鈕跟著出現／消失
+        renderAcousticListen();       // 主畫面的「🎧 聽我說」也是
+      });
+    }
+  }
   $("#s_lang").addEventListener("change", e=>{ state.settings.lang=e.target.value;
     applyI18n(state.settings.lang);          // 先翻譯整個介面（含儲存狀態用的語言）
     populateVoiceDropdown();                  // 角色語音清單即時用快取重新篩選
@@ -343,6 +358,7 @@ function bindSettings(){
   $("#lt_add").addEventListener("click", addCloudServer);
   $("#lt_url").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addCloudServer(); } });
   $("#lt_detect").addEventListener("click", refreshLocalVoices);
+  $("#btnAcousticListen")?.addEventListener("click", acousticListen);
   if($("#lib_refresh")) $("#lib_refresh").addEventListener("click", ()=>renderCloudLibrary().catch(()=>{}));
   if($("#lt_emotion")) $("#lt_emotion").addEventListener("change", e=>{ state.settings.voiceEmotion = e.target.value; save(); });
   // ngrok 雲端通道：token/domain 存帳號雲端 + 鏡射到配對文件（Colab 用配對碼取）
@@ -1050,6 +1066,7 @@ function showApp(user){
   // 生圖與文字重組的「電腦幫忙跑」也一樣（localHas 要偵測過才會是 true）。
   // 背景跑、失敗就安靜略過：連不上本來就會自動退回雲端／瀏覽器語音。
   if(localComputeEnabled()) refreshLocalVoices().catch(()=>{});
+  renderAcousticListen();   // 「🎧 聽我說」預設隱藏，錄過才出現
   renderAac(); renderCombo(); renderCcList(); renderQuickSos(); setupCrisis();
   setStoryToast(toast); setupStory();
   setupHeadControl(msg=>{ const el=$("#headStatus"); if(el) el.textContent = msg; });
@@ -1117,15 +1134,117 @@ async function renderShortcuts(){
         ${x.hasRecording ? "" :
           `<div class="tiny muted">${t("set.shortcutNeedsRec")}</div>`}
       </div>
+      ${acousticOn() ? `<button class="btn ghost sc-rec" data-id="${esc(String(x.id))}"
+          data-kw="${esc(x.keyword)}" style="padding:4px 10px">🎙</button>` : ""}
       <button class="btn ghost sc-del" data-id="${esc(String(x.id))}" style="padding:4px 10px">🗑</button>
     </div>`).join("");
 
+  box.querySelectorAll(".sc-rec").forEach(b=>{
+    b.addEventListener("click", ()=>enrollShortcut(b.dataset.id, b.dataset.kw));
+  });
   box.querySelectorAll(".sc-del").forEach(b=>{
     b.addEventListener("click", async ()=>{
       try{ await deleteShortcut(b.dataset.id); await renderShortcuts(); }
       catch(e){ setShortcutMsg(t("set.shortcutDelFail") + e.message); }
     });
   });
+}
+
+// ── 網頁端聲波比對（實驗，預設關閉）──────────────────────
+//
+// 演算法整條都在 js/acoustic.js（App 端的 JS 移植，對照測試證實 DTW 距離
+// 相對誤差 3e-7、樣板 blob 位元相同）。這裡只負責錄音與畫面。
+
+function acousticOn(){ return !!state.settings.acousticMatch && Mic.isSupported(); }
+
+/** keyword → { exemplars, threshold, marginThreshold, ... }，只放在這次工作階段。 */
+const _acousticTemplates = new Map();
+
+/**
+ * 登錄一句：連錄 MIN_TAKES 次。
+ *
+ * 每次之間會等使用者按一下，不做自動連錄——構音障礙的使用者需要喘口氣，
+ * 而且被催促的錄音彼此差異會變大，門檻就跟著鬆掉。
+ */
+async function enrollShortcut(id, keyword){
+  if(!acousticOn()) return;
+  const takes = [];
+  try{
+    for(let i=0;i<Mic.MIN_TAKES;i++){
+      setShortcutMsg(t("ac.recordPrompt").replace("{n}", i+1).replace("{total}", Mic.MIN_TAKES));
+      await Mic.startCapture();
+      await waitForStop();
+      const take = await Mic.stopCapture();
+      if(take.peak < Mic.MIN_PEAK){
+        setShortcutMsg(t("ac.tooQuiet"));
+        i--;                       // 沒出聲不算一次，重錄這一輪
+        await new Promise(r=>setTimeout(r,1200));
+        continue;
+      }
+      takes.push(take);
+    }
+    const tpl = Mic.buildTemplate(takes);
+    _acousticTemplates.set(id, {
+      id, keyword,
+      exemplars: tpl.exemplars,
+      rejectionThreshold: tpl.threshold,
+      marginThreshold: 0.15,
+      matchMode: "Keyword",
+    });
+    setShortcutMsg(t("ac.enrolled").replace("{kw}", keyword)
+                   .replace("{spread}", tpl.spread.toFixed(2))
+                   .replace("{thr}", tpl.threshold.toFixed(2)));
+  }catch(e){
+    Mic.cancelCapture();
+    setShortcutMsg(t("ac.enrollFail") + (e.message||e));
+  }
+}
+
+/** 錄音中：按畫面上任一處或等 3 秒自動停。這是最簡單、也最不會卡住的收音方式。 */
+function waitForStop(){
+  return new Promise(res=>{
+    const done = ()=>{ clearTimeout(timer); document.removeEventListener("pointerdown", done); res(); };
+    const timer = setTimeout(done, 3000);
+    document.addEventListener("pointerdown", done, { once:true });
+  });
+}
+
+/** 主畫面的「🎧 聽我說」：錄一次 → 比對 → 命中就唸出對應的整句話。 */
+function renderAcousticListen(){
+  const btn = $("#btnAcousticListen");
+  if(!btn) return;
+  btn.classList.toggle("hidden", !acousticOn() || _acousticTemplates.size === 0);
+}
+
+async function acousticListen(){
+  if(!acousticOn()) return;
+  const templates = [..._acousticTemplates.values()];
+  if(!templates.length){ toast(t("ac.noTemplates")); return; }
+  try{
+    await Mic.startCapture();
+    toast(t("ac.listening"));
+    await waitForStop();
+    const take = await Mic.stopCapture();
+    if(take.peak < Mic.MIN_PEAK){ toast(t("ac.tooQuiet")); return; }
+    const query = Acoustic.extractMfcc(take.samples);
+    const r = Acoustic.match(query, templates);
+    if(r.kind === "hit"){
+      const phrase = await phraseOf(r.template.id);
+      if(phrase){ $("#resultText").textContent = phrase; $("#result").classList.remove("hidden"); speak(phrase); }
+    }else if(r.kind === "ambiguous"){
+      // 誤觸發（替他說出沒想說的話）比沒觸發危險得多，所以不確定時讓他自己選
+      toast(t("ac.ambiguous"));
+    }else{
+      toast(t("ac.noMatch"));
+    }
+  }catch(e){ Mic.cancelCapture(); toast(t("ac.listenFail") + (e.message||e)); }
+}
+
+async function phraseOf(id){
+  try{
+    const list = await listShortcuts();
+    return (list.find(x=>String(x.id)===String(id))||{}).spokenPhrase || "";
+  }catch{ return ""; }
 }
 
 function setShortcutMsg(text){
