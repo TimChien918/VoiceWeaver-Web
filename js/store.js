@@ -6,7 +6,7 @@ import {
 import {
   getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, getDocs, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { t } from "./i18n.js?v=1.5.10";
+import { t } from "./i18n.js?v=1.5.11";
 
 const DEFAULTS = {
   settings: { theme: "auto", lang: "zh-TW", rate: 0.95, font: 1.0,
@@ -24,7 +24,7 @@ const DEFAULTS = {
               style: "tech",          // 視覺風格：tech／cute／anime／minimal（同 App）
               highContrast: false,    // 高對比（無障礙）：純黑底＋高彩文字
               currentLocationTag: "", // 最近一次定位的地點標籤（圖卡推薦排序的情境加成用）
-              // 網頁端聲波比對（實驗）。**預設關閉。**
+              // 網頁端聲波比對。**預設關閉。**
               // 演算法本身與 App 完全一致（對照測試證實 DTW 距離相對誤差 3e-7、
               // 樣板 blob 位元相同），但「登錄與比對用不同麥克風」這件事沒有解——
               // 門檻是從登錄錄音的變異算出來的，換一支麥克風就不一定還對得上。
@@ -306,7 +306,7 @@ function saveLocalShortcuts(list){
 
 // Drive 用動態 import：drive.js 反過來要 store.js 的 driveToken，
 // 靜態互相 import 會踩到模組初始化順序。順便也讓沒用到 Drive 的人不必載這段。
-async function _drive(){ return import("./drive.js?v=1.5.10"); }
+async function _drive(){ return import("./drive.js?v=1.5.11"); }
 
 /**
  * 兩個雲端來源都讀：Firestore（即時、免 Drive 授權）與使用者自己 Drive 的

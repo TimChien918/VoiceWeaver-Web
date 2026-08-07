@@ -1,27 +1,27 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices } from "./store.js?v=1.5.10";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.10";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.10";
-import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.10";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.10";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.10";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.10";
-import { bindTap } from "./interaction.js?v=1.5.10";
-import { orderCards } from "./predict.js?v=1.5.10";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.10";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.10";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.10";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.10";
-import { preloadZhConv } from "./zhconv.js?v=1.5.10";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.10";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.10";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.10";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.10";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.10";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.10";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.10";
-import * as Acoustic from "./acoustic.js?v=1.5.10";
-import * as Mic from "./acousticmic.js?v=1.5.10";
-import { applyI18n, t } from "./i18n.js?v=1.5.10";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices } from "./store.js?v=1.5.11";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.11";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.11";
+import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.11";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.11";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.11";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.11";
+import { bindTap } from "./interaction.js?v=1.5.11";
+import { orderCards } from "./predict.js?v=1.5.11";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.11";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.11";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.11";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.11";
+import { preloadZhConv } from "./zhconv.js?v=1.5.11";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.11";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.11";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.11";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.11";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.11";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.11";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.11";
+import * as Acoustic from "./acoustic.js?v=1.5.11";
+import * as Mic from "./acousticmic.js?v=1.5.11";
+import { applyI18n, t } from "./i18n.js?v=1.5.11";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -1150,7 +1150,7 @@ async function renderShortcuts(){
   });
 }
 
-// ── 網頁端聲波比對（實驗，預設關閉）──────────────────────
+// ── 網頁端聲波比對（預設關閉）────────────────────────────
 //
 // 演算法整條都在 js/acoustic.js（App 端的 JS 移植，對照測試證實 DTW 距離
 // 相對誤差 3e-7、樣板 blob 位元相同）。這裡只負責錄音與畫面。
@@ -1328,9 +1328,8 @@ async function renderVoices(){
     </div>`).join("");
 }
 
+// 沒有「重新讀取」按鈕是刻意的：切進設定頁就會自動重讀（見 setupTabs），
+// 使用者不該為了看到最新狀態去按一顆按鈕——他多半也想不到要按。
 function setupVoices(){
-  const btn = $("#refreshVoices");
-  if(!btn) return;
-  btn.addEventListener("click", ()=>{ renderVoices().catch(()=>{}); });
   renderVoices().catch(()=>{});
 }

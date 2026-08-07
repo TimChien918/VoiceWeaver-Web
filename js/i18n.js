@@ -28,8 +28,8 @@ export const STRINGS = {
   "btn.regen":   { "zh-TW":"重組一次", "en":"Redo", "ja":"もう一度", "ko":"다시 구성" },
   // 候選數量不一定是 3（模型講得一致時會塌成 1～2 句），所以不能寫死「三個」。
   "btn.regenerate":{ "zh-TW":"都不對？重新生成", "en":"None of these? Regenerate", "ja":"どれも違う？作り直す", "ko":"모두 아닌가요? 다시 생성" },
-  // ── 網頁端聲波比對（實驗）──
-  "set.acousticEnable": { "zh-TW":"網頁端聲波比對（實驗）", "en":"Acoustic matching in the browser (experimental)", "ja":"ブラウザでの波形照合（実験）", "ko":"브라우저 파형 대조 (실험)" },
+  // ── 網頁端聲波比對 ──
+  "set.acousticEnable": { "zh-TW":"網頁端聲波比對", "en":"Acoustic matching in the browser", "ja":"ブラウザでの波形照合", "ko":"브라우저 파형 대조" },
   "set.acousticDesc": { "zh-TW":"在這台裝置上直接錄音、直接比對，不必用手機。演算法與手機完全一樣，但門檻是從登錄錄音算出來的——換一支麥克風就不一定還準，所以建議在這裡重新錄一組，不要沿用手機錄的。", "en":"Record and match right on this device, no phone needed. The algorithm is identical to the phone's, but the threshold is calibrated from the enrolment recordings — a different microphone may not fit it, so record a fresh set here rather than reusing the phone's.", "ja":"この端末で直接録音して照合します（スマホ不要）。アルゴリズムはスマホと同一ですが、しきい値は登録録音から算出されるため、マイクが変わると合わなくなることがあります。スマホの録音を流用せず、ここで録り直すことをお勧めします。", "ko":"이 기기에서 바로 녹음하고 대조합니다(휴대폰 불필요). 알고리즘은 휴대폰과 동일하지만 임계값은 등록 녹음에서 계산되므로 마이크가 바뀌면 맞지 않을 수 있습니다. 휴대폰 녹음을 그대로 쓰지 말고 여기서 다시 녹음하세요." },
   "btn.acousticListen": { "zh-TW":"🎧 聽我說（專屬發音）", "en":"🎧 Listen to me (my own pronunciation)", "ja":"🎧 聞いて（わたし専用の発音）", "ko":"🎧 내 말 듣기 (내 전용 발음)" },
   "ac.recordPrompt": { "zh-TW":"第 {n} / {total} 次：說出那幾個字，說完點一下畫面", "en":"Take {n} of {total}: say the words, then tap the screen", "ja":"{total} 回中 {n} 回目：その言葉を話し、終わったら画面をタップ", "ko":"{total}회 중 {n}회: 그 말을 하고 화면을 누르세요" },
@@ -98,7 +98,6 @@ export const STRINGS = {
                        "en":"Stored in VoiceWeaver/Models/ on your own Google Drive — phone, computer and web all see the same copy. This only lists what you have; synthesis still runs on your computer or Colab.",
                        "ja":"自分の Google ドライブの VoiceWeaver/Models/ に保存され、スマホ・PC・Web が同じものを参照します。ここは一覧のみで、合成は PC か Colab で実行されます。",
                        "ko":"본인 Google 드라이브의 VoiceWeaver/Models/에 저장되며 휴대폰·PC·웹이 같은 사본을 봅니다. 여기서는 목록만 표시하고 합성은 PC나 Colab에서 실행됩니다." },
-  "set.voicesRefresh": { "zh-TW":"⟳ 重新讀取", "en":"⟳ Reload", "ja":"⟳ 再読み込み", "ko":"⟳ 다시 읽기" },
   "set.voicesEmpty": { "zh-TW":"Drive 上還沒有語音模型。用電腦端的語音中心匯入，就會自動上傳到這裡。",
                        "en":"No voice models on Drive yet. Import one in the desktop Voice Center and it uploads here automatically.",
                        "ja":"ドライブにまだ音声モデルがありません。PC の音声センターで取り込むと自動でアップロードされます。",

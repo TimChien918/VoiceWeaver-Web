@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 <title>VoiceWeaver 網頁版</title>
-<link rel="stylesheet" href="style.css?v=1.5.10" />
+<link rel="stylesheet" href="style.css?v=1.5.11" />
 </head>
 <body>
   <!-- 登入閘 -->
@@ -288,7 +288,7 @@
           <label class="row" style="align-items:flex-start;gap:8px;margin:6px 0">
             <input id="s_acoustic" type="checkbox" />
             <span>
-              <span data-i18n="set.acousticEnable">網頁端聲波比對（實驗）</span>
+              <span data-i18n="set.acousticEnable">網頁端聲波比對</span>
               <span class="tiny muted" style="display:block" data-i18n="set.acousticDesc">在這台裝置上直接錄音、直接比對，不必用手機。演算法與手機完全一樣，但門檻是從登錄錄音算出來的——換一支麥克風就不一定還準，所以建議在這裡重新錄一組，不要沿用手機錄的。</span>
             </span>
           </label>
@@ -304,7 +304,6 @@
           <h3 data-i18n="set.voicesTitle">🗣 我的專屬聲音</h3>
           <p class="tiny muted" data-i18n="set.voicesDesc">存在你自己 Google Drive 的 VoiceWeaver/Models/ 裡，手機、電腦、網頁看到的是同一份。這裡只列出有哪些聲音，合成仍然在電腦或 Colab 上跑。</p>
           <div id="voiceList"></div>
-          <button id="refreshVoices" class="btn ghost" style="margin-top:8px" data-i18n="set.voicesRefresh">⟳ 重新讀取</button>
           <p id="voiceMsg" class="tiny muted" style="margin:6px 0 0"></p>
         </div>
         <div class="card complex">
@@ -494,7 +493,7 @@
 
   <!-- 你的 Firebase 設定（複製 config.example.js 為 config.js 並填入）。沒有 config.js 時為純本機模式。 -->
   <script>window.__FIREBASE_CONFIG__ = null;</script>
-  <script src="config.js?v=1.5.10" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
-  <script type="module" src="js/app.js?v=1.5.10"></script>
+  <script src="config.js?v=1.5.11" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
+  <script type="module" src="js/app.js?v=1.5.11"></script>
 </body>
 </html>
