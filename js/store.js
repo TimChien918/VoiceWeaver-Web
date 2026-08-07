@@ -6,7 +6,7 @@ import {
 import {
   getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, getDocs, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { t } from "./i18n.js?v=1.5.5";
+import { t } from "./i18n.js?v=1.5.6";
 
 const DEFAULTS = {
   settings: { theme: "auto", lang: "zh-TW", rate: 0.95, font: 1.0,
@@ -292,7 +292,7 @@ function saveLocalShortcuts(list){
 
 // Drive 用動態 import：drive.js 反過來要 store.js 的 driveToken，
 // 靜態互相 import 會踩到模組初始化順序。順便也讓沒用到 Drive 的人不必載這段。
-async function _drive(){ return import("./drive.js?v=1.5.5"); }
+async function _drive(){ return import("./drive.js?v=1.5.6"); }
 
 /**
  * 兩個雲端來源都讀：Firestore（即時、免 Drive 授權）與使用者自己 Drive 的
@@ -378,6 +378,8 @@ export async function saveShortcut({ id, keyword, spokenPhrase }){
  *
  * 這裡刻意**不覆蓋 exemplarBlob**：Drive 上那筆可能是手機錄好音寫上去的，
  * 網頁只改了文字就把錄音清掉的話，使用者要重錄 5 次才能救回來。
+ * category 同理：那是手機端從語句庫帶上來的，決定它在雲端放哪個資料夾，
+ * 網頁沒有這個概念，不保留的話每改一次文字就被丟回 Custom。
  */
 async function _driveWrite(docId, rec){
   try{
@@ -389,6 +391,7 @@ async function _driveWrite(docId, rec){
       id: docId,
       exemplarBlob: (existing && existing.exemplarBlob) || "",
       rejectionThreshold: existing ? existing.rejectionThreshold : rec.rejectionThreshold,
+      category: (existing && existing.category) || rec.category || "Custom",
     });
   }catch(e){ /* 沒授權／離線都很正常 */ }
 }

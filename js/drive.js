@@ -9,10 +9,14 @@
 // 手機 App 與 Mac 端用的是同一個專案，所以三邊看得到彼此建立的檔案。
 //
 // 資料夾結構（三端共用）：
-//   VoiceWeaver/Models/<LANG>/<角色>/       語音模型（GPT-SoVITS 聲文權重）
-//   VoiceWeaver/AcousticModels/*.json      聲波模型（專屬發音的關鍵字樣板）
+//   VoiceWeaver/Models/<LANG>/<角色>/            語音模型（GPT-SoVITS 聲文權重）
+//   VoiceWeaver/AcousticModels/<分類>/<id>.json  聲波模型（專屬發音的關鍵字樣板）
+//
+// 聲波模型的檔名是內部 id（唯一鍵；關鍵字是使用者隨時會改的東西，拿來當檔名
+// 改一次就多一個孤兒檔）。看不看得懂交給資料夾——平放時使用者在自己的雲端硬碟
+// 只會看到一排 5.json、6.json，完全認不出哪個是哪一句。
 
-import { driveToken } from "./store.js?v=1.5.5";
+import { driveToken } from "./store.js?v=1.5.6";
 
 const FILES = "https://www.googleapis.com/drive/v3/files";
 const UPLOAD = "https://www.googleapis.com/upload/drive/v3/files";
@@ -115,10 +119,13 @@ async function writeJson(name, parent, obj){
   });
 }
 
-/** 丟垃圾桶（不是永久刪除），使用者可在 Drive 自己還原。 */
-async function trashFile(name, parent){
-  const id = await findId(name, parent, false);
-  if(!id) return;                       // 本來就不在＝已經是想要的狀態
+/**
+ * 丟垃圾桶（不是永久刪除），使用者可在 Drive 自己還原。
+ *
+ * 只收 file id 不收「名稱＋父層」：聲波模型分層之後，同一個檔名可能落在
+ * 根目錄或任何一個分類資料夾，呼叫端本來就得先列出來才知道它在哪一層。
+ */
+async function trashById(id){
   await api(`${FILES}/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -133,13 +140,43 @@ async function trashFile(name, parent){
 // 只是讓他多點一次、還看到一串沒有意義的亂碼。
 const ACOUSTIC_PATH = [ROOT_FOLDER, ACOUSTIC_DIR];
 
+// 檔案放在 AcousticModels/<分類>/<id>.json。
+//
+// 檔名維持內部 id（唯一鍵，關鍵字是使用者隨時會改的東西），看不看得懂
+// 交給資料夾負責——平放時使用者在雲端硬碟只會看到一排 5.json、6.json。
+//
+// 舊版面（平放在 AcousticModels 底下）仍然要讀得到：少讀一層的後果不是
+// 「少一筆」，而是網頁把它當成雲端沒有、存檔時整個蓋掉。
+const DEFAULT_CATEGORY = 'Custom';
+
+/** 檔名不能有 / ，前後空白會被吃掉，空字串建不出資料夾。與 App 端同一套規則。 */
+function sanitizeCategory(raw){
+  const cleaned = String(raw ?? '')
+    .replace(/[/\\:*?"<>|]/g, ' ')
+    .trim().replace(/\s+/g, ' ')
+    .slice(0, 48);
+  return cleaned || DEFAULT_CATEGORY;
+}
+
+/** 根目錄本身 + 每個分類子資料夾裡的 .json，一次列完。 */
+async function acousticFiles(parent){
+  const kids = await listChildren(parent);
+  const out = kids.filter(f => f.mimeType !== FOLDER_MIME && /\.json$/i.test(f.name))
+                  .map(f => ({ ...f, parentId: parent }));
+  for(const dir of kids.filter(f => f.mimeType === FOLDER_MIME)){
+    const inner = await listChildren(dir.id);
+    for(const f of inner){
+      if(f.mimeType !== FOLDER_MIME && /\.json$/i.test(f.name)) out.push({ ...f, parentId: dir.id });
+    }
+  }
+  return out;
+}
+
 export async function listAcoustic(){
   const parent = await folderPath(ACOUSTIC_PATH, false);
   if(!parent) return [];
-  const files = (await listChildren(parent)).filter(
-    f => f.mimeType !== FOLDER_MIME && /\.json$/i.test(f.name));
   const out = [];
-  for(const f of files){
+  for(const f of await acousticFiles(parent)){
     // 單筆壞掉不該讓整次取回失敗——其他筆是好的，使用者該拿得到
     try{ out.push(await readJson(f.id)); }catch{ /* 跳過這一筆 */ }
   }
@@ -154,20 +191,38 @@ export async function listAcoustic(){
 export async function readAcoustic(id){
   const parent = await folderPath(ACOUSTIC_PATH, false);
   if(!parent) return null;
-  const fid = await findId(`${id}.json`, parent, false);
-  if(!fid) return null;
-  try{ return await readJson(fid); }catch{ return null; }
+  const hit = (await acousticFiles(parent)).find(f => f.name === `${id}.json`);
+  if(!hit) return null;
+  try{ return await readJson(hit.id); }catch{ return null; }
 }
 
 export async function saveAcoustic(template){
-  const parent = await folderPath(ACOUSTIC_PATH, true);
-  await writeJson(`${template.id}.json`, parent, template);
+  const root = await folderPath(ACOUSTIC_PATH, true);
+  const category = sanitizeCategory(template.category);
+  const parent = await folderPath([...ACOUSTIC_PATH, category], true);
+  await writeJson(`${template.id}.json`, parent, { ...template, category });
+  // 這一筆以前可能平放在根目錄、或歸在別的分類。留著的話同一個樣板會有兩份，
+  // 而「雲端是主」會讓兩份都被拉回手機 → 使用者看到重複的觸發詞。
+  await trashAcousticElsewhere(root, parent, `${template.id}.json`);
+}
+
+async function trashAcousticElsewhere(root, keep, name){
+  for(const f of await acousticFiles(root)){
+    if(f.name === name && f.parentId !== keep){
+      try{ await trashById(f.id); }catch{ /* 清不掉不該讓存檔失敗 */ }
+    }
+  }
 }
 
 export async function deleteAcoustic(id){
   const parent = await folderPath(ACOUSTIC_PATH, false);
   if(!parent) return;
-  await trashFile(`${id}.json`, parent);
+  // 不假設它在哪一層：根目錄與每個分類資料夾都找一次
+  for(const f of await acousticFiles(parent)){
+    if(f.name === `${id}.json`){
+      try{ await trashById(f.id); }catch{ /* 略過 */ }
+    }
+  }
 }
 
 /**
