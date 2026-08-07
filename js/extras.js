@@ -22,8 +22,10 @@ export async function detectLocation(){
     const q = `[out:json][timeout:8];(nwr(around:60,${lat},${lon})[amenity];nwr(around:60,${lat},${lon})[shop];);out tags 5;`;
     const r = await fetch("https://overpass-api.de/api/interpreter", { method:"POST", body:q });
     const j = await r.json();
-    const t = j.elements?.[0]?.tags;
-    const name = t?.name || t?.amenity || t?.shop;
+    // 這裡原本叫 t，把 i18n 的 t() 整個遮蔽掉——沒有 name 時 `t("loc.nearby")`
+    // 是在呼叫一個 tags 物件，一定拋 TypeError，那條訊息等於永遠不會出現。
+    const tags = j.elements?.[0]?.tags;
+    const name = tags?.name || tags?.amenity || tags?.shop;
     return name ? `${name}` : `${t("loc.nearby")} (${lat.toFixed(4)},${lon.toFixed(4)})`;
   }catch{ return `${t("loc.position")} (${lat.toFixed(4)},${lon.toFixed(4)})`; }
 }

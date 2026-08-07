@@ -1102,10 +1102,9 @@ function setShortcutMsg(text){
   if(el) el.textContent = text || "";
 }
 
-function esc(s){
-  return String(s).replace(/[&<>"']/g, c =>
-    ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
-}
+// 跟 escapeHtml 同一件事，但原本這支用 String(s) 而不是 String(s??"")——
+// 錯誤物件沒有 message 時（例如 `throw 0`）畫面上會出現一行「undefined」。
+function esc(s){ return escapeHtml(s); }
 
 // 引號跟著語言走：「」在英文介面裡看起來就是跑錯字型的中文標點
 function quote(s){

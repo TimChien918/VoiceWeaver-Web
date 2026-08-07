@@ -68,7 +68,9 @@ function renderTrail(){
     `<button class="ktrail-ctl" data-act="clear" aria-label="clear">✕</button>` +
     _trail.map((c,i)=>
       `<div class="ktrail-item" data-i="${i}">${
-        c.img ? `<img src="${c.img}" alt="" draggable="false" />` : `<span class="ke">${esc(c.emoji)}</span>`
+        // emoji 與文字都跳脫了，img 卻沒有——自建照片卡會跨裝置同步過來，
+        // 內容不是這支程式產生的就不能當成安全的。
+        c.img ? `<img src="${esc(c.img)}" alt="" draggable="false" />` : `<span class="ke">${esc(c.emoji)}</span>`
       }<span class="kw">${esc(c.word)}</span></div>`).join("");
   // 點單張線索＝重唸那一個（幫家人確認）；整串重播；清空——都是家人操作，不碰 AI
   box.querySelectorAll(".ktrail-item").forEach(el=>bindTap(el, ()=>{

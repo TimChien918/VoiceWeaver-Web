@@ -138,6 +138,7 @@ export const STRINGS = {
   "toast.enterFragments": { "zh-TW":"請先輸入碎詞", "en":"Enter fragments first", "ja":"先に断片を入力してください", "ko":"먼저 단어 조각을 입력하세요" },
   "toast.needLlm": { "zh-TW":"請先到設定頁填 LLM 金鑰（建議 Gemini）", "en":"Add an LLM key in Settings first (Gemini recommended)", "ja":"先に設定で LLM キーを追加（Gemini 推奨）", "ko":"먼저 설정에서 LLM 키를 추가하세요 (Gemini 권장)" },
   "toast.composeFail": { "zh-TW":"重組失敗：", "en":"Compose failed: ", "ja":"再構成失敗：", "ko":"재구성 실패: " },
+  "toast.reconstructFail": { "zh-TW":"重組失敗，請再試一次", "en":"Could not rebuild the sentence. Please try again.", "ja":"再構成できませんでした。もう一度お試しください。", "ko":"문장을 만들지 못했습니다. 다시 시도해 주세요." },
   "toast.recognizing": { "zh-TW":"辨識中…", "en":"Recognizing…", "ja":"認識中…", "ko":"인식 중…" },
   "toast.recognized": { "zh-TW":"已加入辨識結果", "en":"Recognition result added", "ja":"認識結果を追加しました", "ko":"인식 결과 추가됨" },
   "toast.recognizeFail": { "zh-TW":"辨識失敗：", "en":"Recognition failed: ", "ja":"認識失敗：", "ko":"인식 실패: " },

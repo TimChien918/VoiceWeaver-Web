@@ -113,7 +113,9 @@ export async function reconstruct(fragments, context){
         .then(parseCoT).catch(()=>null))
   );
   const samples = results.filter(Boolean);
-  if(!samples.length) throw new Error("重組失敗");
+  // 這個 message 會被 app.js toast 出來給使用者看，所以不能寫死中文——
+  // 英文介面的人重組失敗時會收到一句他看不懂的中文。
+  if(!samples.length) throw new Error(tr("toast.reconstructFail"));
   const ranked = rankBySelfConsistency(samples);
   return { text: ranked[0].text, confidence: ranked[0].confidence, alternatives: ranked };
 }

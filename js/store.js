@@ -39,8 +39,13 @@ export function newId(){ return "k" + Date.now().toString(36) + (_idc++).toStrin
 // 產生一組不可猜的配對碼（24 字），只產一次並存進帳號設定。
 export function ensurePairCode(){
   if(!state.apiKeys.ngrokPairCode){
-    const a = new Uint8Array(18); (crypto||{}).getRandomValues?.(a);
+    // 這串等於 ngrok token 的密碼（誰拿到就讀得到 cloudbridge 那份文件），
+    // 所以亂數缺席時**不能靜靜地產生一串 0**——那是一組人人都猜得到的碼。
+    const a = new Uint8Array(18);
+    if(globalThis.crypto?.getRandomValues) globalThis.crypto.getRandomValues(a);
+    else for(let i=0;i<a.length;i++) a[i] = Math.floor(Math.random()*256);
     state.apiKeys.ngrokPairCode = "vw" + Array.from(a, b=>b.toString(36).padStart(2,"0")).join("").slice(0,22);
+    save();   // 沒存檔的話下次載入又產一組新的，Colab 那端就再也對不上
   }
   return state.apiKeys.ngrokPairCode;
 }
@@ -197,6 +202,9 @@ export function save(){
   clearTimeout(_saveTimer);
   _onSaved("save.saving");
   _saveTimer = setTimeout(async ()=>{
+    // 先歸零再寫：不歸零的話 flushPendingSave 永遠看到一個「還有待寫入」的假訊號，
+    // 之後每一次切分頁／隱藏視窗都會多打一次 Firestore——使用者只是在切視窗。
+    _saveTimer = null;
     try{
       await setDoc(doc(_db,"users",state.uid), { ...snapshot(), updatedAt:Date.now() }, { merge:true });
       _onSaved("save.synced");

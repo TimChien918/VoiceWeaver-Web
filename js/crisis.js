@@ -16,7 +16,7 @@
 //
 // 呼吸引導不是裝飾：等待家人回應的那幾分鐘最難熬，給一個節奏可以跟著做。
 import { t } from "./i18n.js?v=1.5.6";
-import { state } from "./store.js?v=1.5.6";
+import { state, save } from "./store.js?v=1.5.6";
 import {
   telegramSend, locationLine,
   telegramSendPhoto, telegramSendVoice, telegramPollReplies
@@ -31,8 +31,12 @@ const DEFAULT_VIDEO_BASE = "https://meet.jit.si";
 function roomUrl() {
   const base = (state.settings.videoCallBaseUrl || DEFAULT_VIDEO_BASE).replace(/\/+$/, "");
   // 房名要不可猜（等於這場對話的密碼），但也不能每次重開就換掉。
+  //
+  // 產生之後**一定要存檔**：原本只寫進 state 沒有 save()，重新整理就重新產生一組，
+  // 家人手上那個連結會連進一個沒有人的空房間——而他們正在等著看到人。
   if (!state.settings.crisisRoom) {
     state.settings.crisisRoom = "vw-" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    save();
   }
   return `${base}/${state.settings.crisisRoom}#` +
     "config.prejoinPageEnabled=false&" +

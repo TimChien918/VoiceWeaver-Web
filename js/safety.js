@@ -13,25 +13,61 @@
  * （「自 殺」）餵進重組區，或 STT 斷詞把字拆開。
  */
 const CRISIS_PATTERNS = [
+  // 中文
   /自\s*殺/, /自\s*殘/, /自\s*我\s*了\s*斷/,
-  /想\s*死/, /不\s*想\s*活/, /結\s*束\s*生\s*命/,
-  /跳\s*樓/, /上\s*吊/, /吞\s*藥/,
-  /suicide/i, /kill\s*myself/i, /end\s*my\s*life/i, /self[-\s]?harm/i
+  /想\s*死/, /不\s*想\s*活/, /活\s*不\s*下\s*去/,
+  /結\s*束\s*生\s*命/, /了\s*結\s*自\s*己/,
+  /跳\s*樓/, /上\s*吊/, /吞\s*藥/, /割\s*腕/,
+  // 英文。原本只有 suicide / kill myself / end my life / self-harm 四條，
+  // 「I want to die」這個最常見的說法整個漏掉——而介面早就支援英文了。
+  /suicid/i,
+  /kill\s*(myself|my\s*self)/i,
+  /end\s*(my|it\s*all)\b.*\blife|end\s*it\s*all/i,
+  /take\s*my\s*(own\s*)?life/i,
+  /self[-\s]?harm/i, /hurt\s*myself/i, /cut\s*myself/i,
+  /want\s*(to\s*)?die/i, /wanna\s*die/i,
+  /(don'?t|do\s*not)\s*want\s*to\s*live/i,
+  /better\s*off\s*dead/i, /hang(ing)?\s*myself/i,
+  // jump\s*off 不會命中 jumping off——動名詞才是實際講法（"thinking of jumping off"）
+  /jump(ing|s|ed)?\s*off/i, /overdose/i,
+  // 日文
+  /死\s*に\s*たい/, /消\s*え\s*たい/, /生\s*き\s*た\s*く\s*な\s*い/,
+  // 韓文
+  /자\s*살/, /죽\s*고\s*싶/, /살\s*기\s*싫/,
 ];
 
 /** 拒絕治療類：不觸發家人通報，但同樣屬於「不可發聲」。 */
 const REFUSAL_PATTERNS = [
   /拒\s*絕\s*治\s*療/, /放\s*棄\s*治\s*療/, /不\s*要\s*救\s*我/,
   /不\s*想\s*治/, /拔\s*管/,
-  /refuse\s*treatment/i, /stop\s*treating/i
+  /refuse\s*(the\s*)?treatment/i, /stop\s*(the\s*)?treat/i,
+  /give\s*up\s*(on\s*)?(treatment|therapy)/i,
+  /(don'?t|do\s*not)\s*(want|need)\s*(any\s*)?(more\s*)?(treatment|therapy)/i,
+  /(don'?t|do\s*not)\s*(save|resuscitate)\s*me/i,
+  /\bDNR\b/i, /pull\s*the\s*(plug|tube)/i,
+  /治\s*療\s*を\s*やめ/, /치\s*료\s*를?\s*그만/,
 ];
 
 /** 醫療／疼痛意圖：發聲前要二次確認，避免 AI 誤判部位或意圖。 */
 const MEDICAL_CONFIRM_KEYWORDS = [
+  // 中文
   "痛", "藥", "醫生", "醫師", "護理", "打針", "開刀", "手術", "急診",
   "頭暈", "噁心", "想吐", "流血", "發燒", "過敏", "呼吸", "胸悶",
-  "拉肚子", "便秘", "抽筋", "麻木", "腫", "摔", "跌倒"
+  "拉肚子", "便秘", "抽筋", "麻木", "腫", "摔", "跌倒",
+  // 日文／韓文
+  "痛い", "薬", "医者", "看護", "手術", "救急", "めまい", "吐き気",
+  "아파", "약", "의사", "간호", "수술", "응급", "어지", "메스꺼",
 ];
+
+/**
+ * 英文的醫療關鍵字要看「整個詞」而不是子字串——`ill` 會命中 `still`、`bill`，
+ * 一般句子也被逼著按確認，按到最後使用者就不看內容直接按了，那一關等於白做。
+ *
+ * 原本這一整條不存在：英文介面說「my chest hurts」會被判成 normal 直接唸出去，
+ * 而那道確認正是為了防止 AI 把部位講錯。
+ */
+const MEDICAL_CONFIRM_EN =
+  /\b(pain|painful|hurts?|hurting|ache|aching|sore|medicine|medication|pills?|doctor|nurse|surgery|operation|injection|shot|emergency|dizzy|nausea|nauseous|vomit|bleed|bleeding|blood|fever|allergic|allergy|breathe|breathing|chest|diarrh?ea|constipat\w*|cramp|numb|swollen|swelling|fell|fallen|fall)\b/i;
 
 /** 模型若還是吐出來，送進 TTS 前靜默替換成中性說法。 */
 const OUTPUT_REDACTIONS = [
@@ -41,7 +77,13 @@ const OUTPUT_REDACTIONS = [
   [/放\s*棄\s*治\s*療/gi,     "與醫師討論下一步"],
   [/自\s*殺/g,                "（請與家屬聯絡）"],
   [/自\s*殘/g,                "（請與家屬聯絡）"],
-  [/suicide/gi,               "(please contact family)"]
+  // 英文原本只擋 suicide 一個詞
+  [/suicid\w*/gi,             "(please contact family)"],
+  [/kill\s*yourself/gi,       "(please contact family)"],
+  [/you\s*(will\s*)?(never|won'?t)\s*(get\s*)?(better|recover)/gi,
+                              "we will work on rehab together"],
+  [/there'?s\s*no\s*hope/gi,  "please talk with your family"],
+  [/give\s*up\s*(on\s*)?treatment/gi, "discuss the next step with your doctor"],
 ];
 
 /** 貼在所有 LLM 呼叫的 system prompt 最前面。 */
@@ -71,6 +113,7 @@ export function classifyRisk(text){
   if(CRISIS_PATTERNS.some(re => re.test(text))) return "lock";
   if(REFUSAL_PATTERNS.some(re => re.test(text))) return "lock";
   if(MEDICAL_CONFIRM_KEYWORDS.some(k => text.includes(k))) return "confirm";
+  if(MEDICAL_CONFIRM_EN.test(text)) return "confirm";
   return "normal";
 }
 

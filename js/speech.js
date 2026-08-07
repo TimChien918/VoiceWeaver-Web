@@ -49,7 +49,8 @@ export function listVoices(lang){
 export function speak(text, { safetyChecked = false } = {}){
   if(!text) return;
   // 第三層防禦：模型萬一還是吐出禁字，唸出來之前替換掉。
-  // 放在 speak() 內是刻意的——所有發聲路徑都經過這裡，繞不過去。
+  // **每一個對外發聲的函式都要自己做這一步**（speak / speakUpbeat / speakIn）——
+  // 曾經只有這裡做，另外兩條就這樣成了繞過整層防護的後門。
   if(!safetyChecked) text = sanitizeForSpeech(text);
   // 本地 GPT-SoVITS 角色語音優先；失敗則自動退回瀏覽器原生語音。
   if(localTtsEnabled()){
@@ -68,6 +69,9 @@ export function speak(text, { safetyChecked = false } = {}){
  *  瀏覽器 TTS 路徑＝pitch 1.2 / rate 1.08。 */
 export function speakUpbeat(text){
   if(!text) return;
+  // 第三層防禦也要走。speak() 的註解說「所有發聲路徑都經過這裡，繞不過去」，
+  // 但這條路徑根本沒經過——而它服務的正是重度模式的使用者。
+  text = sanitizeForSpeech(text);
   if(localTtsEnabled()){
     localSpeak(text, { emotion:"开心" })
       .catch(e=>{ console.warn("本地語音失敗，改用瀏覽器語音", e); _webSpeak(text, { pitch:1.2, rate:1.08 }); });
@@ -103,6 +107,9 @@ function _webSpeak(text, opts = {}){
 /** 多語朗讀：指定語言唸一句（重組結果一鍵中/英/日/韓）。 */
 export function speakIn(text, lang){
   if(!text) return;
+  // **這條路徑唸的是 LLM 的重組結果**——正是第三層防禦存在的唯一理由，
+  // 卻是三個發聲函式裡唯一完全沒消毒的。一鍵切語言就繞過整層防護。
+  text = sanitizeForSpeech(text);
   if(!("speechSynthesis" in window)) return;
   stopLocalSpeak();                            // 多語朗讀走瀏覽器聲音，先停本地音避免疊音
   try{
