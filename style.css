@@ -433,3 +433,10 @@ body.sev-moderate .complex, body.sev-severe .complex{ display:none !important; }
   animation:recpulse 1.4s ease-in-out infinite; }
 @keyframes recpulse{ 50%{ filter:brightness(.82); } }
 @media (prefers-reduced-motion: reduce){ #btnAudioDirect.recording{ animation:none; } }
+
+/* 候選句：三句攤開讓使用者挑（與 App 一致）。選中的用邊框與圓點標示，
+   不用底色——底色會讓「已選」看起來像「已按下去了」，但點選其實不發聲。 */
+#altPick { margin: 8px 0 10px; }
+#altPick > .tiny { margin-bottom: 6px; }
+.alt-opt { text-align: left; margin-bottom: 6px; white-space: normal; line-height: 1.45; }
+.alt-opt.on { border-color: var(--accent, #4f6bff); border-width: 2px; font-weight: 600; }

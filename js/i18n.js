@@ -26,8 +26,9 @@ export const STRINGS = {
   "btn.composing": { "zh-TW":"重組中…", "en":"Composing…", "ja":"再構成中…", "ko":"재구성 중…" },
   "btn.speak":   { "zh-TW":"🔊 朗讀", "en":"🔊 Speak", "ja":"🔊 読み上げ", "ko":"🔊 읽기" },
   "btn.regen":   { "zh-TW":"重組一次", "en":"Redo", "ja":"もう一度", "ko":"다시 구성" },
-  "btn.nextAlt":   { "zh-TW":"換一個說法（%1/%2）", "en":"Try another (%1/%2)", "ja":"別の言い方（%1/%2）", "ko":"다른 표현 (%1/%2)" },
-  "btn.regenerate":{ "zh-TW":"三個都不對？重新生成", "en":"None fit? Regenerate", "ja":"どれも違う？作り直す", "ko":"모두 아님? 다시 생성" },
+  // 候選數量不一定是 3（模型講得一致時會塌成 1～2 句），所以不能寫死「三個」。
+  "btn.regenerate":{ "zh-TW":"都不對？重新生成", "en":"None of these? Regenerate", "ja":"どれも違う？作り直す", "ko":"모두 아닌가요? 다시 생성" },
+  "alt.pickOne":   { "zh-TW":"挑一句最接近的", "en":"Pick the closest one", "ja":"いちばん近いものを選んでください", "ko":"가장 가까운 것을 고르세요" },
   "btn.more":      { "zh-TW":"更多", "en":"More", "ja":"その他", "ko":"더보기" },
   "btn.less":      { "zh-TW":"收起", "en":"Less", "ja":"閉じる", "ko":"접기" },
   "btn.img":     { "zh-TW":"🖼 生成圖卡", "en":"🖼 Image", "ja":"🖼 画像生成", "ko":"🖼 이미지 생성" },

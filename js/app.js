@@ -1,25 +1,25 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices } from "./store.js?v=1.5.8";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.8";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.8";
-import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.8";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.8";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.8";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.8";
-import { bindTap } from "./interaction.js?v=1.5.8";
-import { orderCards } from "./predict.js?v=1.5.8";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.8";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.8";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.8";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.8";
-import { preloadZhConv } from "./zhconv.js?v=1.5.8";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.8";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.8";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.8";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.8";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.8";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.8";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare } from "./localtts.js?v=1.5.8";
-import { applyI18n, t } from "./i18n.js?v=1.5.8";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices } from "./store.js?v=1.5.9";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.9";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.9";
+import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.9";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.9";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.9";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.9";
+import { bindTap } from "./interaction.js?v=1.5.9";
+import { orderCards } from "./predict.js?v=1.5.9";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.9";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.9";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.9";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.9";
+import { preloadZhConv } from "./zhconv.js?v=1.5.9";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.9";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.9";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.9";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.9";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.9";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.9";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.9";
+import { applyI18n, t } from "./i18n.js?v=1.5.9";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -442,29 +442,51 @@ let altList = [];       // 目前這批候選
 let altIndex = 0;       // 正在顯示第幾個
 let lastFrag = "";      // 重新生成時要用的原始碎詞
 
-function renderAltButton(){
-  const btn = $("#btnAlt");
-  if(!btn) return;
-  if(altList.length <= 1){ btn.classList.add("hidden"); return; }
-  btn.classList.remove("hidden");
-  const last = altIndex >= altList.length - 1;
-  btn.textContent = last
-    ? t("btn.regenerate")
-    : t("btn.nextAlt").replace("%1", altIndex + 1).replace("%2", altList.length);
+/**
+ * 把候選句整批攤開（與 App 的做法一致）。
+ *
+ * 舊版是「一次顯示一句、按鈕輪播」，但按鈕上寫的是「三個都不對？重新生成」——
+ * 使用者從頭到尾只看過一句，憑什麼判斷三個都不對。而且候選其實可能只有 1～2 句
+ * （模型講得一致時會塌掉），「三個」是寫死的。
+ *
+ * 依信心度由高到低排：最可能對的排最上面，手指移動距離最短。
+ * 點一下只是「選定」不發聲——挑的過程不該每點一次就送一次語音合成。
+ */
+function renderAltList(){
+  const wrap = $("#altPick"), box = $("#altList"), btn = $("#btnAlt");
+  if(!wrap || !box) return;
+  if(altList.length <= 1){
+    wrap.classList.add("hidden");
+    box.innerHTML = "";
+    if(btn) btn.classList.add("hidden");
+    return;
+  }
+  wrap.classList.remove("hidden");
+  if(btn){ btn.classList.remove("hidden"); btn.textContent = t("btn.regenerate"); }
+  // 排序只做一次的效果：記住原始索引，選取狀態才不會跟著排序跑掉
+  const ranked = altList.map((c,i)=>({ ...c, i }))
+                        .sort((a,b)=>(b.confidence??0)-(a.confidence??0));
+  box.innerHTML = ranked.map(c=>{
+    const on = c.i === altIndex;
+    return `<button class="btn ghost block alt-opt${on?" on":""}" data-i="${c.i}"
+              aria-pressed="${on}">${on?"◉":"○"}　${escapeHtml(c.text)}</button>`;
+  }).join("");
+  box.querySelectorAll(".alt-opt").forEach(el=>{
+    el.addEventListener("click", ()=>selectAlt(+el.dataset.i));
+  });
 }
 
-function showAlt(i){
+/** 選定某一句（不發聲）。 */
+function selectAlt(i){
+  if(!altList[i]) return;
   altIndex = i;
   lastResult = altList[i].text;
   $("#resultText").textContent = lastResult;
-  renderAltButton();
+  renderAltList();
 }
 
-async function cycleAlt(){
-  if(altIndex >= altList.length - 1){ await doCompose(); return; }  // 都不對 → 重新生成
-  showAlt(altIndex + 1);
-  speak(lastResult);
-}
+/** 「都不對？重新生成」：真的再打一次 LLM。 */
+async function cycleAlt(){ await doCompose(); }
 
 async function doCompose(){
   const frag = $("#fragments").value.trim();
@@ -495,7 +517,7 @@ async function doCompose(){
     $("#resultText").textContent = lastResult;
     $("#result").classList.remove("hidden");
     $("#resultImg").classList.add("hidden");
-    renderAltButton();
+    renderAltList();
     addHistory({ original: frag + (ctxText?(" | "+ctxText):""), reconstructed: lastResult });
     speak(lastResult, { safetyChecked: crisisCleared });
   }catch(e){ toast(t("toast.composeFail") + (e.message||e)); }
@@ -533,7 +555,7 @@ function setupAudioDirect(){
       $("#resultText").textContent = sentence;
       $("#result").classList.remove("hidden");
       $("#resultImg").classList.add("hidden");
-      renderAltButton();
+      renderAltList();
       addHistory({ original: t("btn.audioDirect"), reconstructed: sentence });
       markFirstSpeak(); recordInputSource(false);
       speak(sentence);
@@ -1021,6 +1043,13 @@ function showApp(user){
   // renderCombo 也要在這裡重跑一次——setupAac() 在登入完成前就先畫過一次，
   // 那時 applyI18n 還沒跑，組合區的空狀態會卡在預設的中文。
   preloadZhConv();   // 簡繁對照表：背景載入，第一次重組時就有得用
+  // 開了「讓電腦幫忙跑運算」就自動偵測一次，不要等使用者按「偵測連線」。
+  //
+  // 原本 detectLocalTts() 只掛在那顆按鈕上，所以設定明明開著、角色語音也選好了，
+  // 只要沒手動按過偵測，朗讀出來的還是瀏覽器機械音——而且每次重新整理都會退回去。
+  // 生圖與文字重組的「電腦幫忙跑」也一樣（localHas 要偵測過才會是 true）。
+  // 背景跑、失敗就安靜略過：連不上本來就會自動退回雲端／瀏覽器語音。
+  if(localComputeEnabled()) refreshLocalVoices().catch(()=>{});
   renderAac(); renderCombo(); renderCcList(); renderQuickSos(); setupCrisis();
   setStoryToast(toast); setupStory();
   setupHeadControl(msg=>{ const el=$("#headStatus"); if(el) el.textContent = msg; });
@@ -1050,8 +1079,9 @@ function main(){
   setupKiosk({ onExit: ()=>toast(t("care.exited")) });
   setRehabToast(toast); setReportToast(toast); setSpeechToast(toast);
   setupRehab(); setupReport();
-  // 已啟用本地語音 → 背景偵測一次，讓引擎就緒（連不上不影響其他功能）
-  if(state.settings.localTtsEnabled) refreshLocalVoices().catch(()=>{});
+  // 這裡**不能**偵測電腦運算：這一段跑在登入之前，state.settings 還是 DEFAULTS，
+  // localTtsEnabled 永遠讀到 false，於是「開機自動偵測」看起來有做、實際從來沒觸發過。
+  // 真正的偵測放在 showApp()（設定載入完之後）。
   $("#btnGoogle").addEventListener("click", async ()=>{ try{ await loginGoogle(); }catch(e){ $("#loginErr").textContent=e.message||e; } });
   $("#btnAnon").addEventListener("click", async ()=>{ try{ await loginAnon(); }catch(e){ $("#loginErr").textContent=e.message||e; } });
 

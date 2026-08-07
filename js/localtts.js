@@ -4,11 +4,19 @@
 //   ① http://localhost / 127.0.0.1（瀏覽器例外，限「開網頁的電腦＝語音中心電腦」）
 //   ② https://<主機>.<tailnet>.ts.net（Tailscale serve 的真憑證網址，任何地方可連）
 // 連不上時上層會自動退回瀏覽器原生語音。
-import { state } from "./store.js?v=1.5.8";
-import { t } from "./i18n.js?v=1.5.8";
+import { state } from "./store.js?v=1.5.9";
+import { t } from "./i18n.js?v=1.5.9";
 
 let _base = null;   // 已確認可用的橋接 base URL
-let _health = { voice: false, image: false, text: false };  // 電腦端三項運算可用性
+
+// 電腦端三項運算可用性。**初值必須是「未知」而不是 false。**
+//
+// localTtsEnabled() 判斷的是 `_health.voice !== false`——那個寫法的用意本來就是
+// 「還沒偵測過就先試試看，真的連不上再退回瀏覽器語音」。但初值寫成 { voice:false }
+// 之後，`false !== false` 是 false，於是在按下「偵測連線」之前它永遠回 false：
+// 使用者開了電腦運算、選好角色語音，朗讀出來的還是瀏覽器的機械音，
+// 而且每次重新整理都會退回這個狀態。專屬聲音等於完全沒作用。
+let _health = {};   // undefined＝還沒偵測；true/false＝偵測過的結果
 
 // 候選位址：使用者新增的雲端清單（可多台，逐一嘗試、第一個健康的即採用）＋ 同機 localhost。
 function candidates() {
