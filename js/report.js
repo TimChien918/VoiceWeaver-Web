@@ -1,8 +1,8 @@
 // 成績單：讀 Firestore rehabLogs，三段時間維度，統計 + 折線趨勢 + Telegram 匯出。
-import { state } from "./store.js?v=1.5.6";
-import { listRehabLogs } from "./store.js?v=1.5.6";
-import { t } from "./i18n.js?v=1.5.6";
-import { behaviorSummary } from "./behavior.js?v=1.5.6";
+import { state } from "./store.js?v=1.5.8";
+import { listRehabLogs } from "./store.js?v=1.5.8";
+import { t } from "./i18n.js?v=1.5.8";
+import { behaviorSummary } from "./behavior.js?v=1.5.8";
 
 const esc = (x)=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
@@ -15,9 +15,27 @@ export function setReportToast(fn){ toast = fn; }
 
 // 比對用關鍵字，**不可翻譯**：這是拿來掃描患者中文語料的，翻掉就統計不到了
 // （同 App 的 I18n 規則：只翻顯示文字，比對用的中文關鍵字一律留原文）。
-const POSITIVE = ["謝謝","好","喜歡","開心","高興","幸福","舒服","加油"];
+//
+// **不可以放單獨一個「好」。** 舊版放了，而比對是純 indexOf 子字串搜尋，
+// 所以「我不好」「不好意思」「我這裡好痛」全部被算成正向情緒。
+// 「好痛」被記成正向，是把最需要被看見的疼痛訊號反向記進治療師的報表裡。
+// 與 App 的 ReportAggregator.POSITIVE_WORDS 同一份清單、同一套否定詞規則。
+const POSITIVE = ["謝謝","喜歡","開心","高興","幸福","舒服","加油",
+                  "很好","好多了","太好了","好棒","好極了"];
+/** 否定詞。緊接在正向詞前面時那一次不算——「不喜歡」跟「喜歡」是相反的意思。 */
+const NEGATIONS = ["不","沒","別","無","未","毋"];
 function countPositive(text){
-  return POSITIVE.reduce((n,w)=>{ let i=0,c=0; while(true){const f=(text||"").indexOf(w,i); if(f<0)break; c++; i=f+w.length;} return n+c; },0);
+  const s = text || "";
+  return POSITIVE.reduce((n,w)=>{
+    let i=0,c=0;
+    while(true){
+      const f = s.indexOf(w,i);
+      if(f<0) break;
+      if(!(f>0 && NEGATIONS.includes(s[f-1]))) c++;
+      i = f + w.length;
+    }
+    return n+c;
+  },0);
 }
 
 function rangeFrom(range){

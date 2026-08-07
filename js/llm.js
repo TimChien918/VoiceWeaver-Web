@@ -1,8 +1,8 @@
 // 重組 / 組句：走多供應商輪詢（providers.js）。
-import { runLlm, hasLlm } from "./providers.js?v=1.5.6";
-import { t as tr } from "./i18n.js?v=1.5.6";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
-import { DEFENSIVE_SYSTEM_PROMPT } from "./safety.js?v=1.5.6";
-import { toTraditionalSync } from "./zhconv.js?v=1.5.6";
+import { runLlm, hasLlm } from "./providers.js?v=1.5.8";
+import { t as tr } from "./i18n.js?v=1.5.8";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
+import { DEFENSIVE_SYSTEM_PROMPT } from "./safety.js?v=1.5.8";
+import { toTraditionalSync } from "./zhconv.js?v=1.5.8";
 
 // 第一層防禦：黏在所有 system prompt 最前面，先要求模型別生成自傷／絕望字眼。
 // 這只是「請求」不是保證——真正擋住的是 app.js 的分級閘門與 speech.js 的輸出消毒。
@@ -171,7 +171,7 @@ function outLang(){
  * 「用英文回答」很容易整段跟著中文走。用該語言自己的祈使句寫，模型才會照做；
  * 放在提示詞最後一行（recency）效果最穩。與 App 的 I18n.outputLanguageDirective 同一招。
  */
-function outputLanguageDirective(field){
+export function outputLanguageDirective(field){
   switch(curLang()){
     case "en": return `IMPORTANT: the "${field}" value MUST be written in English.`;
     case "ja": return `重要：「${field}」の値は必ず日本語で書いてください。`;

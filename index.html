@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 <title>VoiceWeaver 網頁版</title>
-<link rel="stylesheet" href="style.css?v=1.5.6" />
+<link rel="stylesheet" href="style.css?v=1.5.8" />
 </head>
 <body>
   <!-- 登入閘 -->
@@ -279,8 +279,8 @@
           <p class="tiny muted" data-i18n="set.shortcutDesc">設定「聽到哪幾個字 → 說出哪一句」。這裡只負責文字；聲音要在手機上錄，因為比對是拿使用者本人的錄音做波形對齊，別人的聲音沒有用。</p>
           <div id="shortcutList"></div>
           <div class="row" style="gap:6px;margin-top:8px">
-            <input id="sc_keyword" type="text" placeholder="要聽的字，例 need water" style="flex:1" />
-            <input id="sc_phrase" type="text" placeholder="要說出口的話" style="flex:2" />
+            <input id="sc_keyword" type="text" data-i18n-ph="ph.scKeyword" placeholder="要聽的字，例 need water" style="flex:1" />
+            <input id="sc_phrase" type="text" data-i18n-ph="ph.scPhrase" placeholder="要說出口的話" style="flex:2" />
           </div>
           <button id="addShortcut" class="btn ghost" style="margin-top:8px" data-i18n="set.addShortcut">＋ 新增</button>
           <p id="shortcutMsg" class="tiny muted" style="margin:6px 0 0"></p>
@@ -297,7 +297,7 @@
           <label class="lbl">Bot Token</label>
           <input id="k_tgtoken" type="password" autocomplete="off" />
           <label class="lbl" data-i18n="set.familyPhone">家人電話（危機時直撥）</label>
-          <input id="k_familyPhone" type="tel" placeholder="例 0912345678" />
+          <input id="k_familyPhone" type="tel" data-i18n-ph="ph.familyPhone" placeholder="例 0912345678" />
           <label class="lbl" data-i18n="set.tgChat">Chat ID（接收者）</label>
           <input id="k_tgchat" type="text" autocomplete="off" />
         </div>
@@ -381,9 +381,9 @@
           <label class="lbl" data-i18n="ng.section">☁️ 用 Colab 免費 GPU（ngrok 通道）</label>
           <p class="tiny muted" data-i18n="ng.desc">用 Colab 免費 GPU 跑語音合成時，這裡填 ngrok 授權碼——會存到你的帳號雲端，Colab 用下方「配對碼」自動取用，你完全不用把授權碼貼進 Colab。</p>
           <label class="lbl" data-i18n="ng.token">ngrok authtoken</label>
-          <input id="ng_token" type="password" placeholder="從 dashboard.ngrok.com 複製" autocomplete="off" />
+          <input id="ng_token" type="password" data-i18n-ph="ph.ngToken" placeholder="從 dashboard.ngrok.com 複製" autocomplete="off" />
           <label class="lbl" data-i18n="ng.domain">固定網域（選填，建議）</label>
-          <input id="ng_domain" type="text" placeholder="例 voiceweaver.ngrok-free.app（填了網址就永遠不變）" autocomplete="off" />
+          <input id="ng_domain" type="text" data-i18n-ph="ph.ngDomain" placeholder="例 voiceweaver.ngrok-free.app（填了網址就永遠不變）" autocomplete="off" />
           <button id="ng_use" class="btn ghost" style="margin-top:6px" data-i18n="ng.useUrl">☁️ 用此 Colab 網址連線</button>
           <label class="lbl" data-i18n="ng.pair">Colab 配對碼（貼到 Colab 的 VW_PAIR_CODE）</label>
           <div class="row" style="gap:6px">
@@ -479,7 +479,7 @@
 
   <!-- 你的 Firebase 設定（複製 config.example.js 為 config.js 並填入）。沒有 config.js 時為純本機模式。 -->
   <script>window.__FIREBASE_CONFIG__ = null;</script>
-  <script src="config.js?v=1.5.6" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
-  <script type="module" src="js/app.js?v=1.5.6"></script>
+  <script src="config.js?v=1.5.8" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
+  <script type="module" src="js/app.js?v=1.5.8"></script>
 </body>
 </html>

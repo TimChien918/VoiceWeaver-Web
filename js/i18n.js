@@ -210,6 +210,12 @@ export const STRINGS = {
   "stt.error": { "zh-TW":"語音輸入錯誤", "en":"Voice input error", "ja":"音声入力エラー", "ko":"음성 입력 오류" },
   "set.cloudLabel": { "zh-TW":"雲端／電腦清單（可加多個，連不上自動換下一個）", "en":"Cloud / computer list (add several; auto-fails over)", "ja":"クラウド／PC 一覧（複数追加可・自動フェイルオーバー）", "ko":"클라우드/컴퓨터 목록 (여러 개 추가, 자동 전환)" },
   "set.addCloud": { "zh-TW":"➕ 新增雲端", "en":"➕ Add cloud", "ja":"➕ クラウド追加", "ko":"➕ 클라우드 추가" },
+  // ── 這一輪實機掃出來的：英文介面仍顯示中文的 placeholder ──
+  "ph.scKeyword": { "zh-TW":"要聽的字，例 need water", "en":"Words to listen for, e.g. need water", "ja":"聞き取る言葉（例：need water）", "ko":"인식할 말, 예: need water" },
+  "ph.scPhrase": { "zh-TW":"要說出口的話", "en":"The sentence to speak out loud", "ja":"実際に話す文", "ko":"실제로 말할 문장" },
+  "ph.familyPhone": { "zh-TW":"例 0912345678", "en":"e.g. 0912345678", "ja":"例：09012345678", "ko":"예: 01012345678" },
+  "ph.ngToken": { "zh-TW":"從 dashboard.ngrok.com 複製", "en":"Copy it from dashboard.ngrok.com", "ja":"dashboard.ngrok.com からコピー", "ko":"dashboard.ngrok.com에서 복사" },
+  "ph.ngDomain": { "zh-TW":"例 voiceweaver.ngrok-free.app（填了網址就永遠不變）", "en":"e.g. voiceweaver.ngrok-free.app (set this and the URL never changes)", "ja":"例：voiceweaver.ngrok-free.app（設定すると URL が変わりません）", "ko":"예: voiceweaver.ngrok-free.app (설정하면 주소가 바뀌지 않습니다)" },
   "lt.noClouds": { "zh-TW":"尚未新增雲端／電腦；同一台電腦可直接按「偵測連線」。", "en":"No cloud/computer added yet; on the same machine just tap Detect.", "ja":"クラウド／PC 未追加。同じ PC なら「接続を検出」をタップ。", "ko":"클라우드/컴퓨터 미추가; 같은 PC면 '연결 감지'를 누르세요." },
   "lt.removeCloud": { "zh-TW":"移除這個雲端", "en":"Remove this cloud", "ja":"このクラウドを削除", "ko":"이 클라우드 제거" },
   "lt.cloudN": { "zh-TW":"雲端 {n}", "en":"Cloud {n}", "ja":"クラウド {n}", "ko":"클라우드 {n}" },
@@ -416,7 +422,10 @@ export const STRINGS = {
   "audio.thinking":   { "zh-TW":"AI 正在聽…", "en":"AI is listening…", "ja":"AI が聞いています…", "ko":"AI가 듣고 있어요…" },
   "audio.tooShort":   { "zh-TW":"錄得太短了，再說一次", "en":"That was too short — try again", "ja":"短すぎます、もう一度", "ko":"너무 짧아요, 다시 말해주세요" },
   "audio.noResult":   { "zh-TW":"AI 沒聽出內容，再試一次", "en":"AI couldn't make it out — try again", "ja":"AI が聞き取れませんでした、もう一度", "ko":"AI가 알아듣지 못했어요, 다시 시도" },
-  "audio.outputLang": { "zh-TW":"繁體中文", "en":"英文", "ja":"日文", "ko":"韓文" },
+  // prompt. 開頭＝這不是 UI 文字，是要嵌進「中文 prompt」裡的語言名稱，
+  // 所以值本來就該是中文（英文介面時 → 「輸出一句…的英文」）。
+  // 用這個前綴標示，翻譯檢查才不會每次都把它當成漏翻。同 llm.js 的 LANG_NAME。
+  "prompt.outputLangName": { "zh-TW":"繁體中文", "en":"英文", "ja":"日文", "ko":"韓文" },
   "audio.needMic":    { "zh-TW":"需要麥克風權限才能錄音", "en":"Microphone permission is needed", "ja":"録音にはマイク権限が必要です", "ko":"녹음하려면 마이크 권한이 필요합니다" },
   "err.noNativeAudio":{ "zh-TW":"需要 Gemini 金鑰才能讓 AI 直接聽語音（設定頁）", "en":"A Gemini key is needed for AI to listen directly (Settings)", "ja":"AI が直接聞くには Gemini キーが必要（設定）", "ko":"AI가 직접 들으려면 Gemini 키 필요 (설정)" },
   "btn.cancel":  { "zh-TW":"取消", "en":"Cancel", "ja":"キャンセル", "ko":"취소" },

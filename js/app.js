@@ -1,25 +1,25 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices } from "./store.js?v=1.5.6";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.6";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.6";
-import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.6";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.6";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.6";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.6";
-import { bindTap } from "./interaction.js?v=1.5.6";
-import { orderCards } from "./predict.js?v=1.5.6";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.6";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.6";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.6";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.6";
-import { preloadZhConv } from "./zhconv.js?v=1.5.6";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.6";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.6";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.6";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.6";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.6";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.6";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare } from "./localtts.js?v=1.5.6";
-import { applyI18n, t } from "./i18n.js?v=1.5.6";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices } from "./store.js?v=1.5.8";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.8";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.8";
+import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.8";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.8";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.8";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.8";
+import { bindTap } from "./interaction.js?v=1.5.8";
+import { orderCards } from "./predict.js?v=1.5.8";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.8";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.8";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.8";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.8";
+import { preloadZhConv } from "./zhconv.js?v=1.5.8";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.8";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.8";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.8";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.8";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.8";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.8";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare } from "./localtts.js?v=1.5.8";
+import { applyI18n, t } from "./i18n.js?v=1.5.8";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -310,6 +310,7 @@ function bindSettings(){
     renderAac();                              // AAC 分類 chip（「我的」分類名要跟著翻）
     setShortcutMsg("");                       // 舊語言的存檔／錯誤訊息不該留在畫面上
     renderShortcuts();                        // 專屬發音的空狀態與「還沒錄音」提示
+    renderCloudList();                        // 雲端／電腦清單的空狀態（實機掃到它留在舊語言）
     renderVoices();                           // 專屬聲音的空狀態與「缺權重」提示
     // 成績單內容是「載入當下」畫出來的（含圖表裡的「尚無資料」與空狀態），
     // 正在看報表時要重跑一次，否則畫面會留著舊語言的字。

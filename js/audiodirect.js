@@ -6,8 +6,9 @@
 //
 // 只有支援原生音訊的供應商（目前是 Gemini）走得通；沒有這種金鑰時
 // 呼叫端會退回原本的「瀏覽器 STT → 文字重組」。
-import { t } from "./i18n.js?v=1.5.6";
-import { runAudioLlm, hasNativeAudio } from "./providers.js?v=1.5.6";
+import { t } from "./i18n.js?v=1.5.8";
+import { runAudioLlm, hasNativeAudio } from "./providers.js?v=1.5.8";
+import { outputLanguageDirective } from "./llm.js?v=1.5.8";
 
 export { hasNativeAudio };
 
@@ -59,11 +60,15 @@ export async function stopAndInterpret(context) {
   const sys =
     "你是失語症患者的溝通助理。使用者的發音可能不清楚、斷斷續續或用詞不完整。" +
     "請直接聽這段錄音，判斷他最可能想表達的意思，輸出一句自然、口語、有禮貌的" +
-    t("audio.outputLang") + "。\n" +
+    t("prompt.outputLangName") + "。\n" +
     "規則：貼著他真的說出來的內容走，只補讓句子成立所需的語法零件，" +
     "不要新增他沒提到的事件、時間或對象。聽不清楚時給最貼近日常的說法，不要拒答。" +
     "只輸出那一句話，不要解釋。" +
-    (context ? `\n情境參考：${context}` : "");
+    (context ? `\n情境參考：${context}` : "") +
+    // 提示詞主體是中文，只靠中文寫的「輸出英文」模型很容易整段跟著中文走。
+    // 文字重組那條路徑早就補了這一行，直接聽音訊這條漏掉——英文使用者
+    // 對著麥克風講英文，唸出來的卻是中文。放最後一行（recency）效果最穩。
+    "\n" + outputLanguageDirective("回覆");
 
   const out = await runAudioLlm(sys, b64, blob.type.split(";")[0]);
   if (!out) throw new Error(t("audio.noResult"));
