@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.24";
-import { speak } from "./speech.js?v=1.5.24";
-import { applyI18n, t } from "./i18n.js?v=1.5.24";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.24";
+import { state } from "./store.js?v=1.5.25";
+import { speak } from "./speech.js?v=1.5.25";
+import { applyI18n, t } from "./i18n.js?v=1.5.25";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.25";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -57,6 +57,7 @@ function UNITS() {
         { cap: "The user types, or says, whatever they can manage.", act: () => typeInto("#fragments", "water  rest  now") },
         { cap: "One tap turns the fragments into a whole sentence.", act: () => press("#btnCompose") },
         { cap: "Three versions, never one. A wrong guess put in your mouth is worse than silence.", act: showCandidates, hold: 1600 },
+        { cap: "The person picks the one that is actually theirs.", act: pickCandidateDemo, hold: 1200 },
         { cap: "A large picture card confirms the meaning before anything is said out loud.", act: showConfirm, hold: 1600 },
         { cap: "Only then does it speak, in the person's own voice.", act: confirmYes },
       ],
@@ -161,12 +162,23 @@ function UNITS() {
       ],
     },
     {
-      id: "a11y", icon: "♿", title: "Accessibility & languages", est: 20,
+      id: "a11y", icon: "♿", title: "Accessibility & languages", est: 24,
       steps: [
-        { cap: "Text scales across the whole app, settings included.", act: fontScaleDemo, hold: 1400 },
-        { cap: "Traditional Chinese, English, Japanese, Korean.", act: () => langDemo("ja-JP"), hold: 1600 },
-        { cap: "The voice follows the language.", act: () => langDemo("ko-KR"), hold: 1600 },
+        { cap: "Many users are elderly, and stroke often takes part of the visual field with it.", act: () => goTab("settings") },
+        { cap: "So the text scales all the way up, across every screen, settings included.", act: fontScaleDemo, hold: 1400 },
+        { cap: "Nothing is cut off and nothing overlaps, even at the largest size.", hold: 1200 },
+        { cap: "The whole interface runs in Traditional Chinese, English, Japanese and Korean.", act: () => langDemo("ja-JP"), hold: 1800 },
+        { cap: "The voice follows the language — the same person, speaking four of them.", act: () => langDemo("ko-KR"), hold: 1800 },
         { cap: "", act: () => langDemo(null) },
+      ],
+    },
+    {
+      id: "learning", icon: "🧠", title: "It learns this person", est: 22,
+      steps: [
+        { cap: "No two people with aphasia are the same, so the app refuses to stay generic.", act: () => goTab("aac") },
+        { cap: "The cards you reach for most rise to the top, weighted by time of day and by place.", act: () => spotSel("#aacFeedWrap") || spotSel("#aacCats"), hold: 1600 },
+        { cap: "Which candidate you accept teaches it which phrasing sounds like you.", hold: 1400 },
+        { cap: "Your pronunciation model, your cards, your voice — it drifts towards you over time.", hold: 1400 },
       ],
     },
     {
@@ -330,6 +342,19 @@ async function confirmYes() {
   demoSpeak(SAMPLE.candidates[0]);
 }
 
+/** 在三個候選之間切換給人看，最後回到第一個。 */
+async function pickCandidateDemo() {
+  const opts = $$("#altList .alt-opt");
+  const txt = $("#resultText");
+  for (const i of [1, 2, 0]) {
+    if (_abort) return;
+    opts.forEach((o, j) => o.classList.toggle("on", j === i));
+    if (txt && SAMPLE.candidates[i]) txt.textContent = SAMPLE.candidates[i];
+    spot(opts[i] || null);
+    await sleep(1300);
+  }
+}
+
 async function aacPickDemo() {
   const combo = $("#aacCombo");
   if (!combo) return;
@@ -469,12 +494,12 @@ function kioskClose() {
 async function fontScaleDemo() {
   goTab("settings");
   const root = document.documentElement;
-  for (const v of [1.3, 1.6]) {
+  for (const v of [1.4, 1.8, 2.2]) {
     if (_abort) break;
     root.style.setProperty("--font", v + "rem");
-    await sleep(900);
+    await sleep(1000);
   }
-  await sleep(400);
+  await sleep(600);
   root.style.setProperty("--font", (_restore.font || 1) + "rem");
 }
 
