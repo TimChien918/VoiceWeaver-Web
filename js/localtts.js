@@ -100,13 +100,52 @@ export async function detectLocalTts(timeoutMs = 2500) {
   return null;
 }
 
+// ── 文字語言 → 該用哪個角色 ────────────────────────────────────────────
+//
+// 以前這裡永遠送「使用者選定角色的語言」，不是「這句話的語言」。
+// 於是選了中文角色時，英文句子被標成 text_lang=ZH 送進 GPT-SoVITS，
+// 中文前端會把英文字母硬當中文唸——出來就是一段中文腔的怪聲。
+// （使用者回報：「英文模式合成出來會是中文」。）
+//
+// 改成先看文字本身：有假名→JA、有諺文→KO、有漢字→ZH、其餘拉丁字母→EN。
+// 再從電腦上已有的角色裡挑同語言的；能挑到同一個角色的該語言版本最好
+// （同一個人的聲音，只是換語言模型），挑不到就用任何一個該語言的角色。
+export function detectTextLang(text) {
+  const s = String(text || "");
+  if (/[\u3040-\u309f\u30a0-\u30ff]/.test(s)) return "JA";
+  if (/[\uac00-\ud7af\u1100-\u11ff]/.test(s)) return "KO";
+  if (/[\u4e00-\u9fff]/.test(s)) return "ZH";
+  if (/[A-Za-z]/.test(s)) return "EN";
+  return "";
+}
+
+let _voicesCache = [];
+/** 依「這句話的語言」挑角色。回 {name, lang}；挑不到回 null（呼叫端就照舊）。 */
+async function voiceForText(text) {
+  const want = detectTextLang(text);
+  if (!want) return null;
+  const chosenName = state.settings.localVoiceName || "";
+  const chosenLang = (state.settings.localVoiceLang || "").toUpperCase();
+  if (chosenLang === want) return null;          // 選的角色本來就對，不必動
+  if (!_voicesCache.length) _voicesCache = await localVoices();
+  const same = _voicesCache.filter(v => (v.lang || "").toUpperCase() === want);
+  if (!same.length) return null;                 // 電腦上沒有該語言的角色 → 只能沿用
+  // 同一個角色的該語言版本優先（「花火 ZH」→「花火 EN」＝同一個人換語言）
+  const base = chosenName.replace(/[ _](ZH|CN|EN|JA|JP|KO|KR)\b/i, "").trim();
+  const sameChar = same.find(v => (v.name || "").replace(/[ _](ZH|CN|EN|JA|JP|KO|KR)\b/i, "").trim() === base);
+  const pick = sameChar || same[0];
+  return { name: pick.name, lang: want };
+}
+
 // 取得電腦上的語音模型清單 [{name, lang}]
 export async function localVoices() {
   if (!_base && !(await detectLocalTts())) return [];
   try {
     const r = await _fetch("/voices", {}, 4000);
     const j = await r.json();
-    return j && j.ok ? j.voices : [];
+    const list = j && j.ok ? j.voices : [];
+    if (list.length) _voicesCache = list;
+    return list;
   } catch (e) { return []; }
 }
 
@@ -150,6 +189,9 @@ export async function localSynth(text, opts = {}) {
   if (!text) return null;
   if (!_base && !(await detectLocalTts())) throw new Error(t("err.notConnected"));
   const body = { text };
+  // 沒有明確指定角色時，依「這句話的語言」挑——不然英文會被當中文唸。
+  const auto = opts.name ? null : await voiceForText(text).catch(() => null);
+  if (auto) { opts = { ...opts, name: auto.name, lang: auto.lang }; }
   if (opts.name) { body.name = opts.name; body.lang = opts.lang || ""; }
   else if (state.settings.localVoiceName) {
     body.name = state.settings.localVoiceName;
@@ -180,6 +222,9 @@ export async function localSpeak(text, opts = {}) {
   if (!text) return;
   if (!_base && !(await detectLocalTts())) throw new Error(t("err.notConnected"));
   const body = { text };
+  // 沒有明確指定角色時，依「這句話的語言」挑——不然英文會被當中文唸。
+  const auto = opts.name ? null : await voiceForText(text).catch(() => null);
+  if (auto) { opts = { ...opts, name: auto.name, lang: auto.lang }; }
   if (opts.name) {
     body.name = opts.name;
     body.lang = opts.lang || "";
