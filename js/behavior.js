@@ -8,7 +8,7 @@
 //   選句＝AI 第一候選被採用的比率（越高代表 AI 越貼近患者本意）
 //   修改＝退回／刪卡的累計次數
 //   圖卡＝圖卡輸入佔全部輸入的比例
-import { state, save } from "./store.js?v=1.5.23";
+import { state, save } from "./store.js?v=1.5.24";
 
 const D = { firstSpeakCount:0, firstSpeakSumMs:0, candidateFirstHit:0, candidateTotal:0,
             undoCount:0, aacInputCount:0, textInputCount:0 };

@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.23";
-import { speak } from "./speech.js?v=1.5.23";
-import { applyI18n, t } from "./i18n.js?v=1.5.23";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.23";
+import { state } from "./store.js?v=1.5.24";
+import { speak } from "./speech.js?v=1.5.24";
+import { applyI18n, t } from "./i18n.js?v=1.5.24";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.24";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -45,109 +45,109 @@ function UNITS() {
     {
       id: "intro", icon: "🎬", title: "Title & overview", est: 12,
       steps: [
-        { cap: "VoiceWeaver — a communication aid for people with aphasia.", act: () => titleCard("VoiceWeaver", "Communication support for people with aphasia") },
-        { cap: "It turns broken words into whole sentences, and speaks them in a familiar voice.", act: () => titleSub("Fragments → sentence → familiar voice") },
-        { cap: "Here is a walkthrough of the main features.", act: hideTitle },
+        { cap: "Imagine knowing exactly what you want to say, and not one word will come out.", act: () => titleCard("VoiceWeaver", "Communication support for people with aphasia") },
+        { cap: "That is aphasia. The thought is intact. The bridge to speech is broken.", act: () => titleSub("Fragments → sentence → familiar voice") },
+        { cap: "VoiceWeaver rebuilds that bridge.", act: hideTitle },
       ],
     },
     {
       id: "compose", icon: "💬", title: "Sentence reconstruction", est: 26,
       steps: [
-        { cap: "A person with aphasia can often produce only isolated words.", act: () => goTab("compose") },
-        { cap: "They type or say what they can — here: water, rest, now.", act: () => typeInto("#fragments", "water  rest  now") },
-        { cap: "One tap rebuilds it into a natural sentence.", act: () => press("#btnCompose") },
-        { cap: "The AI returns three candidates, so the user is never forced to accept a wrong guess.", act: showCandidates, hold: 1600 },
-        { cap: "Before anything is spoken aloud, the intent is confirmed with a large picture card.", act: showConfirm, hold: 1600 },
-        { cap: "Only after confirmation is the sentence spoken.", act: confirmYes },
+        { cap: "What comes out is fragments. Water. Rest. Now.", act: () => goTab("compose") },
+        { cap: "The user types, or says, whatever they can manage.", act: () => typeInto("#fragments", "water  rest  now") },
+        { cap: "One tap turns the fragments into a whole sentence.", act: () => press("#btnCompose") },
+        { cap: "Three versions, never one. A wrong guess put in your mouth is worse than silence.", act: showCandidates, hold: 1600 },
+        { cap: "A large picture card confirms the meaning before anything is said out loud.", act: showConfirm, hold: 1600 },
+        { cap: "Only then does it speak, in the person's own voice.", act: confirmYes },
       ],
     },
     {
       id: "aac", icon: "🖼", title: "Picture cards (AAC)", est: 24,
       steps: [
-        { cap: "For users who cannot type at all, the picture board is the way in.", act: () => goTab("aac") },
-        { cap: "Cards are colour-coded by part of speech and grouped by situation.", act: () => spotSel("#aacCats"), hold: 1400 },
-        { cap: "Tapping cards builds a sentence buffer.", act: aacPickDemo },
-        { cap: "The buffer can be spoken directly, or rewritten into a grammatical sentence.", act: () => spotSel("#aacCompose"), hold: 1200 },
-        { cap: "Card size scales up for low vision and poor motor control.", act: aacScaleDemo },
+        { cap: "Some people cannot type at all. For them, the board is the way in.", act: () => goTab("aac") },
+        { cap: "Cards are coloured by part of speech, and grouped by where you are.", act: () => spotSel("#aacCats"), hold: 1400 },
+        { cap: "Tap by tap, a sentence takes shape.", act: aacPickDemo },
+        { cap: "It can be spoken as it stands, or rewritten into proper grammar.", act: () => spotSel("#aacCompose"), hold: 1200 },
+        { cap: "Everything scales up, for tired eyes and unsteady hands.", act: aacScaleDemo },
       ],
     },
     {
       id: "customcards", icon: "📷", title: "Custom photo cards", est: 14,
       steps: [
-        { cap: "Generic icons mean little to an older adult.", act: () => scrollTo("#ccList") },
-        { cap: "A family member photographs the person's own things — their cup, their grandchild.", act: () => typeInto("#ccWord", "my grandson") },
-        { cap: "Recognising your own belongings is what builds trust in the device.", act: () => spotSel("#ccAdd"), hold: 1400 },
+        { cap: "A stock drawing of a cup means nothing to someone's grandmother.", act: () => scrollTo("#ccList") },
+        { cap: "So the family photographs her cup. Her chair. Her grandson.", act: () => typeInto("#ccWord", "my grandson") },
+        { cap: "Recognising your own things is where trust begins.", act: () => spotSel("#ccAdd"), hold: 1400 },
       ],
     },
     {
       id: "acoustic", icon: "🎤", title: "Personal pronunciation model", est: 20,
       steps: [
-        { cap: "Aphasic speech breaks ordinary speech recognition.", act: () => goSetting("acoustic") },
-        { cap: "So the user records their own way of saying a few key words.", act: () => captionOnly() },
-        { cap: "The app stores an acoustic template per keyword and matches against it with DTW.", act: () => captionOnly() },
-        { cap: "It recognises the person in front of it — not an average speaker.", act: () => captionOnly() },
+        { cap: "Aphasic speech breaks ordinary speech recognition. Every time.", act: () => goSetting("acoustic") },
+        { cap: "So the app learns this person's own way of saying a few key words.", act: () => captionOnly() },
+        { cap: "It keeps an acoustic template, and matches it with dynamic time warping.", act: () => captionOnly() },
+        { cap: "It listens to the person in front of it, not to an average speaker.", act: () => captionOnly() },
       ],
     },
     {
       id: "voice", icon: "🗣", title: "Personal voice (GPT-SoVITS)", est: 22,
       steps: [
-        { cap: "Losing speech often means losing your own voice as well.", act: () => goSetting("voice") },
-        { cap: "A GPT-SoVITS model is trained from a short recording made before the illness.", act: () => captionOnly() },
-        { cap: "Models live in the user's own Google Drive and sync to phone, web and desktop.", act: () => captionOnly() },
-        { cap: "The sentence is then spoken in the person's own voice, with the right emotion.", act: () => captionOnly() },
+        { cap: "Losing speech often means losing your voice as well.", act: () => goSetting("voice") },
+        { cap: "A short recording made before the illness is enough to rebuild it.", act: () => captionOnly() },
+        { cap: "The model lives in their own Drive, and follows them to phone, web and desktop.", act: () => captionOnly() },
+        { cap: "So the sentence comes out sounding like them, with the right feeling.", act: () => captionOnly() },
       ],
     },
     {
       id: "rehab", icon: "🏥", title: "Speech rehabilitation", est: 22,
       steps: [
-        { cap: "Beyond communication, the app doubles as a daily practice tool.", act: () => goTab("rehab") },
-        { cap: "A clinical phrase bank works offline — no API key required.", act: () => spotSel("#rehabBank"), hold: 1400 },
-        { cap: "The user hears the target sentence, then reads it back.", act: rehabDemo, hold: 1200 },
-        { cap: "Each attempt is scored per syllable, so progress is visible.", act: rehabScore, hold: 1800 },
+        { cap: "Communication is today. Recovery is the long game.", act: () => goTab("rehab") },
+        { cap: "A clinical phrase bank works offline, with no API key.", act: () => spotSel("#rehabBank"), hold: 1400 },
+        { cap: "Hear the target sentence. Say it back.", act: rehabDemo, hold: 1200 },
+        { cap: "Every attempt is scored syllable by syllable, so progress is something you can see.", act: rehabScore, hold: 1800 },
       ],
     },
     {
       id: "story", icon: "📖", title: "Picture storytelling", est: 16,
       steps: [
-        { cap: "Repeating single sentences is not enough for milder cases.", act: () => scrollTo("#storyFrames") },
-        { cap: "A four-frame picture story asks the user to organise meaning themselves.", act: () => spotSel("#storyFrames"), hold: 1400 },
-        { cap: "The AI comments like a therapist would, and gives a score.", act: storyFeedback, hold: 1800 },
+        { cap: "For milder cases, repeating single sentences is not enough.", act: () => scrollTo("#storyFrames") },
+        { cap: "Four pictures. Tell the story in your own order.", act: () => spotSel("#storyFrames"), hold: 1400 },
+        { cap: "The AI answers the way a therapist would, and gives a score.", act: storyFeedback, hold: 1800 },
       ],
     },
     {
       id: "report", icon: "📊", title: "Progress report", est: 20,
       steps: [
-        { cap: "Everything the user does feeds a report their therapist can read.", act: () => goTab("report") },
-        { cap: "Sessions, average score, streak, and use of positive language.", act: () => spotSel(".stats"), hold: 1600 },
-        { cap: "Behavioural metrics show how the person is coping, not just how they scored.", act: () => scrollTo("#bmReaction"), hold: 1600 },
-        { cap: "The report exports to CSV or PDF for a clinical visit.", act: () => spotSel("#reportCsv"), hold: 1400 },
+        { cap: "Everything the person does quietly becomes a report.", act: () => goTab("report") },
+        { cap: "Sessions, average score, streak, and how much positive language they use.", act: () => spotSel(".stats"), hold: 1600 },
+        { cap: "Behavioural numbers show how they are coping, not only how they scored.", act: () => scrollTo("#bmReaction"), hold: 1600 },
+        { cap: "It exports for the next clinic visit.", act: () => spotSel("#reportCsv"), hold: 1400 },
       ],
     },
     {
       id: "history", icon: "🕘", title: "History", est: 10,
       steps: [
-        { cap: "Every sentence the person managed to say is kept.", act: () => goTab("history") },
-        { cap: "Frequent ones can be starred and reused instantly.", act: () => captionOnly(), hold: 1400 },
+        { cap: "Every sentence they managed to say is kept.", act: () => goTab("history") },
+        { cap: "The ones that matter get starred, and come back with one tap.", act: () => captionOnly(), hold: 1400 },
       ],
     },
     {
       id: "crisis", icon: "🆘", title: "Crisis intervention", est: 22,
       note: "Simulated — no message is sent.",
       steps: [
-        { cap: "Losing speech carries a real risk of depression and self-harm.", act: () => goTab("compose") },
-        { cap: "Every sentence is screened for crisis signals before it is spoken.", act: () => captionOnly() },
-        { cap: "If one is detected the app does not just refuse — it stays with the person.", act: crisisMock, hold: 1800 },
-        { cap: "A breathing orb, a few large buttons, and the family is contacted automatically.", act: () => spotSel("#crisisOrb"), hold: 2000 },
-        { cap: "This screen cannot be dismissed by the user alone. In this demo nothing was sent.", act: crisisClose, hold: 1200 },
+        { cap: "Losing language carries a real risk of depression and self-harm.", act: () => goTab("compose") },
+        { cap: "So every sentence is screened before it is ever spoken.", act: () => captionOnly() },
+        { cap: "When something is found, the app does not refuse and walk away.", act: crisisMock, hold: 1800 },
+        { cap: "It stays. A breathing circle, a few large buttons, and the family already contacted.", act: () => spotSel("#crisisOrb"), hold: 2000 },
+        { cap: "This screen cannot be closed by the user alone. Nothing was sent in this demo.", act: crisisClose, hold: 1200 },
       ],
     },
     {
       id: "kiosk", icon: "🔒", title: "Severe mode (locked board)", est: 18,
       steps: [
-        { cap: "For the most severely affected, a whole grid of cards is still too much.", act: () => goTab("aac") },
-        { cap: "Severe mode turns the device into a single-card board that scans automatically.", act: kioskMock, hold: 2600 },
-        { cap: "Tapping speaks the card and adds it to a clue trail the family can read.", act: kioskTrail, hold: 1800 },
-        { cap: "Exit is behind a caregiver PIN, so the patient cannot get lost in the app.", act: kioskPin, hold: 1800 },
+        { cap: "For the most severely affected, a whole grid is still too much.", act: () => goTab("aac") },
+        { cap: "So the device becomes one card at a time, scanning on its own.", act: kioskMock, hold: 2600 },
+        { cap: "A tap speaks it, and leaves a trail the family can read.", act: kioskTrail, hold: 1800 },
+        { cap: "Getting out needs a caregiver PIN. Nobody gets lost in the app.", act: kioskPin, hold: 1800 },
         { cap: "", act: kioskClose },
       ],
     },
@@ -155,17 +155,17 @@ function UNITS() {
       id: "sos", icon: "🚨", title: "Emergency SOS", est: 14,
       note: "Simulated — no message is sent.",
       steps: [
-        { cap: "In an emergency, composing a sentence is too slow.", act: () => goTab("compose") },
-        { cap: "Fixed one-tap phrases sit at the top of the screen at all times.", act: () => spotSel("#quickSos"), hold: 1600 },
-        { cap: "The SOS button messages the family with the current location. Not sent in this demo.", act: () => spotSel("#btnSos"), hold: 1600 },
+        { cap: "In an emergency, building a sentence is far too slow.", act: () => goTab("compose") },
+        { cap: "Fixed phrases sit at the top of every screen, one tap away.", act: () => spotSel("#quickSos"), hold: 1600 },
+        { cap: "The SOS button reaches the family with a location. Nothing is sent in this demo.", act: () => spotSel("#btnSos"), hold: 1600 },
       ],
     },
     {
       id: "a11y", icon: "♿", title: "Accessibility & languages", est: 20,
       steps: [
-        { cap: "Text scales across the whole app, including inside settings.", act: fontScaleDemo, hold: 1400 },
-        { cap: "The interface runs in Traditional Chinese, English, Japanese and Korean.", act: () => langDemo("ja-JP"), hold: 1600 },
-        { cap: "Voice output follows the same language.", act: () => langDemo("ko-KR"), hold: 1600 },
+        { cap: "Text scales across the whole app, settings included.", act: fontScaleDemo, hold: 1400 },
+        { cap: "Traditional Chinese, English, Japanese, Korean.", act: () => langDemo("ja-JP"), hold: 1600 },
+        { cap: "The voice follows the language.", act: () => langDemo("ko-KR"), hold: 1600 },
         { cap: "", act: () => langDemo(null) },
       ],
     },
@@ -173,14 +173,14 @@ function UNITS() {
       id: "cloud", icon: "☁️", title: "Cloud sync", est: 14,
       steps: [
         { cap: "Phone, web and desktop share one account.", act: () => goSetting("cloud") },
-        { cap: "Voice models stay in the user's own Google Drive — never on a developer server.", act: () => captionOnly() },
-        { cap: "Nothing here leaves the user's own account.", act: () => captionOnly() },
+        { cap: "The voice models stay in the user's own Google Drive. Never on our server.", act: () => captionOnly() },
+        { cap: "Nothing here leaves their account.", act: () => captionOnly() },
       ],
     },
     {
       id: "outro", icon: "🏁", title: "Closing card", est: 8,
       steps: [
-        { cap: "VoiceWeaver — giving words back, in your own voice.", act: () => titleCard("VoiceWeaver", "Giving words back — in your own voice") },
+        { cap: "Aphasia takes the words. It does not take the person.", act: () => titleCard("VoiceWeaver", "Giving words back — in your own voice") },
         { cap: "", act: hideTitle },
       ],
     },
@@ -488,8 +488,8 @@ function langDemo(lang) {
 // 演示裡「App 講出來的話」（不是旁白）。有預先合成就走混音軌——那條才錄得到；
 // 沒有（沒接電腦端）才退回一般 TTS，至少現場聽得到。
 function demoSpeak(text) {
-  const buf = _clips.get(text);
-  if (buf) { playClip(buf); return; }
+  const clip = _clips.get(text);
+  if (clip) { playClip(clip); return; }
   try { speak(text); } catch { /* 沒有語音也不能擋住演示 */ }
 }
 
@@ -503,8 +503,50 @@ async function pickNarrationVoice() {
   } catch { /* 連不上就退瀏覽器語音 */ }
 }
 
-// 旁白預先合成的快取：句子文字 → AudioBuffer。
-// 跨次執行保留（同一份腳本每次都一樣），所以第二次跑幾乎不用等。
+// 旁白播放速度。GPT-SoVITS 的英文原速偏慢，聽起來像在唸稿。
+// 用 <audio> 的 playbackRate ＋ preservesPitch 加速——不會變成花栗鼠音。
+const NARRATION_RATE = 1.22;
+
+// ── 預錄旁白的存放 ───────────────────────────────────────────────────────
+// 存 IndexedDB，不是只放記憶體。放記憶體的話重新整理一次就全沒了，
+// 等於每次開頁面都要重新合成一輪（CPU 上每句 25 秒）——那就不叫預錄了。
+const DB_NAME = "vw_demo_narration";
+const STORE = "clips";
+let _db = null;
+
+function openDb() {
+  if (_db) return Promise.resolve(_db);
+  return new Promise((resolve) => {
+    let req;
+    try { req = indexedDB.open(DB_NAME, 1); } catch { resolve(null); return; }
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+    };
+    req.onsuccess = () => { _db = req.result; resolve(_db); };
+    req.onerror = () => resolve(null);   // 無痕模式等情況拿不到 → 退回只用記憶體
+  });
+}
+
+function dbGet(key) {
+  return openDb().then((db) => db && new Promise((resolve) => {
+    const r = db.transaction(STORE).objectStore(STORE).get(key);
+    r.onsuccess = () => resolve(r.result || null);
+    r.onerror = () => resolve(null);
+  }));
+}
+function dbPut(key, blob) {
+  return openDb().then((db) => db && new Promise((resolve) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).put(blob, key);
+    tx.oncomplete = tx.onerror = () => resolve();
+  }));
+}
+
+// 快取鍵要帶角色名：換了旁白角色就該重新合成，不然會播到上一個聲音。
+function clipKey(text) { return `${_voice?.name || "browser"}|${text}`; }
+
+// 記憶體層（同一次執行內免走 IndexedDB）：句子文字 → Blob。
 //
 // 存 AudioBuffer 而不是 <audio> 的網址，是為了能把聲音**直接混進錄影**：
 // getDisplayMedia 的音訊要使用者自己記得勾「分享分頁音訊」才有，忘了就錄成默片；
@@ -525,7 +567,7 @@ function mixDest() {
   return _mixDest;
 }
 
-/** 把選到的單元裡所有旁白先合成好。回實際成功的句數。 */
+/** 把選到的單元裡所有旁白先合成好（先問 IndexedDB，缺的才合成）。回成功句數。 */
 async function prepareNarration(units, onProgress) {
   // 除了旁白，演示中「App 自己唸出來」的示範句也要一起合成。
   // 那些原本走瀏覽器語音，而瀏覽器語音是繞過 WebAudio 的——錄影錄不到，
@@ -535,6 +577,12 @@ async function prepareNarration(units, onProgress) {
     ...units.flatMap((u) => u.steps.map((s) => s.cap)),
     ...spoken,
   ].filter(Boolean))];
+  // 先把上次存下來的撈回來——這一步是「為什麼第二次不用等」的關鍵。
+  for (const x of texts) {
+    if (_clips.has(x)) continue;
+    const hit = await dbGet(clipKey(x));
+    if (hit) _clips.set(x, hit);
+  }
   const todo = texts.filter((x) => !_clips.has(x));
   let ok = _clips.size;
   for (let i = 0; i < todo.length; i++) {
@@ -543,8 +591,9 @@ async function prepareNarration(units, onProgress) {
     try {
       const blob = await localSynth(todo[i], { name: _voice.name, lang: "EN", emotion: "中立" });
       if (blob) {
-        const buf = await audioCtx().decodeAudioData(await blob.arrayBuffer());
-        _clips.set(todo[i], buf); ok++;
+        _clips.set(todo[i], blob);
+        await dbPut(clipKey(todo[i]), blob);   // 存起來，下次開頁面直接用
+        ok++;
       }
     } catch {
       // 這一句合不出來就留給瀏覽器語音，不要為了一句放棄整段旁白
@@ -554,24 +603,48 @@ async function prepareNarration(units, onProgress) {
   return ok;
 }
 
-/** 播一段預合成的旁白：同時送喇叭與錄影軌，等真的播完才 resolve。 */
-function playClip(buf) {
+/**
+ * 播一段預錄好的旁白：同時送喇叭與錄影軌，等真的播完才 resolve。
+ *
+ * 用 <audio> 而不是 AudioBufferSource，是為了 preservesPitch——
+ * BufferSource 的 playbackRate 是直接改取樣率，加速會連音高一起拉高（花栗鼠）。
+ * 走 media element 才有瀏覽器的變速不變調。
+ */
+function playClip(blob) {
   return new Promise((resolve) => {
     const ac = audioCtx();
-    const src = ac.createBufferSource();
-    src.buffer = buf;
-    src.connect(ac.destination);   // 使用者聽得到
-    src.connect(mixDest());        // 錄影錄得到
-    src.onended = () => { try { src.disconnect(); } catch {} resolve(); };
-    src.start();
+    const url = URL.createObjectURL(blob);
+    const el = new Audio(url);
+    el.preservesPitch = true;
+    el.mozPreservesPitch = true;
+    el.webkitPreservesPitch = true;
+    el.playbackRate = NARRATION_RATE;
+    let src = null;
+    try {
+      src = ac.createMediaElementSource(el);
+      src.connect(ac.destination);   // 使用者聽得到
+      src.connect(mixDest());        // 錄影錄得到
+    } catch {
+      /* 接不上 WebAudio 就直接播，至少現場聽得到（影片會沒這一句） */
+    }
+    let done = false;
+    const fin = () => {
+      if (done) return;
+      done = true;
+      try { src?.disconnect(); } catch {}
+      try { URL.revokeObjectURL(url); } catch {}
+      resolve();
+    };
+    el.onended = el.onerror = fin;
+    el.play().catch(fin);
   });
 }
 
 // 旁白一句。**一定要等講完**才走下一步，否則字幕跟畫面會愈跑愈前面。
 async function narrate(text) {
   if (!_narrate || !text) return;
-  const buf = _clips.get(text);
-  if (buf) { await playClip(buf); return; }
+  const clip = _clips.get(text);
+  if (clip) { await playClip(clip); return; }
   await browserNarrate(text);   // 預先合成時失敗（或根本沒有橋接）的那幾句
 }
 
@@ -798,7 +871,7 @@ export function setupDemo() {
   const stepMs = (cap, narrated) => {
     if (!narrated) return MIN_STEP_SILENT;
     const words = String(cap || "").split(/\s+/).filter(Boolean).length;
-    return Math.max(MIN_STEP_NARRATED, (words / 2.6) * 1000) + TAIL_PAD;   // 約每秒 2.6 字
+    return Math.max(MIN_STEP_NARRATED, (words / (2.6 * NARRATION_RATE)) * 1000) + TAIL_PAD;
   };
   const est = () => {
     const ids = new Set(chosen());
