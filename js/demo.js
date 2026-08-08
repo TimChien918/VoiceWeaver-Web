@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.25";
-import { speak } from "./speech.js?v=1.5.25";
-import { applyI18n, t } from "./i18n.js?v=1.5.25";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.25";
+import { state } from "./store.js?v=1.5.26";
+import { speak } from "./speech.js?v=1.5.26";
+import { applyI18n, t } from "./i18n.js?v=1.5.26";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.26";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -45,110 +45,110 @@ function UNITS() {
     {
       id: "intro", icon: "🎬", title: "Title & overview", est: 12,
       steps: [
-        { cap: "Imagine knowing exactly what you want to say, and not one word will come out.", act: () => titleCard("VoiceWeaver", "Communication support for people with aphasia") },
-        { cap: "That is aphasia. The thought is intact. The bridge to speech is broken.", act: () => titleSub("Fragments → sentence → familiar voice") },
-        { cap: "VoiceWeaver rebuilds that bridge.", act: hideTitle },
+        { cap: "Aphasia damages the route from thought to speech, while the thought itself stays intact.", act: () => titleCard("VoiceWeaver", "How it works — browser build") },
+        { cap: "This is the browser build — no install, no account required, running entirely on this page.", act: () => titleSub("No install · runs in the browser") },
+        { cap: "Here is how each part of it works.", act: hideTitle },
       ],
     },
     {
       id: "compose", icon: "💬", title: "Sentence reconstruction", est: 26,
       steps: [
-        { cap: "What comes out is fragments. Water. Rest. Now.", act: () => goTab("compose") },
-        { cap: "The user types, or says, whatever they can manage.", act: () => typeInto("#fragments", "water  rest  now") },
-        { cap: "One tap turns the fragments into a whole sentence.", act: () => press("#btnCompose") },
-        { cap: "Three versions, never one. A wrong guess put in your mouth is worse than silence.", act: showCandidates, hold: 1600 },
-        { cap: "The person picks the one that is actually theirs.", act: pickCandidateDemo, hold: 1200 },
-        { cap: "A large picture card confirms the meaning before anything is said out loud.", act: showConfirm, hold: 1600 },
-        { cap: "Only then does it speak, in the person's own voice.", act: confirmYes },
+        { cap: "Input arrives as isolated content words, with the grammar missing.", act: () => goTab("compose") },
+        { cap: "Typing, dictation, or a photograph all feed the same buffer.", act: () => typeInto("#fragments", "water  rest  now") },
+        { cap: "A language model reconstructs the sentence, constrained by a defensive prompt.", act: () => press("#btnCompose") },
+        { cap: "Self-consistency sampling returns three candidates rather than one best guess.", act: showCandidates, hold: 1600 },
+        { cap: "Which candidate gets accepted is logged, and feeds the ranking of later phrasings.", act: pickCandidateDemo, hold: 1200 },
+        { cap: "A confirmation card stands between the model and the speaker. Nothing is spoken unverified.", act: showConfirm, hold: 1600 },
+        { cap: "Only a confirmed sentence reaches the synthesiser.", act: confirmYes },
       ],
     },
     {
       id: "aac", icon: "🖼", title: "Picture cards (AAC)", est: 24,
       steps: [
-        { cap: "Some people cannot type at all. For them, the board is the way in.", act: () => goTab("aac") },
-        { cap: "Cards are coloured by part of speech, and grouped by where you are.", act: () => spotSel("#aacCats"), hold: 1400 },
-        { cap: "Tap by tap, a sentence takes shape.", act: aacPickDemo },
-        { cap: "It can be spoken as it stands, or rewritten into proper grammar.", act: () => spotSel("#aacCompose"), hold: 1200 },
-        { cap: "Everything scales up, for tired eyes and unsteady hands.", act: aacScaleDemo },
+        { cap: "For users with no reliable text output, the board replaces the keyboard entirely.", act: () => goTab("aac") },
+        { cap: "Colours follow the Fitzgerald Key: yellow nouns, green verbs, blue adjectives.", act: () => spotSel("#aacCats"), hold: 1400 },
+        { cap: "Selections accumulate in a buffer instead of firing one word at a time.", act: aacPickDemo },
+        { cap: "The buffer can be spoken verbatim, or passed through the same reconstruction step.", act: () => spotSel("#aacCompose"), hold: 1200 },
+        { cap: "Card size has four steps; the grid drops to two columns, then one, as the type grows.", act: aacScaleDemo },
       ],
     },
     {
       id: "customcards", icon: "📷", title: "Custom photo cards", est: 14,
       steps: [
-        { cap: "A stock drawing of a cup means nothing to someone's grandmother.", act: () => scrollTo("#ccList") },
-        { cap: "So the family photographs her cup. Her chair. Her grandson.", act: () => typeInto("#ccWord", "my grandson") },
-        { cap: "Recognising your own things is where trust begins.", act: () => spotSel("#ccAdd"), hold: 1400 },
+        { cap: "Symbol sets are drawn for an average user, which is nobody in particular.", act: () => scrollTo("#ccList") },
+        { cap: "Photographs taken by the family become cards, downscaled and stored in the account.", act: () => typeInto("#ccWord", "my grandson") },
+        { cap: "Recognition of familiar objects is what makes the board usable at all.", act: () => spotSel("#ccAdd"), hold: 1400 },
       ],
     },
     {
       id: "acoustic", icon: "🎤", title: "Personal pronunciation model", est: 20,
       steps: [
-        { cap: "Aphasic speech breaks ordinary speech recognition. Every time.", act: () => goSetting("acoustic") },
-        { cap: "So the app learns this person's own way of saying a few key words.", act: () => captionOnly() },
-        { cap: "It keeps an acoustic template, and matches it with dynamic time warping.", act: () => captionOnly() },
-        { cap: "It listens to the person in front of it, not to an average speaker.", act: () => captionOnly() },
+        { cap: "General speech recognition is trained on typical speech, so it fails here by design.", act: () => goSetting("acoustic") },
+        { cap: "Instead, a handful of keywords are enrolled from the user's own repeated attempts.", act: () => captionOnly() },
+        { cap: "Matching runs on MFCC features with dynamic time warping and a per-word threshold.", act: () => captionOnly() },
+        { cap: "The threshold comes from that user's own variance, not from a population average.", act: () => captionOnly() },
       ],
     },
     {
       id: "voice", icon: "🗣", title: "Personal voice (GPT-SoVITS)", est: 22,
       steps: [
-        { cap: "Losing speech often means losing your voice as well.", act: () => goSetting("voice") },
-        { cap: "A short recording made before the illness is enough to rebuild it.", act: () => captionOnly() },
-        { cap: "The model lives in their own Drive, and follows them to phone, web and desktop.", act: () => captionOnly() },
-        { cap: "So the sentence comes out sounding like them, with the right feeling.", act: () => captionOnly() },
+        { cap: "Voice identity is usually lost along with speech, and rarely addressed.", act: () => goSetting("voice") },
+        { cap: "A GPT-SoVITS model is trained from a few minutes of audio recorded before onset.", act: () => captionOnly() },
+        { cap: "Weights live in the user's own Google Drive; synthesis runs on their own computer.", act: () => captionOnly() },
+        { cap: "Emotion is selected per sentence by choosing a matching reference clip.", act: () => captionOnly() },
       ],
     },
     {
       id: "rehab", icon: "🏥", title: "Speech rehabilitation", est: 22,
       steps: [
-        { cap: "Communication is today. Recovery is the long game.", act: () => goTab("rehab") },
-        { cap: "A clinical phrase bank works offline, with no API key.", act: () => spotSel("#rehabBank"), hold: 1400 },
-        { cap: "Hear the target sentence. Say it back.", act: rehabDemo, hold: 1200 },
-        { cap: "Every attempt is scored syllable by syllable, so progress is something you can see.", act: rehabScore, hold: 1800 },
+        { cap: "Alongside communication, the same data supports structured rehabilitation.", act: () => goTab("rehab") },
+        { cap: "The phrase bank is bundled, so practice works with no network and no key.", act: () => spotSel("#rehabBank"), hold: 1400 },
+        { cap: "The target is spoken, repeated back, and compared.", act: rehabDemo, hold: 1200 },
+        { cap: "Scoring is per syllable, and mis-pronounced characters are highlighted individually.", act: rehabScore, hold: 1800 },
       ],
     },
     {
       id: "story", icon: "📖", title: "Picture storytelling", est: 16,
       steps: [
-        { cap: "For milder cases, repeating single sentences is not enough.", act: () => scrollTo("#storyFrames") },
-        { cap: "Four pictures. Tell the story in your own order.", act: () => spotSel("#storyFrames"), hold: 1400 },
-        { cap: "The AI answers the way a therapist would, and gives a score.", act: storyFeedback, hold: 1800 },
+        { cap: "Repetition tasks plateau quickly for milder presentations.", act: () => scrollTo("#storyFrames") },
+        { cap: "Sequenced picture description requires the user to build the discourse themselves.", act: () => spotSel("#storyFrames"), hold: 1400 },
+        { cap: "Feedback is graded on content, order and causality rather than on wording.", act: storyFeedback, hold: 1800 },
       ],
     },
     {
       id: "report", icon: "📊", title: "Progress report", est: 20,
       steps: [
-        { cap: "Everything the person does quietly becomes a report.", act: () => goTab("report") },
-        { cap: "Sessions, average score, streak, and how much positive language they use.", act: () => spotSel(".stats"), hold: 1600 },
-        { cap: "Behavioural numbers show how they are coping, not only how they scored.", act: () => scrollTo("#bmReaction"), hold: 1600 },
-        { cap: "It exports for the next clinic visit.", act: () => spotSel("#reportCsv"), hold: 1400 },
+        { cap: "All of the above is instrumented, without asking the user to record anything.", act: () => goTab("report") },
+        { cap: "Session count, mean score, streak, and proportion of positive vocabulary.", act: () => spotSel(".stats"), hold: 1600 },
+        { cap: "Reaction time, first-candidate acceptance and undo rate act as coping indicators.", act: () => scrollTo("#bmReaction"), hold: 1600 },
+        { cap: "Exports as CSV or PDF for the treating clinician.", act: () => spotSel("#reportCsv"), hold: 1400 },
       ],
     },
     {
       id: "history", icon: "🕘", title: "History", est: 10,
       steps: [
-        { cap: "Every sentence they managed to say is kept.", act: () => goTab("history") },
-        { cap: "The ones that matter get starred, and come back with one tap.", act: () => captionOnly(), hold: 1400 },
+        { cap: "Every produced sentence is retained with its context and confidence.", act: () => goTab("history") },
+        { cap: "Frequently reused sentences are promoted to one-tap shortcuts.", act: () => captionOnly(), hold: 1400 },
       ],
     },
     {
       id: "crisis", icon: "🆘", title: "Crisis intervention", est: 22,
       note: "Simulated — no message is sent.",
       steps: [
-        { cap: "Losing language carries a real risk of depression and self-harm.", act: () => goTab("compose") },
-        { cap: "So every sentence is screened before it is ever spoken.", act: () => captionOnly() },
-        { cap: "When something is found, the app does not refuse and walk away.", act: crisisMock, hold: 1800 },
-        { cap: "It stays. A breathing circle, a few large buttons, and the family already contacted.", act: () => spotSel("#crisisOrb"), hold: 2000 },
-        { cap: "This screen cannot be closed by the user alone. Nothing was sent in this demo.", act: crisisClose, hold: 1200 },
+        { cap: "Post-stroke depression is common, and language loss is an independent risk factor.", act: () => goTab("compose") },
+        { cap: "Every candidate sentence passes a risk classifier before synthesis.", act: () => captionOnly() },
+        { cap: "A positive result blocks output — but blocking alone would leave the user stranded.", act: crisisMock, hold: 1800 },
+        { cap: "So the interface changes: paced breathing, minimal controls, family contacted automatically.", act: () => spotSel("#crisisOrb"), hold: 2000 },
+        { cap: "Dismissal requires the contact to respond. Nothing was transmitted during this demo.", act: crisisClose, hold: 1200 },
       ],
     },
     {
       id: "kiosk", icon: "🔒", title: "Severe mode (locked board)", est: 18,
       steps: [
-        { cap: "For the most severely affected, a whole grid is still too much.", act: () => goTab("aac") },
-        { cap: "So the device becomes one card at a time, scanning on its own.", act: kioskMock, hold: 2600 },
-        { cap: "A tap speaks it, and leaves a trail the family can read.", act: kioskTrail, hold: 1800 },
-        { cap: "Getting out needs a caregiver PIN. Nobody gets lost in the app.", act: kioskPin, hold: 1800 },
+        { cap: "At the severe end, even a grid presents too many simultaneous choices.", act: () => goTab("aac") },
+        { cap: "Single-card scanning reduces the task to one yes-or-no decision at a time.", act: kioskMock, hold: 2600 },
+        { cap: "Accepted cards accumulate as a trail, which a familiar listener can interpret.", act: kioskTrail, hold: 1800 },
+        { cap: "Exit is PIN-gated so the device cannot be navigated away from accidentally.", act: kioskPin, hold: 1800 },
         { cap: "", act: kioskClose },
       ],
     },
@@ -156,43 +156,43 @@ function UNITS() {
       id: "sos", icon: "🚨", title: "Emergency SOS", est: 14,
       note: "Simulated — no message is sent.",
       steps: [
-        { cap: "In an emergency, building a sentence is far too slow.", act: () => goTab("compose") },
-        { cap: "Fixed phrases sit at the top of every screen, one tap away.", act: () => spotSel("#quickSos"), hold: 1600 },
-        { cap: "The SOS button reaches the family with a location. Nothing is sent in this demo.", act: () => spotSel("#btnSos"), hold: 1600 },
+        { cap: "Composition latency is unacceptable in an emergency.", act: () => goTab("compose") },
+        { cap: "Fixed phrases are therefore pinned above every screen, independent of the current tab.", act: () => spotSel("#quickSos"), hold: 1600 },
+        { cap: "The alert carries a location link. No message is transmitted during this demo.", act: () => spotSel("#btnSos"), hold: 1600 },
       ],
     },
     {
       id: "a11y", icon: "♿", title: "Accessibility & languages", est: 24,
       steps: [
-        { cap: "Many users are elderly, and stroke often takes part of the visual field with it.", act: () => goTab("settings") },
-        { cap: "So the text scales all the way up, across every screen, settings included.", act: fontScaleDemo, hold: 1400 },
-        { cap: "Nothing is cut off and nothing overlaps, even at the largest size.", hold: 1200 },
-        { cap: "The whole interface runs in Traditional Chinese, English, Japanese and Korean.", act: () => langDemo("ja-JP"), hold: 1800 },
-        { cap: "The voice follows the language — the same person, speaking four of them.", act: () => langDemo("ko-KR"), hold: 1800 },
+        { cap: "Hemianopia and age-related low vision are common comorbidities after stroke.", act: () => goTab("settings") },
+        { cap: "Type scales across the entire interface, including dialogs and settings.", act: fontScaleDemo, hold: 1400 },
+        { cap: "Layouts reflow rather than clip, verified at the largest scale.", hold: 1200 },
+        { cap: "The interface ships in Traditional Chinese, English, Japanese and Korean.", act: () => langDemo("ja-JP"), hold: 1800 },
+        { cap: "Synthesis follows the interface language, using the same speaker across all four.", act: () => langDemo("ko-KR"), hold: 1800 },
         { cap: "", act: () => langDemo(null) },
       ],
     },
     {
       id: "learning", icon: "🧠", title: "It learns this person", est: 22,
       steps: [
-        { cap: "No two people with aphasia are the same, so the app refuses to stay generic.", act: () => goTab("aac") },
-        { cap: "The cards you reach for most rise to the top, weighted by time of day and by place.", act: () => spotSel("#aacFeedWrap") || spotSel("#aacCats"), hold: 1600 },
-        { cap: "Which candidate you accept teaches it which phrasing sounds like you.", hold: 1400 },
-        { cap: "Your pronunciation model, your cards, your voice — it drifts towards you over time.", hold: 1400 },
+        { cap: "Aphasia presentation varies widely, so static defaults serve almost nobody well.", act: () => goTab("aac") },
+        { cap: "Card ranking combines frequency, time decay, and situational context.", act: () => spotSel("#aacFeedWrap") || spotSel("#aacCats"), hold: 1600 },
+        { cap: "Accepted candidates feed back into phrasing preference over time.", hold: 1400 },
+        { cap: "Acoustic templates, card set and voice model all remain specific to one user.", hold: 1400 },
       ],
     },
     {
       id: "cloud", icon: "☁️", title: "Cloud sync", est: 14,
       steps: [
-        { cap: "Phone, web and desktop share one account.", act: () => goSetting("cloud") },
-        { cap: "The voice models stay in the user's own Google Drive. Never on our server.", act: () => captionOnly() },
-        { cap: "Nothing here leaves their account.", act: () => captionOnly() },
+        { cap: "Phone, browser and desktop share a single account.", act: () => goSetting("cloud") },
+        { cap: "Voice models are stored in the user's own Drive; there is no developer-side storage.", act: () => captionOnly() },
+        { cap: "No user content is transmitted to any server operated by this project.", act: () => captionOnly() },
       ],
     },
     {
       id: "outro", icon: "🏁", title: "Closing card", est: 8,
       steps: [
-        { cap: "Aphasia takes the words. It does not take the person.", act: () => titleCard("VoiceWeaver", "Giving words back — in your own voice") },
+        { cap: "Aphasia damages language. It does not damage the person underneath it.", act: () => titleCard("VoiceWeaver", "Aphasia communication · rehabilitation · safety") },
         { cap: "", act: hideTitle },
       ],
     },
