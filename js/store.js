@@ -6,7 +6,7 @@ import {
 import {
   getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, getDocs, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { t } from "./i18n.js?v=1.5.17";
+import { t } from "./i18n.js?v=1.5.18";
 
 const DEFAULTS = {
   settings: { theme: "auto", lang: "zh-TW", rate: 0.95, font: 1.0,
@@ -158,6 +158,36 @@ export function initAuth({ onUser, onSaved }){
 
 // 登入合一：同一次 Google 登入既是 Firebase 身分，也拿到 Drive 權限（drive.file）。
 export const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+
+/**
+ * 只讀「檔案清單」的權限。**列出專屬聲音一定要有這個。**
+ *
+ * drive.file 是逐檔授權：只看得到「本 App 自己建立的檔案」。專屬發音是網頁
+ * 自己寫上去的，所以讀得回來；但語音模型是別的途徑進 Drive 的——Colab 掛載
+ * Drive 寫的、或使用者自己在 Drive 網頁上拖進去的——對 drive.file 而言，
+ * 那些檔案等同不存在。同一個帳號、同一個資料夾，差別只在「誰建立的」。
+ * 這正是「專屬發音收得到、專屬聲音收不到」的原因，怎麼改資料夾邏輯都沒用。
+ *
+ * 為什麼是 metadata.readonly 而不是 drive.readonly：這個畫面要回答的問題
+ * 只是「我有哪些聲音、哪些能用」——角色名、語言、情緒（從參考音檔名讀）、
+ * 大小，全部都是 metadata。合成本來就在電腦或 Colab 上跑，網頁不需要、
+ * 也不該有能力讀出使用者 Drive 裡任何一個檔案的**內容**。
+ */
+export const DRIVE_METADATA_SCOPE = "https://www.googleapis.com/auth/drive.metadata.readonly";
+
+// 授權範圍改過之後，**舊的權杖不會自動變新的**——授權是登入當下決定的。
+// 這種人打開專屬聲音會看到空清單，而曲庫好端端在 Drive 上，畫面卻說「還沒有」。
+// 拿到權杖時蓋一個世代章，看得出這個權杖是不是在新範圍之後拿的。
+// 以後再加範圍就把 SCOPE_GEN 往上加一號。
+const DRIVE_SCOPE_MARK = "vw_drive_scope_gen";
+const SCOPE_GEN = "2";
+
+/** 目前這個 Drive 權杖是不是舊範圍拿的（需要重新授權才看得到語音模型）。 */
+export function needsScopeUpgrade(){
+  if(!_driveToken) return false;              // 沒權杖是另一回事，別蓋掉「請先授權」
+  try{ return sessionStorage.getItem(DRIVE_SCOPE_MARK) !== SCOPE_GEN; }
+  catch{ return false; }
+}
 let _driveToken = null;      // 這次工作階段的 Google OAuth access token（可呼叫 Drive API）
 
 /** 目前可用的 Drive access token（沒登入或沒授權回 null）。 */
@@ -194,6 +224,7 @@ export async function loginGoogle(opts = {}){
   _popupPending = (async () => {
     const provider = new GoogleAuthProvider();
     provider.addScope(DRIVE_SCOPE);                       // 同一個同意畫面順便要 Drive 權限
+    provider.addScope(DRIVE_METADATA_SCOPE);              // 看得到別的程式建立的語音模型
     // 換帳號時一定要強迫出現選擇畫面：Google 預設會直接用上次那個帳號登回去，
     // 於是使用者按了「換帳號」卻換不掉，畫面完全沒有變化。
     if(opts.chooseAccount) provider.setCustomParameters({ prompt: "select_account" });
@@ -201,7 +232,15 @@ export async function loginGoogle(opts = {}){
     // 從登入結果取出 Google OAuth access token → 之後可直接打 Drive API（存到自己的 Drive）
     const cred = GoogleAuthProvider.credentialFromResult(res);
     _driveToken = cred?.accessToken || null;
-    try{ if(_driveToken) sessionStorage.setItem("vw_drive_token", _driveToken); }catch{}
+    try{
+      if(_driveToken){
+        sessionStorage.setItem("vw_drive_token", _driveToken);
+        // 記下「這個權杖是在有要 metadata 範圍之後拿到的」。
+        // 不去打 tokeninfo 問實際授了哪些範圍：那個端點只吃網址參數，
+        // 等於把 access token 寫進 URL（會進各種紀錄檔）。為了一句提示，不值得。
+        sessionStorage.setItem(DRIVE_SCOPE_MARK, SCOPE_GEN);
+      }
+    }catch{}
     return { uid: res.user?.uid, email: res.user?.email, drive: !!_driveToken };
   })();
   try { return await _popupPending; }
@@ -241,7 +280,8 @@ export async function loginAnon(){
 }
 export async function logout(){
   _driveToken = null;
-  try{ sessionStorage.removeItem("vw_drive_token"); }catch{}
+  _email = "";
+  try{ sessionStorage.removeItem("vw_drive_token"); sessionStorage.removeItem(DRIVE_SCOPE_MARK); }catch{}
   if(_auth) await signOut(_auth);
   else { location.reload(); }
 }
@@ -369,7 +409,7 @@ function saveLocalShortcuts(list){
 
 // Drive 用動態 import：drive.js 反過來要 store.js 的 driveToken，
 // 靜態互相 import 會踩到模組初始化順序。順便也讓沒用到 Drive 的人不必載這段。
-async function _drive(){ return import("./drive.js?v=1.5.17"); }
+async function _drive(){ return import("./drive.js?v=1.5.18"); }
 
 /**
  * 兩個雲端來源都讀：Firestore（即時、免 Drive 授權）與使用者自己 Drive 的

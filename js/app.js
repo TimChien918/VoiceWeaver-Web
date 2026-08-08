@@ -1,27 +1,27 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount } from "./store.js?v=1.5.17";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.17";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.17";
-import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.17";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.17";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.17";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.17";
-import { bindTap } from "./interaction.js?v=1.5.17";
-import { orderCards } from "./predict.js?v=1.5.17";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.17";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.17";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.17";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.17";
-import { preloadZhConv } from "./zhconv.js?v=1.5.17";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.17";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.17";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.17";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.17";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.17";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.17";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.17";
-import * as Acoustic from "./acoustic.js?v=1.5.17";
-import * as Mic from "./acousticmic.js?v=1.5.17";
-import { applyI18n, t } from "./i18n.js?v=1.5.17";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.18";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.18";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.18";
+import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.18";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.18";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.18";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.18";
+import { bindTap } from "./interaction.js?v=1.5.18";
+import { orderCards } from "./predict.js?v=1.5.18";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.18";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.18";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.18";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.18";
+import { preloadZhConv } from "./zhconv.js?v=1.5.18";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.18";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.18";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.18";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.18";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.18";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.18";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.18";
+import * as Acoustic from "./acoustic.js?v=1.5.18";
+import * as Mic from "./acousticmic.js?v=1.5.18";
+import { applyI18n, t } from "./i18n.js?v=1.5.18";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -1350,6 +1350,17 @@ function accountLineHtml(){
       >${esc(t("set.voicesSwitchAccount"))}</button></p>`;
 }
 
+/** 重新授權 Drive。錯誤與空狀態兩條路都會放這顆，所以抽出來共用。 */
+function bindDriveReauth(){
+  $("#btnDriveReauth")?.addEventListener("click", async (ev)=>{
+    const b = ev.currentTarget;
+    if(b.disabled) return;
+    b.disabled = true;
+    try{ await reauthorizeDrive(); await renderVoices(); }
+    catch(err){ if(!isBenignAuthError(err)) toast(authErrorText(err)); b.disabled = false; }
+  });
+}
+
 function bindSwitchAccount(){
   $("#btnSwitchAccount")?.addEventListener("click", async (ev)=>{
     const b = ev.currentTarget;
@@ -1388,13 +1399,7 @@ async function renderVoices(){
                       >${esc(t("set.voicesReauth"))}</button>` : "") +
       accountLineHtml();
     bindSwitchAccount();
-    $("#btnDriveReauth")?.addEventListener("click", async (ev)=>{
-      const b = ev.currentTarget;
-      if(b.disabled) return;
-      b.disabled = true;
-      try{ await reauthorizeDrive(); await renderVoices(); }
-      catch(err){ if(!isBenignAuthError(err)) toast(authErrorText(err)); b.disabled = false; }
-    });
+    bindDriveReauth();
     return;
   }
   if(!list.length){
@@ -1404,8 +1409,16 @@ async function renderVoices(){
     // 一次組完再寫進去。innerHTML += 會把整段重新解析，之前掛上去的事件監聽
     // 全部消失——換帳號按鈕會變成按了沒反應的裝飾品。
     const parts = [`<p class="tiny muted">${t("set.voicesEmpty")}</p>`];
+    // 這一條要排在最前面，而且**先於任何診斷**：權限不夠時，底下走資料夾看到的
+    // 一切都是殘缺的（別的程式建立的檔案在這個權杖眼中根本不存在），
+    // 那些描述只會把人帶去修沒有壞的東西。
+    if(needsScopeUpgrade()){
+      parts.push(`<p class="tiny muted" style="opacity:.75">${esc(t("set.voicesScopeUpgrade"))}
+        <button id="btnDriveReauth" class="btn ghost" style="margin-left:6px"
+          >${esc(t("set.voicesReauth"))}</button></p>`);
+    }
     try{
-      const drive = await import("./drive.js?v=1.5.17");
+      const drive = await import("./drive.js?v=1.5.18");
       const d = await drive.diagnoseVoiceModels();
       // 同名根要先講。有兩個 VoiceWeaver 時，底下那些「沒有 Models」之類的
       // 描述全部都是在講錯的那一個資料夾，先看到它才不會被帶去修錯的地方。
@@ -1434,6 +1447,7 @@ async function renderVoices(){
     parts.push(accountLineHtml());
     box.innerHTML = parts.join("");
     bindSwitchAccount();
+    bindDriveReauth();
     return;
   }
   box.innerHTML = list.map(v=>`
