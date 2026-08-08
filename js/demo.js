@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.26";
-import { speak } from "./speech.js?v=1.5.26";
-import { applyI18n, t } from "./i18n.js?v=1.5.26";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.26";
+import { state } from "./store.js?v=1.5.27";
+import { speak } from "./speech.js?v=1.5.27";
+import { applyI18n, t } from "./i18n.js?v=1.5.27";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.27";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -693,6 +693,28 @@ function browserNarrate(text) {
   });
 }
 
+// ── 讓螢幕不要睡著 ──────────────────────────────────────────────────────
+//
+// 演示要跑好幾分鐘（加上旁白預錄可能更久），使用者多半按下去就走開。
+// 螢幕一暗，錄下來就是半段黑畫面——而且分頁被系統休眠後畫面也不再更新。
+// Screen Wake Lock 只在分頁可見時有效，切走再切回來要自己重新取得，
+// 所以掛一個 visibilitychange 監聽補回來。
+let _wake = null;
+
+async function keepAwake() {
+  if (!("wakeLock" in navigator)) return;          // Safari 舊版沒有，安靜略過
+  try { _wake = await navigator.wakeLock.request("screen"); }
+  catch { _wake = null; }                          // 電量過低等情況會被拒絕
+}
+function releaseAwake() {
+  try { _wake?.release(); } catch {}
+  _wake = null;
+}
+// 切到別的分頁再切回來時，鎖已經被系統收走了 → 補一次
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && window.__VW_DEMO__ && !_wake) keepAwake();
+});
+
 // ── 螢幕錄影 ────────────────────────────────────────────────────────────
 
 function recSupported() {
@@ -796,6 +818,7 @@ async function run(ids, opts) {
   _abort = false;
   _narrate = !!opts.narrate;
   window.__VW_DEMO__ = true;
+  keepAwake();                 // 預錄那一段最久，也最容易讓人走開 → 從這裡就開始
   buildOverlay();
   snapshot();
   ui().classList.remove("hidden");
@@ -819,7 +842,10 @@ async function run(ids, opts) {
       prep.classList.add("hidden");
     }
   }
-  if (_abort) { restore(); ui().classList.add("hidden"); window.__VW_DEMO__ = false; return; }
+  if (_abort) {
+    restore(); releaseAwake();
+    ui().classList.add("hidden"); window.__VW_DEMO__ = false; return;
+  }
 
   let recording = false;
   if (opts.record) {
@@ -852,6 +878,7 @@ async function run(ids, opts) {
     }
   } finally {
     restore();
+    releaseAwake();
     ui().classList.add("hidden");
     window.__VW_DEMO__ = false;
     if (recording) download(await stopRecording());
