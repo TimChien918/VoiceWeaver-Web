@@ -16,7 +16,7 @@
 // 改一次就多一個孤兒檔）。看不看得懂交給資料夾——平放時使用者在自己的雲端硬碟
 // 只會看到一排 5.json、6.json，完全認不出哪個是哪一句。
 
-import { driveToken } from "./store.js?v=1.5.15";
+import { driveToken } from "./store.js?v=1.5.16";
 
 const FILES = "https://www.googleapis.com/drive/v3/files";
 const UPLOAD = "https://www.googleapis.com/upload/drive/v3/files";
@@ -56,6 +56,29 @@ async function findId(name, parent, folder){
   return j.files && j.files.length ? j.files[0].id : null;
 }
 
+/**
+ * 同名的資料夾**全部**列出來。
+ *
+ * Drive 沒有「同一層不能同名」這條規則——同一個父層底下可以有兩個 VoiceWeaver，
+ * 在網頁介面上長得一模一樣。findId 只拿 files[0]，而這個查詢沒有指定排序，
+ * 等於在兩者之間擲骰子：使用者的曲庫在 A，網頁卻一直在看 B。
+ */
+async function findFolders(name, parent){
+  const query = `name = ${q(name)} and ${q(parent)} in parents and trashed = false `
+              + `and mimeType = '${FOLDER_MIME}'`;
+  const out = [];
+  let pageToken = null;
+  do{
+    let url = `${FILES}?q=${encodeURIComponent(query)}&spaces=drive&pageSize=100`
+            + `&fields=${encodeURIComponent("nextPageToken, files(id,name)")}`;
+    if(pageToken) url += "&pageToken=" + encodeURIComponent(pageToken);
+    const j = await (await api(url)).json();
+    out.push(...(j.files || []));
+    pageToken = j.nextPageToken || null;
+  }while(pageToken);
+  return out;
+}
+
 async function ensureFolder(name, parent){
   const found = await findId(name, parent, true);
   if(found) return found;
@@ -75,6 +98,59 @@ export async function folderPath(parts, create){
     if(!parent) return null;
   }
   return parent;
+}
+
+// 認定的 VoiceWeaver 根。挑根要多打好幾次 API（每個候選都得看一眼裡面有什麼），
+// 而列聲音、讀索引、存聲波模型每一次都要用到它，一次畫面就會問好幾遍。
+//
+// 但**不能永久記住**：使用者照著提示把兩個資料夾合併之後，答案就變了。
+// 記著舊的會讓他做完該做的事、畫面卻沒有變化，只好去猜是不是自己弄錯了。
+// 60 秒夠短，重畫一次就會重新挑；也夠長，一次渲染不會重複問。
+const ROOT_TTL_MS = 60_000;
+let _rootId = null, _rootTok = "", _rootAt = 0;
+
+/** 一個候選根「像不像正主」。分數高的贏；同分時保持 Drive 回來的順序。 */
+async function rootScore(id){
+  const kids = (await listChildren(id, true)).map(f => f.name.toUpperCase());
+  if(kids.includes(MODELS_DIR.toUpperCase())) return 3;
+  if(kids.some(n => LANG_DIRS.includes(n))) return 2;        // 舊版面
+  if(kids.includes(ACOUSTIC_DIR.toUpperCase())) return 1;    // 只有網頁自己建的東西
+  return 0;
+}
+
+/**
+ * VoiceWeaver 根資料夾的 id。
+ *
+ * 為什麼不能直接 findId：Drive 允許同名資料夾，而這裡**真的會有兩個**——
+ * 電腦端建過一個，網頁端因為 drive.file 逐檔授權看不到它，於是又自己建了一個。
+ * 之後每次查詢都在兩者之間擲骰子，使用者就會看到「AcousticModels 存得進去、
+ * 但曲庫永遠是空的」這種前後矛盾的狀態，而兩邊他在 Drive 上都看得到。
+ *
+ * 挑「裝著曲庫的那個」，不是「剛好排第一的那個」。
+ */
+async function voiceWeaverRoot(create){
+  const tok = driveToken() || "";
+  if(_rootId && _rootTok === tok && Date.now() - _rootAt < ROOT_TTL_MS) return _rootId;
+  const cands = await findFolders(ROOT_FOLDER, "root");
+  let id = null;
+  if(!cands.length){
+    id = create ? await ensureFolder(ROOT_FOLDER, "root") : null;
+  }else if(cands.length === 1){
+    id = cands[0].id;
+  }else{
+    let bestScore = -1;
+    for(const c of cands){
+      const s = await rootScore(c.id);
+      if(s > bestScore){ bestScore = s; id = c.id; }
+    }
+  }
+  if(id){ _rootId = id; _rootTok = tok; _rootAt = Date.now(); }
+  return id;
+}
+
+/** 有幾個同名的 VoiceWeaver（0 或 1 代表沒有這個問題）。 */
+export async function countRoots(){
+  return (await findFolders(ROOT_FOLDER, "root")).length;
 }
 
 export async function listChildren(parent, foldersOnly){
@@ -138,7 +214,14 @@ async function trashById(id){
 // 底下不再分帳號 id：這是使用者自己的雲端硬碟，一個 Google 帳號一個，
 // 而 Firebase 身分也是同一個 Google 帳號換來的。多包一層永遠只有一個子資料夾，
 // 只是讓他多點一次、還看到一串沒有意義的亂碼。
-const ACOUSTIC_PATH = [ROOT_FOLDER, ACOUSTIC_DIR];
+// 一定要從 voiceWeaverRoot() 走，不能自己 folderPath([ROOT_FOLDER, ...])：
+// 有兩個同名根時，兩條路徑會各自挑到不同的那一個，於是使用者的專屬發音存進 A、
+// 專屬聲音卻在 B——兩份資料在同一個 Drive 裡分家，而畫面上完全看不出來。
+async function acousticParent(create){
+  const root = await voiceWeaverRoot(create);
+  if(!root) return null;
+  return create ? await ensureFolder(ACOUSTIC_DIR, root) : await findId(ACOUSTIC_DIR, root, true);
+}
 
 // 檔案放在 AcousticModels/<分類>/<id>.json。
 //
@@ -173,7 +256,7 @@ async function acousticFiles(parent){
 }
 
 export async function listAcoustic(){
-  const parent = await folderPath(ACOUSTIC_PATH, false);
+  const parent = await acousticParent(false);
   if(!parent) return [];
   const out = [];
   for(const f of await acousticFiles(parent)){
@@ -189,7 +272,7 @@ export async function listAcoustic(){
  * 找不到回 null。
  */
 export async function readAcoustic(id){
-  const parent = await folderPath(ACOUSTIC_PATH, false);
+  const parent = await acousticParent(false);
   if(!parent) return null;
   const hit = (await acousticFiles(parent)).find(f => f.name === `${id}.json`);
   if(!hit) return null;
@@ -197,9 +280,9 @@ export async function readAcoustic(id){
 }
 
 export async function saveAcoustic(template){
-  const root = await folderPath(ACOUSTIC_PATH, true);
+  const root = await acousticParent(true);
   const category = sanitizeCategory(template.category);
-  const parent = await folderPath([...ACOUSTIC_PATH, category], true);
+  const parent = await ensureFolder(category, root);
   await writeJson(`${template.id}.json`, parent, { ...template, category });
   // 這一筆以前可能平放在根目錄、或歸在別的分類。留著的話同一個樣板會有兩份，
   // 而「雲端是主」會讓兩份都被拉回手機 → 使用者看到重複的觸發詞。
@@ -215,7 +298,7 @@ async function trashAcousticElsewhere(root, keep, name){
 }
 
 export async function deleteAcoustic(id){
-  const parent = await folderPath(ACOUSTIC_PATH, false);
+  const parent = await acousticParent(false);
   if(!parent) return;
   // 不假設它在哪一層：根目錄與每個分類資料夾都找一次
   for(const f of await acousticFiles(parent)){
@@ -254,7 +337,7 @@ export function mergeShortcuts(...sources){
  * 與 Mac 端 emotion_models.models_root、App 端 DriveApi.modelsFolder 同一條規則。
  */
 async function modelsParent(){
-  const root = await folderPath([ROOT_FOLDER], false);
+  const root = await voiceWeaverRoot(false);
   if(!root) return null;
   const models = await findId(MODELS_DIR, root, true);
   if(models) return models;
@@ -278,7 +361,7 @@ const CATALOG_NAME = "catalog.json";
  * 兩邊都在時取 updatedAt 較新的那份。
  */
 async function readCatalog(){
-  const root = await folderPath([ROOT_FOLDER], false);
+  const root = await voiceWeaverRoot(false);
   if(!root) return null;
   const models = await findId(MODELS_DIR, root, true);
   const ids = [];
@@ -333,13 +416,17 @@ function fromCatalogEntry(c){
  * 只列資料夾名稱，不讀任何檔案內容。
  */
 export async function diagnoseVoiceModels(){
-  const root = await folderPath([ROOT_FOLDER], false);
+  const root = await voiceWeaverRoot(false);
   if(!root) return { step: "noRoot", root: ROOT_FOLDER };
+  // 同名根的數量要一起講。它會讓所有其他症狀變得莫名其妙——
+  // 「AcousticModels 存得進去，曲庫卻永遠是空的」在只看一個資料夾時完全講不通。
+  let roots = 1;
+  try{ roots = await countRoots(); }catch{ /* 問不到就當作一個 */ }
   const rootKids = (await listChildren(root, true)).map(f => f.name);
   const models = await findId(MODELS_DIR, root, true);
   if(!models){
     const legacy = rootKids.filter(n => LANG_DIRS.includes(n.toUpperCase()));
-    return { step: legacy.length ? "legacy" : "noModels", rootKids, legacy };
+    return { step: legacy.length ? "legacy" : "noModels", rootKids, legacy, roots };
   }
   const modelKids = (await listChildren(models, true)).map(f => f.name);
   const langs = modelKids.filter(n => LANG_DIRS.includes(n.toUpperCase()));
@@ -351,7 +438,7 @@ export async function diagnoseVoiceModels(){
   // 這是兩者最有鑑別力的一組對照，所以一起回報。
   let catalog = 0;
   try{ catalog = (await readCatalog())?.characters?.length || 0; }catch{ /* 沒有就沒有 */ }
-  return { step: "walked", rootKids, modelKids, langs, chars, catalog };
+  return { step: "walked", rootKids, modelKids, langs, chars, catalog, roots };
 }
 
 export async function listVoiceModels(){
