@@ -10,14 +10,23 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.21";
-import { speak } from "./speech.js?v=1.5.21";
-import { applyI18n } from "./i18n.js?v=1.5.21";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.21";
+import { state } from "./store.js?v=1.5.23";
+import { speak } from "./speech.js?v=1.5.23";
+import { applyI18n, t } from "./i18n.js?v=1.5.23";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.23";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// 每一步的最短停留時間。沒有這個下限，動作做完就立刻跳下一步——
+// 十六個單元六十幾步會在一分鐘內衝完，觀眾連畫面變了什麼都看不清楚。
+// 有旁白時通常是旁白比較長（下限很少生效）；純演示時它就是實際節奏。
+const MIN_STEP_NARRATED = 3200;
+const MIN_STEP_SILENT = 4200;
+// 旁白唸完之後畫面再多停一下才換。零間隔看起來像「話還沒講完就跳掉」——
+// 最後一個字的尾音、加上讀完字幕需要的一點時間，都落在這一段。
+const TAIL_PAD = 900;
 
 // 演示進行中的旗標。extras.js 的 Telegram 出口會讀它擋下所有外送。
 export function demoRunning() { return !!window.__VW_DEMO__; }
@@ -194,15 +203,17 @@ function buildOverlay() {
     </div>
     <div class="demo-hud">
       <span id="demoProgress" class="demo-progress"></span>
-      <button id="demoStop" class="demo-stop" type="button">■ Stop</button>
+      <button id="demoStop" class="demo-stop" type="button"></button>
     </div>
     <div id="demoPrep" class="demo-prep hidden">
-      <div class="demo-prep-title">Preparing narration…</div>
+      <div class="demo-prep-title" id="demoPrepTitle"></div>
       <div class="demo-prep-bar"><i id="demoPrepFill"></i></div>
       <div id="demoPrepNote" class="demo-prep-note"></div>
     </div>
     <div id="demoCaption" class="demo-caption hidden"></div>`;
   document.body.appendChild(el);
+  $("#demoPrepTitle").textContent = t("demo.prep");
+  $("#demoStop").textContent = t("demo.stop");
   $("#demoStop").addEventListener("click", () => { _abort = true; });
 }
 
@@ -474,8 +485,13 @@ function langDemo(lang) {
 
 // ── 旁白 ────────────────────────────────────────────────────────────────
 
-// 演示裡「App 講出來的話」（不是旁白）——用一般 TTS，跟使用者平常聽到的一樣。
-function demoSpeak(text) { try { speak(text); } catch { /* 沒有語音也不能擋住演示 */ } }
+// 演示裡「App 講出來的話」（不是旁白）。有預先合成就走混音軌——那條才錄得到；
+// 沒有（沒接電腦端）才退回一般 TTS，至少現場聽得到。
+function demoSpeak(text) {
+  const buf = _clips.get(text);
+  if (buf) { playClip(buf); return; }
+  try { speak(text); } catch { /* 沒有語音也不能擋住演示 */ }
+}
 
 async function pickNarrationVoice() {
   _voice = null;
@@ -487,13 +503,38 @@ async function pickNarrationVoice() {
   } catch { /* 連不上就退瀏覽器語音 */ }
 }
 
-// 旁白預先合成的快取：句子文字 → object URL。
+// 旁白預先合成的快取：句子文字 → AudioBuffer。
 // 跨次執行保留（同一份腳本每次都一樣），所以第二次跑幾乎不用等。
+//
+// 存 AudioBuffer 而不是 <audio> 的網址，是為了能把聲音**直接混進錄影**：
+// getDisplayMedia 的音訊要使用者自己記得勾「分享分頁音訊」才有，忘了就錄成默片；
+// 而用麥克風收喇叭又會把房間的雜音一起錄進去。走 WebAudio 就沒有這兩個問題——
+// 同一份聲音同時送去喇叭和錄影軌，錄到的是乾淨的原始音訊。
 const _clips = new Map();
+
+let _ac = null;          // AudioContext（全程共用；每次 new 會被瀏覽器限制數量）
+let _mixDest = null;     // 錄影用的音訊匯流點
+
+function audioCtx() {
+  if (!_ac) _ac = new (window.AudioContext || window.webkitAudioContext)();
+  if (_ac.state === "suspended") _ac.resume().catch(() => {});
+  return _ac;
+}
+function mixDest() {
+  if (!_mixDest) _mixDest = audioCtx().createMediaStreamDestination();
+  return _mixDest;
+}
 
 /** 把選到的單元裡所有旁白先合成好。回實際成功的句數。 */
 async function prepareNarration(units, onProgress) {
-  const texts = [...new Set(units.flatMap((u) => u.steps.map((s) => s.cap)).filter(Boolean))];
+  // 除了旁白，演示中「App 自己唸出來」的示範句也要一起合成。
+  // 那些原本走瀏覽器語音，而瀏覽器語音是繞過 WebAudio 的——錄影錄不到，
+  // 影片裡會出現「畫面按了朗讀但沒有聲音」。
+  const spoken = [SAMPLE.candidates[0], SAMPLE.rehab];
+  const texts = [...new Set([
+    ...units.flatMap((u) => u.steps.map((s) => s.cap)),
+    ...spoken,
+  ].filter(Boolean))];
   const todo = texts.filter((x) => !_clips.has(x));
   let ok = _clips.size;
   for (let i = 0; i < todo.length; i++) {
@@ -501,7 +542,10 @@ async function prepareNarration(units, onProgress) {
     onProgress(i, todo.length);
     try {
       const blob = await localSynth(todo[i], { name: _voice.name, lang: "EN", emotion: "中立" });
-      if (blob) { _clips.set(todo[i], URL.createObjectURL(blob)); ok++; }
+      if (blob) {
+        const buf = await audioCtx().decodeAudioData(await blob.arrayBuffer());
+        _clips.set(todo[i], buf); ok++;
+      }
     } catch {
       // 這一句合不出來就留給瀏覽器語音，不要為了一句放棄整段旁白
     }
@@ -510,19 +554,24 @@ async function prepareNarration(units, onProgress) {
   return ok;
 }
 
-function playClip(url) {
+/** 播一段預合成的旁白：同時送喇叭與錄影軌，等真的播完才 resolve。 */
+function playClip(buf) {
   return new Promise((resolve) => {
-    const a = new Audio(url);
-    a.onended = a.onerror = () => resolve();
-    a.play().catch(() => resolve());
+    const ac = audioCtx();
+    const src = ac.createBufferSource();
+    src.buffer = buf;
+    src.connect(ac.destination);   // 使用者聽得到
+    src.connect(mixDest());        // 錄影錄得到
+    src.onended = () => { try { src.disconnect(); } catch {} resolve(); };
+    src.start();
   });
 }
 
 // 旁白一句。**一定要等講完**才走下一步，否則字幕跟畫面會愈跑愈前面。
 async function narrate(text) {
   if (!_narrate || !text) return;
-  const url = _clips.get(text);
-  if (url) { await playClip(url); return; }
+  const buf = _clips.get(text);
+  if (buf) { await playClip(buf); return; }
   await browserNarrate(text);   // 預先合成時失敗（或根本沒有橋接）的那幾句
 }
 
@@ -532,11 +581,16 @@ function browserNarrate(text) {
       const u = new SpeechSynthesisUtterance(text);
       u.lang = "en-US";
       u.rate = 0.95;
-      u.onend = u.onerror = () => resolve();
+      let done = false;
+      const fin = () => { if (!done) { done = true; resolve(); } };
+      u.onend = u.onerror = fin;
       speechSynthesis.cancel();
       speechSynthesis.speak(u);
-      // 保險：有些瀏覽器 onend 不會觸發（長句尤其），估時後放行。
-      setTimeout(resolve, 1200 + text.length * 75);
+      // 保險：有些瀏覽器 onend 不會觸發。但這個時限**必須遠大於**實際唸完的時間，
+      // 否則它會反過來把還在唸的句子切斷——那正是「音檔沒播完就跳下一步」。
+      // 英文約每分鐘 160 字，抓三倍再加 5 秒當上限，只用來防卡死。
+      const words = text.split(/\s+/).filter(Boolean).length;
+      setTimeout(fin, 5000 + words / 160 * 60 * 1000 * 3);
     } catch { resolve(); }
   });
 }
@@ -548,18 +602,24 @@ function recSupported() {
 }
 
 async function startRecording() {
-  const stream = await navigator.mediaDevices.getDisplayMedia({
+  const screen = await navigator.mediaDevices.getDisplayMedia({
     video: { frameRate: 30 },
-    audio: true,               // 分享「分頁」並勾選音訊才錄得到旁白
+    audio: false,              // 聲音不靠分頁音訊，改用下面的 WebAudio 混音軌
   });
+  // 影像來自螢幕分享、聲音來自旁白的混音匯流點 → 使用者不必記得勾「分享分頁音訊」，
+  // 也不會錄到房間的雜音。旁白播出去的同時就已經進了這條軌。
+  const stream = new MediaStream([
+    ...screen.getVideoTracks(),
+    ...mixDest().stream.getAudioTracks(),
+  ]);
   const mime = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
     .find((m) => MediaRecorder.isTypeSupported(m)) || "";
   _chunks = [];
-  _recStream = stream;
+  _recStream = screen;         // 要停的是螢幕分享本身；混音軌是共用的，不能停
   _rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 4_000_000 } : undefined);
   _rec.ondataavailable = (e) => { if (e.data && e.data.size) _chunks.push(e.data); };
   // 使用者在瀏覽器自己的分享列按「停止分享」→ 也要把檔案收好，不能就這樣丟掉。
-  stream.getVideoTracks()[0].addEventListener("ended", () => { _abort = true; });
+  screen.getVideoTracks()[0].addEventListener("ended", () => { _abort = true; });
   _rec.start(1000);
 }
 
@@ -655,8 +715,8 @@ async function run(ids, opts) {
         const per = i ? (Date.now() - t0) / i : 0;
         const left = per ? Math.round(per * (n - i) / 1000) : 0;
         note.textContent = n
-          ? `${i} / ${n} lines${left ? ` · about ${Math.floor(left / 60)}m ${left % 60}s left` : ""}`
-          : "Already prepared";
+          ? `${i} / ${n} ${t("demo.lines")}${left ? ` · ${t("demo.left")} ${Math.floor(left / 60)}m ${left % 60}s` : ""}`
+          : t("demo.ready");
       });
       prep.classList.add("hidden");
     }
@@ -680,9 +740,15 @@ async function run(ids, opts) {
         progress(`${u.icon} ${u.title} · ${done}/${total}`);
         caption(s.cap);
         // 動作與旁白同時跑：先讓畫面動起來，旁白在講的同時使用者已經看到變化。
+        const t0 = Date.now();
         const acting = Promise.resolve().then(() => s.act?.()).catch(() => {});
         await Promise.all([acting, narrate(s.cap)]);
-        await sleep(_narrate ? (s.hold ?? 350) : (s.hold ?? 1100));
+        if (_narrate && s.cap) await sleep(TAIL_PAD);   // 講完再讓畫面多停一下
+        await sleep(s.hold ?? 0);
+        // 補到最短停留。旁白比下限長時這裡是 0，不會拖慢。
+        const floor = _narrate ? MIN_STEP_NARRATED : MIN_STEP_SILENT;
+        const left = floor - (Date.now() - t0);
+        if (left > 0) await sleep(left);
       }
       clearSpot();
     }
@@ -727,17 +793,28 @@ export function setupDemo() {
   const boxes = () => $$("#demoUnits input[type=checkbox]");
   const chosen = () => boxes().filter((b) => b.checked).map((b) => b.dataset.id);
 
+  // 估時直接從步數算，不用手寫的 est——手寫值與實際節奏一定會漂移，
+  // 而使用者是靠這個數字決定要不要錄的。
+  const stepMs = (cap, narrated) => {
+    if (!narrated) return MIN_STEP_SILENT;
+    const words = String(cap || "").split(/\s+/).filter(Boolean).length;
+    return Math.max(MIN_STEP_NARRATED, (words / 2.6) * 1000) + TAIL_PAD;   // 約每秒 2.6 字
+  };
   const est = () => {
     const ids = new Set(chosen());
-    const s = UNITS().filter((u) => ids.has(u.id)).reduce((n, u) => n + u.est, 0);
-    const narrated = $("#demoNarrate")?.checked;
-    // 有旁白時每一步要等語音講完，實測約 1.8 倍。
-    const total = Math.round(s * (narrated ? 1.8 : 1));
-    $("#demoEst").textContent = `${ids.size} sections · about ${Math.floor(total / 60)}m ${total % 60}s`;
+    const narrated = !!$("#demoNarrate")?.checked;
+    const ms = UNITS().filter((u) => ids.has(u.id))
+      .flatMap((u) => u.steps)
+      .reduce((n, st) => n + stepMs(st.cap, narrated) + (st.hold ?? 0), 0);
+    const total = Math.round(ms / 1000);
+    $("#demoEst").textContent = `${ids.size} ${t("demo.unitsN")} · ${t("demo.about")} ${Math.floor(total / 60)}m ${total % 60}s`;
   };
 
   box.addEventListener("change", () => { savePicked(chosen()); est(); });
   $("#demoNarrate")?.addEventListener("change", est);
+  // 估時那一行是自己組出來的字串，不吃 data-i18n → 換語言時要重算一次，
+  // 否則會留在上一個語言（「2 個單元」跟旁邊的英文介面併排）。
+  $("#s_lang")?.addEventListener("change", () => setTimeout(est, 0));
   $("#demoAll")?.addEventListener("click", () => { boxes().forEach((b) => b.checked = true); savePicked(chosen()); est(); });
   $("#demoNone")?.addEventListener("click", () => { boxes().forEach((b) => b.checked = false); savePicked(chosen()); est(); });
 
@@ -745,12 +822,12 @@ export function setupDemo() {
     const r = $("#demoRecord");
     if (r) { r.checked = false; r.disabled = true; }
     const hint = $("#demoRecHint");
-    if (hint) hint.textContent = "Screen recording is not available in this browser — use a desktop browser, or record with an external tool.";
+    if (hint) hint.textContent = t("demo.noRec");
   }
 
   $("#demoStart")?.addEventListener("click", async () => {
     const ids = chosen();
-    if (!ids.length) { alert("Select at least one section."); return; }
+    if (!ids.length) { alert(t("demo.pickOne")); return; }
     await run(ids, {
       narrate: !!$("#demoNarrate")?.checked,
       record: !!$("#demoRecord")?.checked,

@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 <title>VoiceWeaver 網頁版</title>
-<link rel="stylesheet" href="style.css?v=1.5.21" />
+<link rel="stylesheet" href="style.css?v=1.5.23" />
 </head>
 <body>
   <!-- 登入閘 -->
@@ -420,22 +420,22 @@
              面板刻意全英文——錄出來的影片是要拿去做報告的，字幕與旁白都英文，
              設定面板跟著英文才不會一段中文一段英文。 -->
         <div class="card complex">
-          <h3>🎬 Auto demo &amp; screen recording</h3>
-          <p class="tiny muted">Walks through the app on its own and records the screen, so you can drop the clip straight into a report. Everything below is scripted sample data — <strong>no AI requests, no cloud writes, and no messages are ever sent</strong> (the SOS and crisis sections are simulated).</p>
-          <label class="lbl">Sections</label>
+          <h3 data-i18n="demo.title">🎬 自動演示與螢幕錄影</h3>
+          <p class="tiny muted" data-i18n="demo.desc"></p>
+          <label class="lbl" data-i18n="demo.sections">演示單元</label>
           <div class="row" style="gap:6px;margin:0 0 8px">
-            <button id="demoAll" class="btn ghost tiny" type="button">Select all</button>
-            <button id="demoNone" class="btn ghost tiny" type="button">Clear</button>
+            <button id="demoAll" class="btn ghost tiny" type="button" data-i18n="demo.all">全選</button>
+            <button id="demoNone" class="btn ghost tiny" type="button" data-i18n="demo.none">清除</button>
             <span id="demoEst" class="tiny muted" style="margin-left:auto"></span>
           </div>
           <div id="demoUnits" class="demo-units"></div>
           <label class="row" style="align-items:flex-start;gap:8px;margin:6px 0"><input id="demoNarrate" type="checkbox" checked />
-            <span>Narration + subtitles (English, spoken with your GPT-SoVITS voice; falls back to the browser voice if the computer bridge is offline).
-            <span class="tiny muted" style="display:block">Every line is synthesised <em>before</em> recording starts, so the video has no waiting in it. On a CPU-only Mac that preparation takes roughly 25&nbsp;s per line the first time; lines are cached, so a second run starts almost immediately.</span></span></label>
+            <span><span data-i18n="demo.narrate"></span>
+            <span class="tiny muted" style="display:block" data-i18n="demo.narrateHint"></span></span></label>
           <label class="row" style="align-items:flex-start;gap:8px;margin:6px 0"><input id="demoRecord" type="checkbox" checked />
-            <span>Record the screen to a .webm file</span></label>
-          <p id="demoRecHint" class="tiny muted">Your browser will ask which window or tab to share. Pick <strong>This tab</strong> and turn on <strong>Share tab audio</strong> so the narration is recorded too.</p>
-          <button id="demoStart" class="btn primary big" type="button">▶ Start demo</button>
+            <span data-i18n="demo.record">把畫面錄成 .webm 影片檔</span></label>
+          <p id="demoRecHint" class="tiny muted" data-i18n="demo.recHint"></p>
+          <button id="demoStart" class="btn primary big" type="button" data-i18n="demo.start">▶ 開始演示</button>
         </div>
         </div><!-- /settingsCards -->
         <p id="saveState" class="tiny muted center">—</p>
@@ -524,7 +524,7 @@
 
   <!-- 你的 Firebase 設定（複製 config.example.js 為 config.js 並填入）。沒有 config.js 時為純本機模式。 -->
   <script>window.__FIREBASE_CONFIG__ = null;</script>
-  <script src="config.js?v=1.5.21" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
-  <script type="module" src="js/app.js?v=1.5.21"></script>
+  <script src="config.js?v=1.5.23" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
+  <script type="module" src="js/app.js?v=1.5.23"></script>
 </body>
 </html>
