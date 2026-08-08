@@ -1,8 +1,8 @@
 // 語音復健：聽整句／點字卡發音／跟讀錄音 → AI 評分（語意/流暢，非字元差異）→ 寫日誌。
-import { speak, listen, sttSupported } from "./speech.js?v=1.5.16";
-import { scoreRehab, suggestRehab, hasAnyLlmKey } from "./llm.js?v=1.5.16";
-import { addRehabLog, listRehabLogs } from "./store.js?v=1.5.16";
-import { t as tr } from "./i18n.js?v=1.5.16";
+import { speak, listen, sttSupported } from "./speech.js?v=1.5.17";
+import { scoreRehab, suggestRehab, hasAnyLlmKey } from "./llm.js?v=1.5.17";
+import { addRehabLog, listRehabLogs } from "./store.js?v=1.5.17";
+import { t as tr } from "./i18n.js?v=1.5.17";
 
 const esc = (x)=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 

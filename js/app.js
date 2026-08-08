@@ -1,27 +1,27 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError } from "./store.js?v=1.5.16";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.16";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.16";
-import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.16";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.16";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.16";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.16";
-import { bindTap } from "./interaction.js?v=1.5.16";
-import { orderCards } from "./predict.js?v=1.5.16";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.16";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.16";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.16";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.16";
-import { preloadZhConv } from "./zhconv.js?v=1.5.16";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.16";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.16";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.16";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.16";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.16";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.16";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.16";
-import * as Acoustic from "./acoustic.js?v=1.5.16";
-import * as Mic from "./acousticmic.js?v=1.5.16";
-import { applyI18n, t } from "./i18n.js?v=1.5.16";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount } from "./store.js?v=1.5.17";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.17";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.17";
+import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.17";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.17";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.17";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.17";
+import { bindTap } from "./interaction.js?v=1.5.17";
+import { orderCards } from "./predict.js?v=1.5.17";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.17";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.17";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.17";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.17";
+import { preloadZhConv } from "./zhconv.js?v=1.5.17";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.17";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.17";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.17";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.17";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.17";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.17";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.17";
+import * as Acoustic from "./acoustic.js?v=1.5.17";
+import * as Mic from "./acousticmic.js?v=1.5.17";
+import { applyI18n, t } from "./i18n.js?v=1.5.17";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -1330,6 +1330,36 @@ function fmtBytes(n){
   return mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${Math.round(mb)} MB`;
 }
 
+/**
+ * 「現在讀的是誰的雲端硬碟」＋一顆換帳號的按鈕。
+ *
+ * 這是「Drive 上還沒有語音模型」最常見、也最看不出來的原因：一個人有兩個
+ * Google 帳號很平常，而 drive.file 只看得到本 App 在**這個帳號**建立的檔案。
+ * 登錯帳號時那句話本身沒有錯（這個帳號確實沒有），但他看著另一個帳號裡滿滿的
+ * 資料夾，只會覺得東西不見了。講出信箱，一秒就看得出是不是登錯。
+ *
+ * 按鈕是動態產生的，**不能靠 data-i18n**：applyI18n 只在切語言時掃一次 DOM，
+ * 那時這顆還不存在。組 HTML 時就要呼叫 t()。
+ */
+function accountLineHtml(){
+  const mail = accountEmail();
+  if(!mail) return "";
+  return `<p class="tiny muted" style="opacity:.75;margin-top:6px">${
+      esc(t("set.voicesAccount").replace("{email}", mail))}
+    <button id="btnSwitchAccount" class="btn ghost" style="margin-left:6px"
+      >${esc(t("set.voicesSwitchAccount"))}</button></p>`;
+}
+
+function bindSwitchAccount(){
+  $("#btnSwitchAccount")?.addEventListener("click", async (ev)=>{
+    const b = ev.currentTarget;
+    if(b.disabled) return;
+    b.disabled = true;
+    try{ await switchAccount(); }
+    catch(err){ if(!isBenignAuthError(err)) toast(authErrorText(err)); b.disabled = false; }
+  });
+}
+
 async function renderVoices(){
   const box = $("#voiceList");
   if(!box) return;
@@ -1355,7 +1385,9 @@ async function renderVoices(){
       // 掃一次 DOM，那時這顆還不存在，於是它會永遠停在寫死的中文。
       // 動態內容一律在組 HTML 時就呼叫 t()（renderVoices 本身有掛在切語言的重繪清單裡）。
       (needsAuth ? `<button id="btnDriveReauth" class="btn ghost" style="margin-top:6px"
-                      >${esc(t("set.voicesReauth"))}</button>` : "");
+                      >${esc(t("set.voicesReauth"))}</button>` : "") +
+      accountLineHtml();
+    bindSwitchAccount();
     $("#btnDriveReauth")?.addEventListener("click", async (ev)=>{
       const b = ev.currentTarget;
       if(b.disabled) return;
@@ -1369,26 +1401,39 @@ async function renderVoices(){
     // 「還沒有語音模型」對一個明明看得到那些資料夾就在 Drive 上的人，
     // 是一句沒有用的話。空清單有四種完全不同的原因，畫面上卻長得一模一樣——
     // 這裡把實際走到哪一步、看到哪些資料夾講出來，他才知道要去修哪裡。
-    box.innerHTML = `<p class="tiny muted">${t("set.voicesEmpty")}</p>`;
+    // 一次組完再寫進去。innerHTML += 會把整段重新解析，之前掛上去的事件監聽
+    // 全部消失——換帳號按鈕會變成按了沒反應的裝飾品。
+    const parts = [`<p class="tiny muted">${t("set.voicesEmpty")}</p>`];
     try{
-      const drive = await import("./drive.js?v=1.5.16");
+      const drive = await import("./drive.js?v=1.5.17");
       const d = await drive.diagnoseVoiceModels();
       // 同名根要先講。有兩個 VoiceWeaver 時，底下那些「沒有 Models」之類的
       // 描述全部都是在講錯的那一個資料夾，先看到它才不會被帶去修錯的地方。
       if(d.roots > 1){
-        box.innerHTML += `<p class="tiny muted" style="opacity:.75">${
-          esc(t("set.diagDupRoot").replace("{n}", String(d.roots)))}</p>`;
+        parts.push(`<p class="tiny muted" style="opacity:.75">${
+          esc(t("set.diagDupRoot").replace("{n}", String(d.roots)))}</p>`);
       }
+      // 「VoiceWeaver 底下只有 AcousticModels」＝這個資料夾裡只有本 App 自己寫過的東西。
+      // 這幾乎一定是登錯 Google 帳號：曲庫在另一個帳號，而 drive.file 看不到它。
+      // 泛用的「沒有 Models 資料夾」會把人帶去檢查資料夾結構，方向就錯了。
+      const onlyOurs = d.step === "noModels" && d.rootKids.length > 0 &&
+        d.rootKids.every(n => n.toUpperCase() === "ACOUSTICMODELS");
       const line =
         d.step === "noRoot"   ? t("set.diagNoRoot").replace("{name}", d.root)
+      : onlyOurs              ? t("set.diagWrongAccount")
       : d.step === "noModels" ? t("set.diagNoModels").replace("{name}", "VoiceWeaver").replace("{kids}", d.rootKids.join("、") || "—")
       : d.step === "legacy"   ? t("set.diagLegacy").replace("{langs}", d.legacy.join("、"))
       : d.chars.length        ? t("set.diagHasChars").replace("{chars}", d.chars.slice(0,8).join("、"))
       : d.catalog             ? t("set.diagCatalogOnly").replace("{n}", String(d.catalog))
       : d.langs.length        ? t("set.diagEmptyLang").replace("{langs}", d.langs.join("、"))
       :                         t("set.diagEmptyModels").replace("{kids}", d.modelKids.join("、") || "—");
-      box.innerHTML += `<p class="tiny muted" style="opacity:.75">${esc(line)}</p>`;
-    }catch{ /* 診斷失敗就算了，上面那句已經顯示了 */ }
+      parts.push(`<p class="tiny muted" style="opacity:.75">${esc(line)}</p>`);
+    }catch{ /* 診斷失敗就算了，第一句已經說明狀況 */ }
+    // 帳號放最後：上面幾句解釋了「這個帳號裡沒有」，這句回答「那這是哪個帳號」，
+    // 而換帳號正是接下來最可能要做的事。
+    parts.push(accountLineHtml());
+    box.innerHTML = parts.join("");
+    bindSwitchAccount();
     return;
   }
   box.innerHTML = list.map(v=>`

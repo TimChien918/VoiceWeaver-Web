@@ -6,7 +6,7 @@ import {
 import {
   getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, getDocs, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { t } from "./i18n.js?v=1.5.16";
+import { t } from "./i18n.js?v=1.5.17";
 
 const DEFAULTS = {
   settings: { theme: "auto", lang: "zh-TW", rate: 0.95, font: 1.0,
@@ -146,7 +146,9 @@ export function initAuth({ onUser, onSaved }){
     if(u){
       state.uid = u.uid; state.online = true;
       await loadCloud(u.uid);
-      onUser({ uid:u.uid, anon:u.isAnonymous, name: u.displayName || (u.isAnonymous ? "" : u.email) });
+      _email = u.email || "";
+      onUser({ uid:u.uid, anon:u.isAnonymous, email:_email,
+               name: u.displayName || (u.isAnonymous ? "" : u.email) });
     } else {
       state.uid = null; state.online = false;
       onUser(null);
@@ -161,6 +163,22 @@ let _driveToken = null;      // 這次工作階段的 Google OAuth access token�
 /** 目前可用的 Drive access token（沒登入或沒授權回 null）。 */
 export function driveToken(){ return _driveToken; }
 
+// 現在登入的是哪個 Google 帳號。
+//
+// 為什麼要露出來：drive.file 只看得到「本 App 在**這個帳號**建立的檔案」。
+// 一個人有兩個 Google 帳號是很平常的事，而曲庫存在其中一個。登錯帳號時
+// 畫面會說「Drive 上還沒有語音模型」——這句話本身是對的（這個帳號確實沒有），
+// 但他看著另一個帳號裡滿滿的資料夾，只會覺得東西不見了。
+// 講出信箱，一秒就看得出是不是登錯了。
+let _email = "";
+export function accountEmail(){ return _email; }
+
+/** 換帳號：先登出，再開 Google 的帳號選擇畫面。 */
+export async function switchAccount(){
+  await logout();
+  return loginGoogle({ chooseAccount: true });
+}
+
 /**
  * 同一個彈窗同時只能有一個。
  *
@@ -170,12 +188,15 @@ export function driveToken(){ return _driveToken; }
  */
 let _popupPending = null;
 
-export async function loginGoogle(){
+export async function loginGoogle(opts = {}){
   if(!hasFirebase()) throw new Error(t("err.noFirebase"));
   if(_popupPending) return _popupPending;   // 第二次點就直接沿用第一次，不要再開一個彈窗
   _popupPending = (async () => {
     const provider = new GoogleAuthProvider();
     provider.addScope(DRIVE_SCOPE);                       // 同一個同意畫面順便要 Drive 權限
+    // 換帳號時一定要強迫出現選擇畫面：Google 預設會直接用上次那個帳號登回去，
+    // 於是使用者按了「換帳號」卻換不掉，畫面完全沒有變化。
+    if(opts.chooseAccount) provider.setCustomParameters({ prompt: "select_account" });
     const res = await signInWithPopup(_auth, provider);
     // 從登入結果取出 Google OAuth access token → 之後可直接打 Drive API（存到自己的 Drive）
     const cred = GoogleAuthProvider.credentialFromResult(res);
@@ -348,7 +369,7 @@ function saveLocalShortcuts(list){
 
 // Drive 用動態 import：drive.js 反過來要 store.js 的 driveToken，
 // 靜態互相 import 會踩到模組初始化順序。順便也讓沒用到 Drive 的人不必載這段。
-async function _drive(){ return import("./drive.js?v=1.5.16"); }
+async function _drive(){ return import("./drive.js?v=1.5.17"); }
 
 /**
  * 兩個雲端來源都讀：Firestore（即時、免 Drive 授權）與使用者自己 Drive 的
