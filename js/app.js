@@ -1,27 +1,27 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices } from "./store.js?v=1.5.11";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.11";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.11";
-import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.11";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.11";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.11";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.11";
-import { bindTap } from "./interaction.js?v=1.5.11";
-import { orderCards } from "./predict.js?v=1.5.11";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.11";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.11";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.11";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.11";
-import { preloadZhConv } from "./zhconv.js?v=1.5.11";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.11";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.11";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.11";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.11";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.11";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.11";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.11";
-import * as Acoustic from "./acoustic.js?v=1.5.11";
-import * as Mic from "./acousticmic.js?v=1.5.11";
-import { applyI18n, t } from "./i18n.js?v=1.5.11";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError } from "./store.js?v=1.5.13";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.13";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.13";
+import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.13";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.13";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.13";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.13";
+import { bindTap } from "./interaction.js?v=1.5.13";
+import { orderCards } from "./predict.js?v=1.5.13";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.13";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.13";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.13";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.13";
+import { preloadZhConv } from "./zhconv.js?v=1.5.13";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.13";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.13";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.13";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.13";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.13";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.13";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.13";
+import * as Acoustic from "./acoustic.js?v=1.5.13";
+import * as Mic from "./acousticmic.js?v=1.5.13";
+import { applyI18n, t } from "./i18n.js?v=1.5.13";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -1099,8 +1099,26 @@ function main(){
   // 這裡**不能**偵測電腦運算：這一段跑在登入之前，state.settings 還是 DEFAULTS，
   // localTtsEnabled 永遠讀到 false，於是「開機自動偵測」看起來有做、實際從來沒觸發過。
   // 真正的偵測放在 showApp()（設定載入完之後）。
-  $("#btnGoogle").addEventListener("click", async ()=>{ try{ await loginGoogle(); }catch(e){ $("#loginErr").textContent=e.message||e; } });
-  $("#btnAnon").addEventListener("click", async ()=>{ try{ await loginAnon(); }catch(e){ $("#loginErr").textContent=e.message||e; } });
+  // 登入按鈕要防連點：Firebase 在前一個彈窗還開著時又收到一個，會把前一個取消掉
+  // 並丟 auth/cancelled-popup-request。而畫面上原本直接把那串原文貼給使用者看——
+  // 「Firebase: Error (auth/cancelled-popup-request).」對照顧者是完全無法理解的。
+  const bindLogin = (sel, fn) => {
+    const btn = $(sel);
+    if(!btn) return;
+    btn.addEventListener("click", async ()=>{
+      if(btn.disabled) return;
+      btn.disabled = true;
+      $("#loginErr").textContent = "";
+      try{ await fn(); }
+      catch(e){
+        // 關掉彈窗／連點兩下不是失敗，安靜就好，不要留一行紅字嚇他
+        $("#loginErr").textContent = isBenignAuthError(e) ? "" : authErrorText(e);
+      }
+      finally{ btn.disabled = false; }
+    });
+  };
+  bindLogin("#btnGoogle", loginGoogle);
+  bindLogin("#btnAnon", loginAnon);
 
   initAuth({
     onUser:(u)=>{ if(u) showApp(u); else showLogin(); },
@@ -1247,6 +1265,23 @@ async function phraseOf(id){
   }catch{ return ""; }
 }
 
+/**
+ * Firebase 的錯誤碼翻成使用者看得懂的話。
+ *
+ * 原本是直接把 e.message 貼上去，於是畫面上會出現
+ * 「Firebase: Error (auth/cancelled-popup-request).」——照顧者看到這個
+ * 只能猜，而他真正需要知道的只有「再按一次就好」還是「要去改設定」。
+ */
+function authErrorText(e){
+  const code = String((e && (e.code || e.message)) || "");
+  if(/popup-blocked/i.test(code))            return t("auth.popupBlocked");
+  if(/network-request-failed/i.test(code))   return t("auth.network");
+  if(/unauthorized-domain/i.test(code))      return t("auth.badDomain");
+  if(/operation-not-allowed/i.test(code))    return t("auth.notEnabled");
+  if(/too-many-requests/i.test(code))        return t("auth.tooMany");
+  return t("auth.generic") + code;
+}
+
 function setShortcutMsg(text){
   const el = $("#shortcutMsg");
   if(el) el.textContent = text || "";
@@ -1305,10 +1340,29 @@ async function renderVoices(){
   }catch(e){
     // 三種失敗要說三種話。全部畫成「還沒有語音模型」的話，
     // 一個明明錄好了聲音的人會以為自己的東西不見了。
-    const msg = e.message === "noDrive"      ? t("set.voicesNoDrive")
-              : e.message === "driveExpired" ? t("set.voicesExpired")
-              : esc(e.message);
-    box.innerHTML = `<p class="tiny muted">${msg}</p>`;
+    //
+    // 「沒有 Drive 權杖」的情況要特別處理：Firebase 登入狀態存在 IndexedDB
+    // （關掉分頁還在），Drive token 存在 sessionStorage（關掉分頁就沒了），
+    // 所以重開瀏覽器之後使用者是「已登入但沒有權杖」——畫面不會跳登入頁，
+    // 而這裡卻叫他「重新登入」。他登入著，這句話對他是矛盾的。
+    // 給一顆就地重新授權的按鈕，不要叫他登出再登入。
+    const needsAuth = e.message === "noDrive" || e.message === "driveExpired";
+    const msg = needsAuth
+      ? (needsDriveReauth() ? t("set.voicesNeedAuth") : t("set.voicesNoDrive"))
+      : esc(e.message);
+    box.innerHTML = `<p class="tiny muted">${msg}</p>` +
+      // 這顆按鈕是動態產生的，**不能靠 data-i18n**：applyI18n 只在切語言時
+      // 掃一次 DOM，那時這顆還不存在，於是它會永遠停在寫死的中文。
+      // 動態內容一律在組 HTML 時就呼叫 t()（renderVoices 本身有掛在切語言的重繪清單裡）。
+      (needsAuth ? `<button id="btnDriveReauth" class="btn ghost" style="margin-top:6px"
+                      >${esc(t("set.voicesReauth"))}</button>` : "");
+    $("#btnDriveReauth")?.addEventListener("click", async (ev)=>{
+      const b = ev.currentTarget;
+      if(b.disabled) return;
+      b.disabled = true;
+      try{ await reauthorizeDrive(); await renderVoices(); }
+      catch(err){ if(!isBenignAuthError(err)) toast(authErrorText(err)); b.disabled = false; }
+    });
     return;
   }
   if(!list.length){

@@ -6,7 +6,7 @@ import {
 import {
   getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, getDocs, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { t } from "./i18n.js?v=1.5.11";
+import { t } from "./i18n.js?v=1.5.13";
 
 const DEFAULTS = {
   settings: { theme: "auto", lang: "zh-TW", rate: 0.95, font: 1.0,
@@ -161,16 +161,58 @@ let _driveToken = null;      // 這次工作階段的 Google OAuth access token�
 /** 目前可用的 Drive access token（沒登入或沒授權回 null）。 */
 export function driveToken(){ return _driveToken; }
 
+/**
+ * 同一個彈窗同時只能有一個。
+ *
+ * Firebase 在前一個 signInWithPopup 還沒結束時又收到一個，會把**前一個**
+ * 取消掉並丟 auth/cancelled-popup-request。連點兩下就會這樣——而這個 App
+ * 的使用者本來就常常手抖誤觸（其他按鈕都走 bindTap 防連點，登入鈕漏了）。
+ */
+let _popupPending = null;
+
 export async function loginGoogle(){
   if(!hasFirebase()) throw new Error(t("err.noFirebase"));
-  const provider = new GoogleAuthProvider();
-  provider.addScope(DRIVE_SCOPE);                       // 同一個同意畫面順便要 Drive 權限
-  const res = await signInWithPopup(_auth, provider);
-  // 從登入結果取出 Google OAuth access token → 之後可直接打 Drive API（存到自己的 Drive）
-  const cred = GoogleAuthProvider.credentialFromResult(res);
-  _driveToken = cred?.accessToken || null;
-  try{ if(_driveToken) sessionStorage.setItem("vw_drive_token", _driveToken); }catch{}
-  return { uid: res.user?.uid, email: res.user?.email, drive: !!_driveToken };
+  if(_popupPending) return _popupPending;   // 第二次點就直接沿用第一次，不要再開一個彈窗
+  _popupPending = (async () => {
+    const provider = new GoogleAuthProvider();
+    provider.addScope(DRIVE_SCOPE);                       // 同一個同意畫面順便要 Drive 權限
+    const res = await signInWithPopup(_auth, provider);
+    // 從登入結果取出 Google OAuth access token → 之後可直接打 Drive API（存到自己的 Drive）
+    const cred = GoogleAuthProvider.credentialFromResult(res);
+    _driveToken = cred?.accessToken || null;
+    try{ if(_driveToken) sessionStorage.setItem("vw_drive_token", _driveToken); }catch{}
+    return { uid: res.user?.uid, email: res.user?.email, drive: !!_driveToken };
+  })();
+  try { return await _popupPending; }
+  finally { _popupPending = null; }
+}
+
+/**
+ * 只補 Drive 授權，不動 Firebase 登入。
+ *
+ * 為什麼一定要有這個：**Firebase 登入狀態存在 IndexedDB（關掉分頁還在），
+ * 而 Drive token 存在 sessionStorage（關掉分頁就沒了）。** 所以重開瀏覽器之後
+ * 使用者是「已登入但沒有 Drive 權杖」的狀態——畫面不會跳登入頁，但每一個
+ * Drive 功能都說「請重新登入」，而他明明就登入著。
+ *
+ * token 本身也大約一小時就過期，所以就算 sessionStorage 保住了也還是會遇到。
+ *
+ * 不把 token 改存 localStorage：OAuth access token 跨工作階段留存會擴大 XSS
+ * 的曝險面，而它一小時就失效，留著換不到什麼。正解是給一個就地重新授權的入口。
+ */
+export async function reauthorizeDrive(){
+  return loginGoogle();
+}
+
+/** 已經登入 Firebase、但這個分頁沒有 Drive 權杖 → 只需要重新授權，不是要重新登入。 */
+export function needsDriveReauth(){
+  return !!state.uid && state.uid !== "local" && !_driveToken;
+}
+
+/** 這個錯誤只是「使用者關掉了彈窗」或「連點了兩下」，不是真的失敗，不必嚇他。 */
+export function isBenignAuthError(e){
+  const code = (e && (e.code || e.message)) || "";
+  return /cancelled-popup-request|popup-closed-by-user|user-cancelled|popup-blocked/i.test(code);
 }
 export async function loginAnon(){
   if(!hasFirebase()){ return; } // 本機模式已等同登入
@@ -306,7 +348,7 @@ function saveLocalShortcuts(list){
 
 // Drive 用動態 import：drive.js 反過來要 store.js 的 driveToken，
 // 靜態互相 import 會踩到模組初始化順序。順便也讓沒用到 Drive 的人不必載這段。
-async function _drive(){ return import("./drive.js?v=1.5.11"); }
+async function _drive(){ return import("./drive.js?v=1.5.13"); }
 
 /**
  * 兩個雲端來源都讀：Firestore（即時、免 Drive 授權）與使用者自己 Drive 的
