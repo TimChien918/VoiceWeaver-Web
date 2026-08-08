@@ -16,7 +16,7 @@
 // 改一次就多一個孤兒檔）。看不看得懂交給資料夾——平放時使用者在自己的雲端硬碟
 // 只會看到一排 5.json、6.json，完全認不出哪個是哪一句。
 
-import { driveToken } from "./store.js?v=1.5.13";
+import { driveToken } from "./store.js?v=1.5.14";
 
 const FILES = "https://www.googleapis.com/drive/v3/files";
 const UPLOAD = "https://www.googleapis.com/upload/drive/v3/files";
@@ -271,13 +271,48 @@ async function modelsParent(){
  * 回 [{name, character, lang, ready, files, bytes, emotions[]}]。
  * ready=false 代表缺權重或缺參考音，那種在電腦端也合成不出來。
  */
+/**
+ * 「Drive 上還沒有語音模型」但使用者明明看得到——這支負責講出它實際看到什麼。
+ *
+ * 空清單有四種完全不同的原因（根資料夾看不到／沒有 Models／語言層是空的／
+ * 角色資料夾裡沒東西），但畫面上長得一模一樣。沒有這個，使用者和我都只能猜。
+ *
+ * 只列資料夾名稱，不讀任何檔案內容。
+ */
+export async function diagnoseVoiceModels(){
+  const root = await folderPath([ROOT_FOLDER], false);
+  if(!root) return { step: "noRoot", root: ROOT_FOLDER };
+  const rootKids = (await listChildren(root, true)).map(f => f.name);
+  const models = await findId(MODELS_DIR, root, true);
+  if(!models){
+    const legacy = rootKids.filter(n => LANG_DIRS.includes(n.toUpperCase()));
+    return { step: legacy.length ? "legacy" : "noModels", rootKids, legacy };
+  }
+  const modelKids = (await listChildren(models, true)).map(f => f.name);
+  const langs = modelKids.filter(n => LANG_DIRS.includes(n.toUpperCase()));
+  const chars = [];
+  for(const lf of await listChildren(models, true)){
+    for(const cf of await listChildren(lf.id, true)) chars.push(`${lf.name}/${cf.name}`);
+  }
+  return { step: "walked", rootKids, modelKids, langs, chars };
+}
+
 export async function listVoiceModels(){
   const parent = await modelsParent();
   if(!parent) return [];
   const out = [];
-  for(const lf of await listChildren(parent, true)){
-    const lang = lf.name.toUpperCase();
-    if(!LANG_DIRS.includes(lang)) continue;
+  const top = await listChildren(parent, true);
+  // 正常版面是 Models/<LANG>/<角色>。但如果底下一個語言資料夾都沒有，
+  // 那多半是使用者自己在 Drive 網頁上把角色資料夾直接拖進 Models/——
+  // 舊版遇到這種情況會**整批靜靜跳過**，畫面顯示「還沒有語音模型」，
+  // 而他明明看得到那些資料夾就在那裡。寧可用未知語言列出來讓他看到。
+  const hasLang = top.some(f => LANG_DIRS.includes(f.name.toUpperCase()));
+  const groups = hasLang
+    ? top.filter(f => LANG_DIRS.includes(f.name.toUpperCase()))
+         .map(f => ({ lang: f.name.toUpperCase(), id: f.id }))
+    : [{ lang: "", id: parent }];
+  for(const lf of groups){
+    const lang = lf.lang;
     for(const cf of await listChildren(lf.id, true)){
       let bytes = 0, files = 0, hasGpt = false, hasSovits = false;
       const emotions = [];
@@ -297,7 +332,7 @@ export async function listVoiceModels(){
         }
       }
       out.push({
-        name: `${cf.name} ${lang}`, character: cf.name, lang,
+        name: lang ? `${cf.name} ${lang}` : cf.name, character: cf.name, lang,
         ready: hasGpt && hasSovits && emotions.length > 0,
         files, bytes, emotions: emotions.sort(),
       });
