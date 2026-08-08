@@ -173,6 +173,7 @@ export const STRINGS = {
                     "ko":"브라우저가 어떤 창이나 탭을 공유할지 묻습니다 — <strong>이 탭</strong>을 선택하세요. 내레이션은 파일에 직접 믹싱되므로 “탭 오디오 공유”를 켤 <em>필요가 없고</em> 마이크도 사용하지 않습니다. 완성된 <code>.webm</code>은 평소 다운로드 폴더에 저장됩니다." },
   "demo.start":   { "zh-TW":"▶ 開始演示", "en":"▶ Start demo", "ja":"▶ デモを開始", "ko":"▶ 데모 시작" },
   "demo.prep":    { "zh-TW":"準備旁白中…", "en":"Preparing narration…", "ja":"ナレーションを準備中…", "ko":"내레이션 준비 중…" },
+  "demo.getReady":{ "zh-TW":"開始錄影——請把滑鼠移開畫面", "en":"Recording — move your mouse off the screen", "ja":"録画開始——マウスを画面外へ", "ko":"녹화 시작 — 마우스를 화면 밖으로" },
   "demo.lines":   { "zh-TW":"句", "en":"lines", "ja":"行", "ko":"문장" },
   "demo.left":    { "zh-TW":"還要約", "en":"about", "ja":"残り約", "ko":"약" },
   "demo.ready":   { "zh-TW":"已經準備好了", "en":"Already prepared", "ja":"準備済み", "ko":"준비 완료" },

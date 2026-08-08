@@ -526,3 +526,7 @@ body.kiosk-on .demo-hud{ top:auto; right:auto;
 .demo-prep-bar > i{ display:block; width:0; height:100%; background:var(--accent);
   transition:width .3s ease; }
 .demo-prep-note{ font-size:.85rem; opacity:.8; }
+
+/* 演示錄影時把游標藏起來。分享畫面時游標一定會入鏡，停在某顆按鈕上
+   整支影片都跟著那顆按鈕發亮，非常干擾。 */
+body.demo-nocursor, body.demo-nocursor * { cursor: none !important; }

@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.27";
-import { speak } from "./speech.js?v=1.5.27";
-import { applyI18n, t } from "./i18n.js?v=1.5.27";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.27";
+import { state } from "./store.js?v=1.5.28";
+import { speak } from "./speech.js?v=1.5.28";
+import { applyI18n, t } from "./i18n.js?v=1.5.28";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.28";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -30,6 +30,16 @@ const TAIL_PAD = 900;
 
 // 演示進行中的旗標。extras.js 的 Telegram 出口會讀它擋下所有外送。
 export function demoRunning() { return !!window.__VW_DEMO__; }
+
+// 「同一時間只准一個聲音」。畫面動作與旁白是並行跑的（畫面才不會等旁白講完
+// 才動），但**聲音不能並行**——示範發聲會直接疊在旁白上，變成兩個人同時講話。
+// 用一條 promise 鏈當發言權：後來的要等前一個放開。
+let _audioChain = Promise.resolve();
+function withAudioFloor(fn) {
+  const next = _audioChain.then(fn, fn);
+  _audioChain = next.catch(() => {});
+  return next;
+}
 
 let _abort = false;          // 使用者按了 Stop
 let _narrate = true;         // 旁白模式
@@ -213,7 +223,7 @@ function buildOverlay() {
       <div id="demoTitleMain"></div>
       <div id="demoTitleSub"></div>
     </div>
-    <div class="demo-hud">
+    <div class="demo-hud" id="demoHud">
       <span id="demoProgress" class="demo-progress"></span>
       <button id="demoStop" class="demo-stop" type="button"></button>
     </div>
@@ -227,6 +237,10 @@ function buildOverlay() {
   $("#demoPrepTitle").textContent = t("demo.prep");
   $("#demoStop").textContent = t("demo.stop");
   $("#demoStop").addEventListener("click", () => { _abort = true; });
+  // 錄影時畫面上沒有 Stop 鈕 → Esc 當中止出口（看不見，但隨時按得到）
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && window.__VW_DEMO__) _abort = true;
+  });
 }
 
 function caption(text) {
@@ -512,10 +526,12 @@ function langDemo(lang) {
 
 // 演示裡「App 講出來的話」（不是旁白）。有預先合成就走混音軌——那條才錄得到；
 // 沒有（沒接電腦端）才退回一般 TTS，至少現場聽得到。
+// 演示裡「App 把句子唸出來」那一下：**固定用瀏覽器內建（Google）語音**，
+// 不用 GPT-SoVITS。理由與 App 端相同——那條路要現場合成，CPU 上一句十幾秒，
+// 畫面早就跳走了，聲音才姍姍來遲蓋在別的段落上。瀏覽器語音是即時的。
+// 而且要等它真的唸完才回來，並且和旁白共用同一個發言權，不會互相疊。
 function demoSpeak(text) {
-  const clip = _clips.get(text);
-  if (clip) { playClip(clip); return; }
-  try { speak(text); } catch { /* 沒有語音也不能擋住演示 */ }
+  return withAudioFloor(() => browserNarrate(text));
 }
 
 async function pickNarrationVoice() {
@@ -669,8 +685,8 @@ function playClip(blob) {
 async function narrate(text) {
   if (!_narrate || !text) return;
   const clip = _clips.get(text);
-  if (clip) { await playClip(clip); return; }
-  await browserNarrate(text);   // 預先合成時失敗（或根本沒有橋接）的那幾句
+  if (clip) { await withAudioFloor(() => playClip(clip)); return; }
+  await withAudioFloor(() => browserNarrate(text));   // 沒預錄成功的那幾句
 }
 
 function browserNarrate(text) {
@@ -853,6 +869,21 @@ async function run(ids, opts) {
     catch (e) { alert("Screen recording was not started: " + (e?.message || e) + "\nThe demo will run without recording."); }
   }
 
+  if (recording) {
+    // 錄影時把 HUD 收起來：進度膠囊與紅色 Stop 是給操作者看的，不是影片內容，
+    // 錄進去就是「18/67」和一顆紅鈕壓在畫面上。中止改用 Esc（見下面的監聽）。
+    $("#demoHud")?.classList.add("hidden");
+    // 游標藏起來，並給一秒鐘把滑鼠移開畫面——分享畫面時游標一定會入鏡，
+    // 停在某個按鈕上整支影片都跟著那顆按鈕發亮。
+    document.body.classList.add("demo-nocursor");
+    const tip = $("#demoPrepNote");
+    $("#demoPrep")?.classList.remove("hidden");
+    $("#demoPrepTitle").textContent = t("demo.getReady");
+    if (tip) tip.textContent = "1";
+    await sleep(1000);
+    $("#demoPrep")?.classList.add("hidden");
+  }
+
   const total = units.reduce((n, u) => n + u.steps.length, 0);
   let done = 0;
   try {
@@ -879,6 +910,8 @@ async function run(ids, opts) {
   } finally {
     restore();
     releaseAwake();
+    document.body.classList.remove("demo-nocursor");
+    $("#demoHud")?.classList.remove("hidden");
     ui().classList.add("hidden");
     window.__VW_DEMO__ = false;
     if (recording) download(await stopRecording());
