@@ -4,8 +4,8 @@
 //   ① http://localhost / 127.0.0.1（瀏覽器例外，限「開網頁的電腦＝語音中心電腦」）
 //   ② https://<主機>.<tailnet>.ts.net（Tailscale serve 的真憑證網址，任何地方可連）
 // 連不上時上層會自動退回瀏覽器原生語音。
-import { state } from "./store.js?v=1.5.19";
-import { t } from "./i18n.js?v=1.5.19";
+import { state } from "./store.js?v=1.5.21";
+import { t } from "./i18n.js?v=1.5.21";
 
 let _base = null;   // 已確認可用的橋接 base URL
 
@@ -143,15 +143,47 @@ export async function localSwitch(name, lang) {
   return j;
 }
 
+// 只合成、不播放 → 回音訊 Blob。
+// 自動演示要用：CPU 上每一句 GPT-SoVITS 要 20~30 秒，邊演邊合成的話錄出來
+// 整支都是空白等待。先把整段旁白合成好、快取起來，錄影時才播得順。
+export async function localSynth(text, opts = {}) {
+  if (!text) return null;
+  if (!_base && !(await detectLocalTts())) throw new Error(t("err.notConnected"));
+  const body = { text };
+  if (opts.name) { body.name = opts.name; body.lang = opts.lang || ""; }
+  else if (state.settings.localVoiceName) {
+    body.name = state.settings.localVoiceName;
+    body.lang = state.settings.localVoiceLang || "";
+  }
+  const emo = opts.emotion || state.settings.voiceEmotion;
+  if (emo) body.emotion = emo;
+  const r = await _fetch("/speak", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  }, 300000);   // 第一句要載權重，會比後面久很多
+  if (!r.ok) {
+    let e = ""; try { e = (await r.json()).error; } catch {}
+    throw new Error(e || ("speak " + r.status));
+  }
+  return await r.blob();
+}
+
 let _audio = null;
 let _audioUrl = null;
 // 合成並播放：帶上目前選定的角色語音，橋接若發現和已載入的不同會自動切換。
 // opts.emotion 可強制指定情緒（重症防呆模式固定「开心」＝GPT-SoVITS 版的語調輕快化）。
+// opts.name/opts.lang 可蓋掉使用者選定的角色（自動演示的英文旁白要固定用 EN 角色，
+//   不能跟著使用者當下選的中文語音跑）。
+// opts.awaitEnd 為真時等到**播完**才 resolve；預設只等開始播。
+//   演示的字幕與畫面要跟旁白對齊，只等 play() 會愈跑愈前面。
 export async function localSpeak(text, opts = {}) {
   if (!text) return;
   if (!_base && !(await detectLocalTts())) throw new Error(t("err.notConnected"));
   const body = { text };
-  if (state.settings.localVoiceName) {
+  if (opts.name) {
+    body.name = opts.name;
+    body.lang = opts.lang || "";
+  } else if (state.settings.localVoiceName) {
     body.name = state.settings.localVoiceName;
     body.lang = state.settings.localVoiceLang || "";
   }
@@ -171,8 +203,14 @@ export async function localSpeak(text, opts = {}) {
   if (_audioUrl) { try { URL.revokeObjectURL(_audioUrl); } catch {} }   // 回收上一段（onended 沒觸發也不洩漏）
   _audioUrl = url;
   _audio = new Audio(url);
-  _audio.onended = () => { try { URL.revokeObjectURL(url); } catch {} if (_audioUrl === url) _audioUrl = null; };
-  await _audio.play();
+  const audio = _audio;
+  const done = new Promise((resolve) => {
+    const fin = () => { try { URL.revokeObjectURL(url); } catch {} if (_audioUrl === url) _audioUrl = null; resolve(); };
+    audio.onended = fin;
+    audio.onerror = fin;      // 播不出來也要放行，否則等它的人會永遠卡住
+  });
+  await audio.play();
+  if (opts.awaitEnd) await done;
 }
 
 export function stopLocalSpeak() {

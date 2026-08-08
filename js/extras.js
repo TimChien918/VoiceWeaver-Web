@@ -1,7 +1,7 @@
 // 進階功能（全部純 API / 瀏覽器）：生圖、定位、相機雲端辨識、Telegram 通報。
-import { state } from "./store.js?v=1.5.19";
-import { runImage } from "./providers.js?v=1.5.19";
-import { t } from "./i18n.js?v=1.5.19";
+import { state } from "./store.js?v=1.5.21";
+import { runImage } from "./providers.js?v=1.5.21";
+import { t } from "./i18n.js?v=1.5.21";
 
 // ── AI 生圖：走多供應商輪詢（pollinations 免金鑰保底）──
 export async function generateImage(prompt){ return runImage(prompt); }
@@ -64,7 +64,17 @@ export async function recognizePhoto(base64Jpeg){
 // ── Telegram 緊急通報 ──
 // 純送出，不等定位。危機通報要用這個——定位最慢會吃掉 6 秒 timeout，
 // 而那 6 秒是家人還不知道出事的 6 秒。
+// 自動演示進行中一律不外送。求救與危機介入演示一次就吵到家人一次，
+// 而且演示是要錄影給別人看的——真的把家人的聊天室洗版是不可接受的。
+// 擋在這一層（而不是各個呼叫點）才擋得乾淨：SOS、危機介入、成績單推播都經過這裡。
+function demoBlocked(what){
+  if(!window.__VW_DEMO__) return false;
+  console.info(`[demo] ${what} 已攔截（自動演示不外送）`);
+  return true;
+}
+
 export async function telegramSend(text){
+  if(demoBlocked("telegramSend")) return true;
   const { tgtoken, tgchat } = state.apiKeys;
   if(!tgtoken || !tgchat) throw new Error(t("err.needTg"));
   const url = `https://api.telegram.org/bot${tgtoken}/sendMessage`;
@@ -89,6 +99,7 @@ export async function telegramNotify(text){
 // ── 危機介入用：媒體上傳與家人回覆輪詢（與 App 的 TelegramClient 同一組 API）──
 
 async function telegramUpload(method, field, blob, filename, caption){
+  if(demoBlocked("telegram " + method)) return true;
   const { tgtoken, tgchat } = state.apiKeys;
   if(!tgtoken || !tgchat) throw new Error(t("err.needTg"));
   const fd = new FormData();

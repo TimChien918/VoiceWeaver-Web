@@ -462,3 +462,67 @@ body.sev-moderate .complex, body.sev-severe .complex{ display:none !important; }
   background:none; border:0; font:inherit; font-size:1rem; font-weight:500;
   color:var(--accent); cursor:pointer; }
 .setback-chev{ font-size:24px; line-height:1; }
+
+/* ── 自動演示 ─────────────────────────────────────────────────────────
+   覆蓋層本身要 pointer-events:none：演示是自己跑的，滑鼠不該被它擋住，
+   只有 Stop 那顆按鈕例外。 */
+.demo-overlay{ position:fixed; inset:0; z-index:9000; pointer-events:none; }
+.demo-overlay.hidden{ display:none; }
+
+.demo-hud{ position:absolute; top:calc(env(safe-area-inset-top) + 10px); right:12px;
+  display:flex; align-items:center; gap:8px; pointer-events:auto; }
+/* 重度模式的「✕ 關閉」也在右上角，兩個疊在一起錄起來很難看。板子出現時 HUD 讓位到左下。 */
+body.kiosk-on .demo-hud{ top:auto; right:auto;
+  bottom:calc(env(safe-area-inset-bottom) + 12px); left:12px; }
+.demo-progress{ background:rgba(0,0,0,.72); color:#fff; font-size:.78rem; font-weight:600;
+  padding:6px 10px; border-radius:999px; white-space:nowrap; max-width:60vw;
+  overflow:hidden; text-overflow:ellipsis; }
+.demo-stop{ background:var(--danger); color:#fff; border:0; border-radius:999px;
+  font:inherit; font-size:.78rem; font-weight:700; padding:6px 12px; cursor:pointer; }
+
+/* 字幕：影片壓縮後小字會糊掉，所以刻意大、粗、高對比，並留兩行的高度。 */
+.demo-caption{ position:absolute; left:50%; transform:translateX(-50%);
+  bottom:calc(env(safe-area-inset-bottom) + 24px);
+  width:min(92%, 900px); box-sizing:border-box;
+  background:rgba(0,0,0,.82); color:#fff; border-radius:12px;
+  padding:14px 20px; font-size:clamp(1rem, 2.4vw, 1.35rem); font-weight:600;
+  line-height:1.45; text-align:center; text-wrap:balance; }
+.demo-caption.hidden{ display:none; }
+
+/* 片頭／片尾卡：蓋掉整個畫面，讓影片有明確的開始與結束。 */
+.demo-titlecard{ position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:14px; text-align:center;
+  background:linear-gradient(160deg, #0a84ff, #0050a0); color:#fff; padding:24px; }
+.demo-titlecard.hidden{ display:none; }
+#demoTitleMain{ font-size:clamp(2rem, 8vw, 4rem); font-weight:800; letter-spacing:-.02em; }
+#demoTitleSub{ font-size:clamp(.95rem, 3vw, 1.4rem); opacity:.9; max-width:22em; }
+
+/* 聚光燈：只加外框與光暈，不動版面——改 padding/transform 會讓周圍元件跳動，
+   錄影時看起來像畫面在抖。 */
+.demo-spot{ outline:3px solid var(--accent) !important; outline-offset:3px;
+  border-radius:10px; box-shadow:0 0 0 9999px rgba(0,0,0,.28); position:relative; z-index:8500;
+  transition:outline-color .2s ease; }
+.demo-press{ filter:brightness(.86); transform:scale(.97); transition:transform .12s ease; }
+
+/* 設定頁的勾選清單 */
+.demo-units{ display:grid; grid-template-columns:repeat(auto-fill, minmax(210px, 1fr));
+  gap:6px; margin:0 0 12px; }
+.demo-unit{ display:flex; align-items:center; gap:8px; padding:8px 10px;
+  border:1px solid var(--line); border-radius:10px; cursor:pointer; }
+.demo-unit input{ flex:none; }
+.demo-unit-ico{ font-size:1.1rem; flex:none; }
+.demo-unit-txt{ display:flex; flex-direction:column; min-width:0; }
+.demo-unit-title{ font-size:.9rem; font-weight:600; }
+.demo-unit-note{ font-size:.72rem; color:var(--muted); }
+
+/* 旁白預先合成的進度（在開始錄影之前，所以不會被錄進去） */
+.demo-prep{ position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:14px;
+  background:rgba(0,0,0,.86); color:#fff; padding:24px; pointer-events:auto; }
+.demo-prep.hidden{ display:none; }
+.demo-prep-title{ font-size:1.25rem; font-weight:700; }
+.demo-prep-bar{ width:min(80%, 460px); height:8px; border-radius:99px;
+  background:rgba(255,255,255,.22); overflow:hidden; }
+.demo-prep-bar > i{ display:block; width:0; height:100%; background:var(--accent);
+  transition:width .3s ease; }
+.demo-prep-note{ font-size:.85rem; opacity:.8; }
