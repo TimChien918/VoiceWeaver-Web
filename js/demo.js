@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.30";
-import { speak } from "./speech.js?v=1.5.30";
-import { applyI18n, t } from "./i18n.js?v=1.5.30";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.30";
+import { state } from "./store.js?v=1.5.31";
+import { speak } from "./speech.js?v=1.5.31";
+import { applyI18n, t } from "./i18n.js?v=1.5.31";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.31";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -353,7 +353,10 @@ function showConfirm() {
 async function confirmYes() {
   await press("#confirmYes");
   $("#confirmDlg")?.classList.add("hidden");
-  demoSpeak(SAMPLE.candidates[0]);
+  // **一定要 await。** 不等的話這一句只是被排進發言權佇列，等它真的輪到、
+  // 播出來的時候畫面早就換到下一段字幕了——看起來就是「字幕跟講的話對不上」。
+  // 等它講完，這一步才算結束。
+  await demoSpeak(SAMPLE.candidates[0]);
 }
 
 /** 在三個候選之間切換給人看，最後回到第一個。 */
@@ -402,7 +405,7 @@ async function aacScaleDemo() {
   chips.forEach((x) => x.classList.toggle("on", +x.dataset.s === (+state.settings.aacScale || 1)));
 }
 
-function rehabDemo() {
+async function rehabDemo() {
   const card = $("#rehabPractice");
   if (!card) return;
   card.classList.remove("hidden");
@@ -412,7 +415,7 @@ function rehabDemo() {
   if (chips) chips.innerHTML = SAMPLE.rehab.split(" ")
     .map((w) => `<span class="chip">${w}</span>`).join("");
   spot(card);
-  demoSpeak(SAMPLE.rehab);
+  await demoSpeak(SAMPLE.rehab);   // 同樣要等講完才前進
 }
 function rehabScore() {
   const box = $("#rehabScore");
@@ -531,6 +534,8 @@ function langDemo(lang) {
 // 畫面早就跳走了，聲音才姍姍來遲蓋在別的段落上。瀏覽器語音是即時的。
 // 而且要等它真的唸完才回來，並且和旁白共用同一個發言權，不會互相疊。
 function demoSpeak(text) {
+  // 排進同一條發言權：前面的旁白一定先講完，才輪到這一句；
+  // 這一句講完放開之後，下一句旁白才拿得到發言權。回傳 promise 讓呼叫端 await。
   return withAudioFloor(() => browserNarrate(text));
 }
 

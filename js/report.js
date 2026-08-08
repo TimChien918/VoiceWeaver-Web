@@ -1,8 +1,8 @@
 // 成績單：讀 Firestore rehabLogs，三段時間維度，統計 + 折線趨勢 + Telegram 匯出。
-import { state } from "./store.js?v=1.5.30";
-import { listRehabLogs } from "./store.js?v=1.5.30";
-import { t } from "./i18n.js?v=1.5.30";
-import { behaviorSummary } from "./behavior.js?v=1.5.30";
+import { state } from "./store.js?v=1.5.31";
+import { listRehabLogs } from "./store.js?v=1.5.31";
+import { t } from "./i18n.js?v=1.5.31";
+import { behaviorSummary } from "./behavior.js?v=1.5.31";
 
 const esc = (x)=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
