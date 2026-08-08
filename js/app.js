@@ -1,27 +1,27 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.18";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.18";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.18";
-import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.18";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.18";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.18";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.18";
-import { bindTap } from "./interaction.js?v=1.5.18";
-import { orderCards } from "./predict.js?v=1.5.18";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.18";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.18";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.18";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.18";
-import { preloadZhConv } from "./zhconv.js?v=1.5.18";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.18";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.18";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.18";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.18";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.18";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.18";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.18";
-import * as Acoustic from "./acoustic.js?v=1.5.18";
-import * as Mic from "./acousticmic.js?v=1.5.18";
-import { applyI18n, t } from "./i18n.js?v=1.5.18";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.19";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.19";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.19";
+import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.19";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.19";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.19";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.19";
+import { bindTap } from "./interaction.js?v=1.5.19";
+import { orderCards } from "./predict.js?v=1.5.19";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.19";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.19";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.19";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.19";
+import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.19";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.19";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.19";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.19";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.19";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.19";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.19";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.19";
+import * as Acoustic from "./acoustic.js?v=1.5.19";
+import * as Mic from "./acousticmic.js?v=1.5.19";
+import { applyI18n, t } from "./i18n.js?v=1.5.19";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -327,6 +327,7 @@ function bindSettings(){
     renderShortcuts();                        // 專屬發音的空狀態與「還沒錄音」提示
     renderCloudList();                        // 雲端／電腦清單的空狀態（實機掃到它留在舊語言）
     renderVoices();                           // 專屬聲音的空狀態與「缺權重」提示
+    buildSettingsIndex();                     // 設定索引的每一列都取自 h3 的譯文
     // 成績單內容是「載入當下」畫出來的（含圖表裡的「尚無資料」與空狀態），
     // 正在看報表時要重跑一次，否則畫面會留著舊語言的字。
     if($('.tab[data-tab="report"]')?.classList.contains("active")) loadReport();
@@ -424,6 +425,80 @@ function renderProviderList(containerId, listKey, catalog){
 }
 
 // ── 分頁 ──
+
+// ── 設定：索引 → 子頁 ──────────────────────────────────────────
+//
+// 設定原本是一長串卡片一路往下堆，找一項要捲很久——而這個 App 的使用者
+// 本來就不擅長在長頁面裡定位。改成 App 那種「一排可點的列 → 點進去才是內容」。
+//
+// 索引從 #settingsCards 底下每張卡的 h3 自動產生：新增一張卡就自動多一列，
+// 不必兩邊各改一次（那種要同步維護的清單遲早會漏）。
+
+/** 目前打開的是第幾張卡；-1 代表停在索引。 */
+let _openCard = -1;
+
+/** 開頭的 emoji 當作圖示，其餘當標題。抓得到 ZWJ 組合字（🧑‍⚕️ 是三個碼位）。 */
+const ICON_RE = /^\s*(\p{Extended_Pictographic}(?:\uFE0F)?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F)?)*)\s*/u;
+
+function settingsCards(){
+  const wrap = $("#settingsCards");
+  return wrap ? [...wrap.children].filter(el => el.classList.contains("card")) : [];
+}
+
+function buildSettingsIndex(){
+  const idx = $("#settingsIndex");
+  if(!idx) return;
+  idx.innerHTML = settingsCards().map((c, i) => {
+    const raw = (c.querySelector("h3")?.textContent || "").trim();
+    const m = raw.match(ICON_RE);
+    const icon = m ? m[1] : "⚙️";
+    const label = (m ? raw.slice(m[0].length) : raw) || t("set.prefs");
+    // 複雜項目在中重度模式要一起隱藏。CSS 是用 body.sev-* .complex 做的，
+    // 所以把 complex 原封不動帶到列上，這條規則就自動涵蓋索引。
+    return `<button type="button" class="setrow${c.classList.contains("complex") ? " complex" : ""}" data-i="${i}">
+        <span class="setrow-ico">${esc(icon)}</span>
+        <span class="setrow-label">${esc(label)}</span>
+        <span class="setrow-chev" aria-hidden="true">›</span>
+      </button>`;
+  }).join("");
+  idx.querySelectorAll(".setrow").forEach(b =>
+    b.addEventListener("click", () => openSettingsCard(+b.dataset.i)));
+  // 重建索引（切語言）時停在原本那一頁，不要把人踢回索引——
+  // 他只是換個語言，不是想離開現在在看的東西。
+  if(_openCard >= 0) openSettingsCard(_openCard); else closeSettingsCard();
+}
+
+function openSettingsCard(i){
+  const cards = settingsCards();
+  const card = cards[i];
+  if(!card) return closeSettingsCard();
+  _openCard = i;
+  cards.forEach((c, n) => c.classList.toggle("hidden", n !== i));
+  $("#settingsIndex")?.classList.add("hidden");
+  const back = $("#btnSettingsBack");
+  const raw = (card.querySelector("h3")?.textContent || "").trim();
+  const m = raw.match(ICON_RE);
+  $("#settingsBackLabel").textContent = m ? raw.slice(m[0].length) : raw;
+  back?.classList.remove("hidden");
+  // 子頁是新的一屏，從頭開始看
+  window.scrollTo({ top: 0, behavior: "auto" });
+}
+
+function closeSettingsCard(){
+  _openCard = -1;
+  settingsCards().forEach(c => c.classList.add("hidden"));
+  $("#settingsIndex")?.classList.remove("hidden");
+  $("#btnSettingsBack")?.classList.add("hidden");
+}
+
+function setupSettingsSubpages(){
+  $("#btnSettingsBack")?.addEventListener("click", () => {
+    closeSettingsCard();
+    window.scrollTo({ top: 0, behavior: "auto" });
+  });
+  buildSettingsIndex();
+}
+
 function setupTabs(){
   $$(".tab").forEach(t=>t.addEventListener("click", ()=>{
     $$(".tab").forEach(x=>x.classList.remove("active"));
@@ -435,6 +510,9 @@ function setupTabs(){
     if(t.dataset.tab==="rehab") renderRehabLogs();
     if(t.dataset.tab==="report") loadReport();
     if(t.dataset.tab==="settings"){
+      // 回到設定一律從索引開始。停在上次那一頁的話，使用者會以為設定頁
+      // 就只有那一區——他不知道要先按返回才看得到其他項目。
+      closeSettingsCard();
       // 每次切進設定就重讀一次雲端，不然手機上剛錄好的東西要重新整理才看得到——
       // 而使用者不會想到要重新整理，只會覺得兩邊沒有同步。
       renderShortcuts().catch(()=>{});
@@ -1093,6 +1171,7 @@ function renderFavorites(){
 function main(){
   applyI18n(state.settings.lang);   // 登入畫面也先翻譯
   setupTabs(); setupActions(); setupAac(); setupCamera(); setupAudioDirect(); bindSettings();
+  setupSettingsSubpages();          // 設定索引（要在 applyI18n 之後：每一列都取自 h3 的譯文）
   setupKiosk({ onExit: ()=>toast(t("care.exited")) });
   setRehabToast(toast); setReportToast(toast); setSpeechToast(toast);
   setupRehab(); setupReport();
@@ -1350,6 +1429,19 @@ function accountLineHtml(){
       >${esc(t("set.voicesSwitchAccount"))}</button></p>`;
 }
 
+/**
+ * 情緒標籤照介面語言顯示成繁體。
+ *
+ * 這些字直接來自 Drive 上的參考音檔名（【开心】…），而曲庫多半是用簡體工具
+ * 建的，所以清單會冒出「厌恶・吃惊・开心」。使用者選的是繁體介面，卻在
+ * 自己的聲音底下看到一排簡體字——只有顯示要轉，Drive 上的檔名不動
+ * （那是三端比對用的鍵，改了就對不上）。
+ */
+function zhDisp(s){
+  return I18N_LANG_IS_TW() ? toTraditionalSync(String(s ?? "")) : String(s ?? "");
+}
+const I18N_LANG_IS_TW = () => (state.settings.lang || "").startsWith("zh");
+
 /** 重新授權 Drive。錯誤與空狀態兩條路都會放這顆，所以抽出來共用。 */
 function bindDriveReauth(){
   $("#btnDriveReauth")?.addEventListener("click", async (ev)=>{
@@ -1418,7 +1510,7 @@ async function renderVoices(){
           >${esc(t("set.voicesReauth"))}</button></p>`);
     }
     try{
-      const drive = await import("./drive.js?v=1.5.18");
+      const drive = await import("./drive.js?v=1.5.19");
       const d = await drive.diagnoseVoiceModels();
       // 同名根要先講。有兩個 VoiceWeaver 時，底下那些「沒有 Models」之類的
       // 描述全部都是在講錯的那一個資料夾，先看到它才不會被帶去修錯的地方。
@@ -1455,7 +1547,7 @@ async function renderVoices(){
       <div style="flex:1;min-width:0">
         <div style="font-size:15px">${esc(v.character)} <span class="tiny muted">${esc(v.lang)}</span></div>
         <div class="tiny" style="color:var(--accent,#007AFF)">
-          ${v.emotions.map(e=>esc(e)).join("・") || "—"}
+          ${v.emotions.map(e=>esc(zhDisp(e))).join("・") || "—"}
         </div>
         ${v.ready ? "" : `<div class="tiny muted">${t("set.voicesNeedsFix")}</div>`}
         ${v.fromCatalog ? `<div class="tiny muted">${t("set.voicesFromCatalog")}</div>` : ""}

@@ -440,3 +440,25 @@ body.sev-moderate .complex, body.sev-severe .complex{ display:none !important; }
 #altPick > .tiny { margin-bottom: 6px; }
 .alt-opt { text-align: left; margin-bottom: 6px; white-space: normal; line-height: 1.45; }
 .alt-opt.on { border-color: var(--accent, #4f6bff); border-width: 2px; font-weight: 600; }
+
+/* ── 設定：索引 → 子頁（與 App 的設定頁同一種導覽） ──
+   原本所有卡片一路往下堆，一頁要捲很久才找得到東西，而這個 App 的使用者
+   本來就不擅長在長頁面裡定位。改成一排可點的列，點進去才看到那一區的內容。 */
+.setrow{ display:flex; align-items:center; gap:12px; width:100%;
+  padding:12px 4px; min-height:52px;              /* 手指點得中（iOS HIG 最小 44） */
+  background:none; border:0; border-bottom:1px solid var(--line);
+  font:inherit; color:var(--fg); text-align:left; cursor:pointer; }
+.setrow:last-child{ border-bottom:0; }
+.setrow:hover{ background:color-mix(in srgb,var(--fg) 4%,transparent); }
+.setrow:active{ background:color-mix(in srgb,var(--fg) 8%,transparent); }
+.setrow-ico{ flex:0 0 auto; width:32px; height:32px; border-radius:8px;
+  display:grid; place-items:center; font-size:17px; background:var(--bg); }
+.setrow-label{ flex:1; min-width:0; font-size:1rem; }
+.setrow-chev{ flex:0 0 auto; color:var(--muted); font-size:20px; line-height:1; }
+
+/* 返回列：獨立一顆大按鈕，不要只有一個小箭頭——手抖也按得中 */
+.setback{ display:flex; align-items:center; gap:4px; min-height:44px;
+  margin:0 0 10px; padding:0 8px 0 2px;
+  background:none; border:0; font:inherit; font-size:1rem; font-weight:500;
+  color:var(--accent); cursor:pointer; }
+.setback-chev{ font-size:24px; line-height:1; }

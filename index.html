@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 <title>VoiceWeaver 網頁版</title>
-<link rel="stylesheet" href="style.css?v=1.5.18" />
+<link rel="stylesheet" href="style.css?v=1.5.19" />
 </head>
 <body>
   <!-- 登入閘 -->
@@ -270,6 +270,14 @@
 
       <!-- 設定 -->
       <section id="tab-settings" class="panel hidden">
+        <!-- 設定改成「索引 → 子頁」：卡片一路往下堆的話，一頁要捲很久才找得到東西，
+             而這個 App 的使用者本來就不擅長在長頁面裡定位。索引由 settingsCards 底下
+             每張卡的 h3 自動產生（見 app.js buildSettingsIndex），新增卡片不用改這裡。 -->
+        <div id="settingsIndex" class="card"></div>
+        <button id="btnSettingsBack" class="setback hidden">
+          <span class="setback-chev">‹</span><span id="settingsBackLabel"></span>
+        </button>
+        <div id="settingsCards">
         <div class="card complex">
           <h3 data-i18n="set.llmTitle">💬 文字供應商（重組／組句）</h3>
           <p class="tiny muted" data-i18n="set.llmDesc">可加多個供應商、同一家也能放多把金鑰；使用時自動輪詢＋失敗備援。</p>
@@ -407,6 +415,7 @@
           <p id="ng_status" class="tiny muted" style="margin-top:6px"></p>
           <p class="tiny muted" data-i18n="ng.hint">授權碼只存在你的帳號、與一份用配對碼保護的雲端文件（只有拿到配對碼才讀得到）。需登入才能同步。</p>
         </div>
+        </div><!-- /settingsCards -->
         <p id="saveState" class="tiny muted center">—</p>
         <p class="tiny muted center" data-i18n="footer">VoiceWeaver 網頁輕量版 · 純 API/瀏覽器、無本地運算</p>
       </section>
@@ -493,7 +502,7 @@
 
   <!-- 你的 Firebase 設定（複製 config.example.js 為 config.js 並填入）。沒有 config.js 時為純本機模式。 -->
   <script>window.__FIREBASE_CONFIG__ = null;</script>
-  <script src="config.js?v=1.5.18" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
-  <script type="module" src="js/app.js?v=1.5.18"></script>
+  <script src="config.js?v=1.5.19" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
+  <script type="module" src="js/app.js?v=1.5.19"></script>
 </body>
 </html>
