@@ -1,27 +1,27 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError } from "./store.js?v=1.5.14";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.14";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.14";
-import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.14";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.14";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.14";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.14";
-import { bindTap } from "./interaction.js?v=1.5.14";
-import { orderCards } from "./predict.js?v=1.5.14";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.14";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.14";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.14";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.14";
-import { preloadZhConv } from "./zhconv.js?v=1.5.14";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.14";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.14";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.14";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.14";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.14";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.14";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.14";
-import * as Acoustic from "./acoustic.js?v=1.5.14";
-import * as Mic from "./acousticmic.js?v=1.5.14";
-import { applyI18n, t } from "./i18n.js?v=1.5.14";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError } from "./store.js?v=1.5.15";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.15";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.15";
+import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.15";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.15";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.15";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.15";
+import { bindTap } from "./interaction.js?v=1.5.15";
+import { orderCards } from "./predict.js?v=1.5.15";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.15";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.15";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.15";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.15";
+import { preloadZhConv } from "./zhconv.js?v=1.5.15";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.15";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.15";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.15";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.15";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.15";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.15";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.15";
+import * as Acoustic from "./acoustic.js?v=1.5.15";
+import * as Mic from "./acousticmic.js?v=1.5.15";
+import { applyI18n, t } from "./i18n.js?v=1.5.15";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -1371,13 +1371,14 @@ async function renderVoices(){
     // 這裡把實際走到哪一步、看到哪些資料夾講出來，他才知道要去修哪裡。
     box.innerHTML = `<p class="tiny muted">${t("set.voicesEmpty")}</p>`;
     try{
-      const drive = await import("./drive.js?v=1.5.14");
+      const drive = await import("./drive.js?v=1.5.15");
       const d = await drive.diagnoseVoiceModels();
       const line =
         d.step === "noRoot"   ? t("set.diagNoRoot").replace("{name}", d.root)
       : d.step === "noModels" ? t("set.diagNoModels").replace("{name}", "VoiceWeaver").replace("{kids}", d.rootKids.join("、") || "—")
       : d.step === "legacy"   ? t("set.diagLegacy").replace("{langs}", d.legacy.join("、"))
       : d.chars.length        ? t("set.diagHasChars").replace("{chars}", d.chars.slice(0,8).join("、"))
+      : d.catalog             ? t("set.diagCatalogOnly").replace("{n}", String(d.catalog))
       : d.langs.length        ? t("set.diagEmptyLang").replace("{langs}", d.langs.join("、"))
       :                         t("set.diagEmptyModels").replace("{kids}", d.modelKids.join("、") || "—");
       box.innerHTML += `<p class="tiny muted" style="opacity:.75">${esc(line)}</p>`;
@@ -1392,6 +1393,7 @@ async function renderVoices(){
           ${v.emotions.map(e=>esc(e)).join("・") || "—"}
         </div>
         ${v.ready ? "" : `<div class="tiny muted">${t("set.voicesNeedsFix")}</div>`}
+        ${v.fromCatalog ? `<div class="tiny muted">${t("set.voicesFromCatalog")}</div>` : ""}
       </div>
       <div class="tiny muted">${fmtBytes(v.bytes)}</div>
     </div>`).join("");

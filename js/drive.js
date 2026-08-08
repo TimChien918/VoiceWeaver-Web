@@ -16,7 +16,7 @@
 // 改一次就多一個孤兒檔）。看不看得懂交給資料夾——平放時使用者在自己的雲端硬碟
 // 只會看到一排 5.json、6.json，完全認不出哪個是哪一句。
 
-import { driveToken } from "./store.js?v=1.5.14";
+import { driveToken } from "./store.js?v=1.5.15";
 
 const FILES = "https://www.googleapis.com/drive/v3/files";
 const UPLOAD = "https://www.googleapis.com/upload/drive/v3/files";
@@ -262,6 +262,59 @@ async function modelsParent(){
   return kids.some(f => LANG_DIRS.includes(f.name.toUpperCase())) ? root : null;
 }
 
+/** 曲庫索引檔的名稱。Mac 的 emotion_models.write_catalog 與 Colab 都產出這一份。 */
+const CATALOG_NAME = "catalog.json";
+
+/**
+ * 讀曲庫索引 catalog.json。找不到或壞掉回 null。
+ *
+ * 為什麼要有這條路：走資料夾是「地面實況」，但它需要 N+1 次 API 呼叫，而且
+ * 只要中間任何一層這個瀏覽器看不見（drive.file 是逐檔授權的），整批就會靜靜消失。
+ * 索引是一個檔案、一次呼叫，而且是產生曲庫的那一端自己寫的——它知道有什麼。
+ *
+ * **兩個地方都要找**：Mac 端 upload_catalog 傳到 VoiceWeaver/，
+ * Colab 直接掛載 Drive 寫在 VoiceWeaver/Models/。同一份東西兩個位置，
+ * 只看其中一邊的話，另一端更新過的曲庫就會被當成不存在。
+ * 兩邊都在時取 updatedAt 較新的那份。
+ */
+async function readCatalog(){
+  const root = await folderPath([ROOT_FOLDER], false);
+  if(!root) return null;
+  const models = await findId(MODELS_DIR, root, true);
+  const ids = [];
+  for(const parent of [models, root]){
+    if(!parent) continue;
+    const id = await findId(CATALOG_NAME, parent, false);
+    if(id && !ids.includes(id)) ids.push(id);
+  }
+  let best = null;
+  for(const id of ids){
+    // 一份壞掉不該讓另一份也讀不到
+    let cat; try{ cat = await readJson(id); }catch{ continue; }
+    if(!cat || !Array.isArray(cat.characters)) continue;
+    if(!best || Number(cat.updatedAt || 0) > Number(best.updatedAt || 0)) best = cat;
+  }
+  return best;
+}
+
+/** catalog.json 的一筆 → 與資料夾掃出來的同一種形狀。 */
+function fromCatalogEntry(c){
+  const lang = String(c.lang || "").toUpperCase();
+  const character = String(c.character || c.name || "").trim();
+  const refs = Array.isArray(c.refs) ? c.refs : [];
+  const bytes = Number(c.bytes || 0) ||
+    (Number(c.gpt?.size || 0) + Number(c.sovits?.size || 0) +
+     refs.reduce((s, r) => s + Number(r.size || 0), 0));
+  return {
+    name: lang ? `${character} ${lang}` : character, character, lang,
+    ready: c.ok !== undefined ? !!c.ok : !!(c.gpt && c.sovits && refs.length),
+    files: (c.gpt ? 1 : 0) + (c.sovits ? 1 : 0) + refs.length,
+    bytes,
+    emotions: Array.isArray(c.emotions) ? [...c.emotions].sort() : [],
+    fromCatalog: true,
+  };
+}
+
 /**
  * 列出 Drive 上的專屬聲音。
  *
@@ -294,7 +347,11 @@ export async function diagnoseVoiceModels(){
   for(const lf of await listChildren(models, true)){
     for(const cf of await listChildren(lf.id, true)) chars.push(`${lf.name}/${cf.name}`);
   }
-  return { step: "walked", rootKids, modelKids, langs, chars };
+  // 索引看得到、資料夾看不到 → 就是 drive.file 逐檔授權擋住了，不是曲庫不見了。
+  // 這是兩者最有鑑別力的一組對照，所以一起回報。
+  let catalog = 0;
+  try{ catalog = (await readCatalog())?.characters?.length || 0; }catch{ /* 沒有就沒有 */ }
+  return { step: "walked", rootKids, modelKids, langs, chars, catalog };
 }
 
 export async function listVoiceModels(){
@@ -338,6 +395,29 @@ export async function listVoiceModels(){
       });
     }
   }
-  out.sort((a, b) => (a.lang + a.character).localeCompare(b.lang + b.character));
-  return out;
+  return mergeWithCatalog(out);
+}
+
+/**
+ * 資料夾掃出來的 ∪ 索引裡有的，以 (語言, 角色) 為鍵。
+ *
+ * 資料夾優先：那是此刻 Drive 上真正躺著的東西，索引可能是上次掃描的舊資料。
+ * 但**索引獨有的也要列出來**——那代表產生曲庫的那一端知道有這個角色，
+ * 只是這個瀏覽器看不到那些檔案（drive.file 逐檔授權，別的程式建的檔看不見）。
+ * 這種時候顯示「還沒有語音模型」，對一個在 Drive 網頁上明明看得到資料夾的人
+ * 是錯的：東西在，是這一端看不到，兩件事該講不一樣的話。
+ */
+async function mergeWithCatalog(walked){
+  let cat = null;
+  // 索引讀不到不該讓已經掃到的角色跟著消失
+  try{ cat = await readCatalog(); }catch{ /* 就只用資料夾掃到的 */ }
+  const key = (v) => `${(v.lang || "").toUpperCase()}/${(v.character || "").trim().toLowerCase()}`;
+  const seen = new Map(walked.map(v => [key(v), v]));
+  for(const c of (cat?.characters || [])){
+    const v = fromCatalogEntry(c);
+    if(!v.character || seen.has(key(v))) continue;
+    seen.set(key(v), v);
+  }
+  return [...seen.values()]
+    .sort((a, b) => (a.lang + a.character).localeCompare(b.lang + b.character));
 }
