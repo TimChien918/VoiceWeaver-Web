@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.28";
-import { speak } from "./speech.js?v=1.5.28";
-import { applyI18n, t } from "./i18n.js?v=1.5.28";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.28";
+import { state } from "./store.js?v=1.5.29";
+import { speak } from "./speech.js?v=1.5.29";
+import { applyI18n, t } from "./i18n.js?v=1.5.29";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.29";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -738,10 +738,33 @@ function recSupported() {
 }
 
 async function startRecording() {
-  const screen = await navigator.mediaDevices.getDisplayMedia({
-    video: { frameRate: 30 },
+  // 只錄「這一個分頁」，不要整個 Chrome。
+  //
+  // preferCurrentTab 會讓瀏覽器的分享視窗直接只給「目前分頁」一個選項——
+  // 使用者不必在「整個螢幕／視窗／分頁」之間挑，也就不會不小心選到整個桌面。
+  // 錄到的內容只有頁面本身：沒有網址列、沒有分頁列、沒有書籤列，也沒有其他視窗。
+  // selfBrowserSurface:"include" 是允許擷取自己這個分頁（預設會排除）；
+  // surfaceSwitching:"exclude" 拿掉錄影中那顆「改分享別的分頁」按鈕，
+  // 免得演示到一半被切走。systemAudio:"exclude" 是因為旁白已經自己混進去了。
+  //
+  // 這些參數舊版瀏覽器不認得會直接忽略，不會報錯；真的不支援時使用者還是
+  // 會看到原本的三選一，選「這個分頁」結果一樣。
+  const wanted = {
+    video: { frameRate: 30, displaySurface: "browser" },
     audio: false,              // 聲音不靠分頁音訊，改用下面的 WebAudio 混音軌
-  });
+    preferCurrentTab: true,
+    selfBrowserSurface: "include",
+    surfaceSwitching: "exclude",
+    systemAudio: "exclude",
+  };
+  let screen;
+  try {
+    screen = await navigator.mediaDevices.getDisplayMedia(wanted);
+  } catch (e) {
+    // 使用者按取消要照實往上丟；只有「參數不支援」才退回最陽春的請求。
+    if (e && (e.name === "NotAllowedError" || e.name === "AbortError")) throw e;
+    screen = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: false });
+  }
   // 影像來自螢幕分享、聲音來自旁白的混音匯流點 → 使用者不必記得勾「分享分頁音訊」，
   // 也不會錄到房間的雜音。旁白播出去的同時就已經進了這條軌。
   const stream = new MediaStream([
