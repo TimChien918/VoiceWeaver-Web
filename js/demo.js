@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.29";
-import { speak } from "./speech.js?v=1.5.29";
-import { applyI18n, t } from "./i18n.js?v=1.5.29";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.29";
+import { state } from "./store.js?v=1.5.30";
+import { speak } from "./speech.js?v=1.5.30";
+import { applyI18n, t } from "./i18n.js?v=1.5.30";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.30";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -726,9 +726,25 @@ function releaseAwake() {
   try { _wake?.release(); } catch {}
   _wake = null;
 }
-// 切到別的分頁再切回來時，鎖已經被系統收走了 → 補一次
+// ── 黑畫面防護 ─────────────────────────────────────────────────────────
+//
+// 分頁擷取在分頁被切走／最小化時，瀏覽器會停止繪製那個分頁——錄下來就是
+// 一段全黑或凍住的畫面，而且是在錄完之後才會發現。Wake Lock 也只在分頁
+// 可見時有效，切走就被系統收走了。
+//
+// 擋不住使用者切分頁（那是他的自由），但可以做到兩件事：
+//   ① 切回來立刻把 Wake Lock 補上，別讓螢幕接著睡著；
+//   ② 記下「這支影片中間有黑掉過」，錄完直接告訴他，不要讓他事後才發現。
+let _wentHidden = false;
+
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible" && window.__VW_DEMO__ && !_wake) keepAwake();
+  if (!window.__VW_DEMO__) return;
+  if (document.visibilityState === "hidden") {
+    _wentHidden = true;          // 這段時間的畫面多半是黑的
+    releaseAwake();              // 反正系統已經收走了，把狀態對齊
+  } else if (!_wake) {
+    keepAwake();
+  }
 });
 
 // ── 螢幕錄影 ────────────────────────────────────────────────────────────
@@ -892,6 +908,7 @@ async function run(ids, opts) {
     catch (e) { alert("Screen recording was not started: " + (e?.message || e) + "\nThe demo will run without recording."); }
   }
 
+  _wentHidden = false;
   if (recording) {
     // 錄影時把 HUD 收起來：進度膠囊與紅色 Stop 是給操作者看的，不是影片內容，
     // 錄進去就是「18/67」和一顆紅鈕壓在畫面上。中止改用 Esc（見下面的監聽）。
@@ -937,7 +954,11 @@ async function run(ids, opts) {
     $("#demoHud")?.classList.remove("hidden");
     ui().classList.add("hidden");
     window.__VW_DEMO__ = false;
-    if (recording) download(await stopRecording());
+    if (recording) {
+      download(await stopRecording());
+      // 錄完才發現中間黑掉一段，等於白錄一次。直接講。
+      if (_wentHidden) alert(t("demo.wentHidden"));
+    }
   }
 }
 
