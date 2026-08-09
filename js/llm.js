@@ -1,24 +1,21 @@
 // 重組 / 組句：走多供應商輪詢（providers.js）。
-import { runLlm, hasLlm } from "./providers.js?v=1.5.46";
-import { t as tr } from "./i18n.js?v=1.5.46";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
-import { DEFENSIVE_SYSTEM_PROMPT } from "./safety.js?v=1.5.46";
-import { toTraditionalSync } from "./zhconv.js?v=1.5.46";
+import { runLlm, hasLlm } from "./providers.js?v=1.5.47";
+import { t as tr } from "./i18n.js?v=1.5.47";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
+import { DEFENSIVE_SYSTEM_PROMPT } from "./safety.js?v=1.5.47";
+import { toTraditionalSync } from "./zhconv.js?v=1.5.47";
 
 // 第一層防禦：黏在所有 system prompt 最前面，先要求模型別生成自傷／絕望字眼。
 // 這只是「請求」不是保證——真正擋住的是 app.js 的分級閘門與 speech.js 的輸出消毒。
 // 提示詞主體維持中文（模型對中文指令的遵從度實測比較穩），但「輸出什麼語言」
 // 必須在執行期才決定，所以改成函式而不是常數——英文介面的使用者打英文碎詞，
 // 唸出來卻是中文，就是因為這裡以前寫死了中文範例、又沒講輸出語言。
-const sysReconstruct = () =>
-  DEFENSIVE_SYSTEM_PROMPT + "\n\n"+
-  // 語言指令放**最前面**，而且用目標語言自己寫。
-  // 只掛在最後那一行不夠：整段提示詞是中文的，模型會整段跟著中文走——
-  // 實測英文介面打英文碎詞，回來的候選句仍然有一半是中文。
-  outputLanguageDirective("candidates[].text") + "\n\n" +
+// 提示詞主體**用目標語言寫**，不是「中文指示 ＋ 最後補一句用英文回答」。
+//
+// 後者實測壓不住：整段規則是中文的，模型就整段跟著中文走——英文介面打英文碎詞，
+// 三個候選回來兩個是中文。加指令沒有用，那是機率性的；把指示本身換成該語言才有效。
+// 中文介面維持中文版（原本就正確，而且措辭是調過的）。
+const RECONSTRUCT_RULES_ZH =
   "你是輔助失語症患者溝通的語言助理。請用碎詞、地點與看到的物品，重組患者最可能想表達的句子。\n"+
-  `\n【輸出語言】重組出來的句子一律用${outLang()}。使用者打什麼語言的碎詞不重要——\n`+
-  `他看到的介面是${outLang()}，唸出去的話就必須是${outLang()}。\n`+
-  "下面的說明與範例是用中文寫的，那只是給你看的指示，不是要你用中文作答。\n"+
   "\n【最重要的原則：貼著碎詞走，不要腦補新內容】\n"+
   "句子裡每個實詞（名詞、動詞、形容詞）都必須能對應回碎詞本身，或明確對應到給定的地點／物件情境；\n"+
   "你只能補上讓句子成立所需的「語法零件」——代名詞（我、你）、助動詞（請、需要、想）、語助詞（了、嗎、呢）——\n"+
@@ -33,7 +30,32 @@ const sysReconstruct = () =>
   '{"candidates":[{"text":"最有把握的說法","confidence":0到100整數},{"text":"另一種說法","confidence":0到100整數},{"text":"再一種說法","confidence":0到100整數}]}\n'+
   "candidates 一定要給滿 3 個，而且要是真的不同的講法（用詞、語氣或詳略不同），\n"+
   "不可以只改標點或語助詞充數——使用者要從這 3 句裡挑一句講出去，三句一樣等於沒得挑。\n"+
-  "每一句都必須遵守上面「貼著碎詞走、不腦補」的規則。第一句放你最有把握的。\n"+
+  "每一句都必須遵守上面「貼著碎詞走、不腦補」的規則。第一句放你最有把握的。";
+
+const RECONSTRUCT_RULES_EN =
+  "You help a person with aphasia communicate. From their fragments, plus the place they are in and the objects they can see, reconstruct the sentence they most likely mean.\n"+
+  "\nMOST IMPORTANT RULE: stay on the fragments. Do not invent content.\n"+
+  "Every content word (noun, verb, adjective) in your sentence must trace back to a fragment, or to the given place/object context.\n"+
+  "You may only add the grammatical glue needed to make it a sentence — pronouns, auxiliaries (please, need, want), articles and particles.\n"+
+  "Never add a new event, time, person or question that the fragments did not mention.\n"+
+  "Example: fragments \"family ... quick\" mean the family should hurry, so write \"Please tell my family to hurry.\"\n"+
+  "Do NOT stretch it into \"I want to know when my family will arrive\" — that is a new question the fragments never contained.\n"+
+  "\nQuestions and question words in the input are hard constraints and must survive: when, where, may I, how long.\n"+
+  "When the fragments are very short, even a single word (\"ten\", \"water\", \"pain\"), still give the most likely everyday sentence. Never refuse and never return an empty string.\n"+
+  "Add only the closest possible glue: \"water\" -> \"I would like some water.\", \"pain\" -> \"It hurts here.\"\n"+
+  "\nconfidence is how sure you are (0-100): 80-100 = almost certain; 50-79 = short or ambiguous fragments but a reasonable guess; 1-49 = you genuinely cannot tell what they mean.\n"+
+  "\nOutput JSON only:\n"+
+  '{"candidates":[{"text":"the reading you are most sure of","confidence":0-100},{"text":"another way to say it","confidence":0-100},{"text":"a third way","confidence":0-100}]}\n'+
+  "Always give exactly 3 candidates, and make them genuinely different (different wording, tone, or level of detail).\n"+
+  "Do not pad the list by changing only punctuation — the user has to pick one of these 3 to say out loud, so three identical ones leave them no choice.\n"+
+  "Every candidate must obey the \"stay on the fragments\" rule above. Put the one you are most sure of first.";
+
+const sysReconstruct = () =>
+  DEFENSIVE_SYSTEM_PROMPT + "\n\n"+
+  // 語言指令放最前面，用目標語言自己寫（recency 之外再加 primacy）
+  outputLanguageDirective("candidates[].text") + "\n\n" +
+  (curLang() === "zh" ? RECONSTRUCT_RULES_ZH : RECONSTRUCT_RULES_EN) + "\n" +
+  // 日／韓：規則用英文寫（比中文不容易把輸出拉去中文），語言指令再壓一次
   "\n" + outputLanguageDirective("candidates[].text");
 
 /** 取樣次數／溫度：溫度太高模型容易編出碎詞裡沒有的內容，0.3 是多樣性與忠實度的折衷。 */
