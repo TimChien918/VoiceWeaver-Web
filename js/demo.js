@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.39";
-import { speak } from "./speech.js?v=1.5.39";
-import { applyI18n, t } from "./i18n.js?v=1.5.39";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.39";
+import { state } from "./store.js?v=1.5.40";
+import { speak } from "./speech.js?v=1.5.40";
+import { applyI18n, t } from "./i18n.js?v=1.5.40";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.40";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -377,7 +377,7 @@ async function confirmYes() {
   // **一定要 await。** 不等的話這一句只是被排進發言權佇列，等它真的輪到、
   // 播出來的時候畫面早就換到下一段字幕了——看起來就是「字幕跟講的話對不上」。
   // 等它講完，這一步才算結束。
-  await speakInOwnVoice(SAMPLE.candidates[0]);
+  await speakDemoSentence(SAMPLE.candidates[0]);
 }
 
 /** 在三個候選之間切換給人看，最後回到第一個。 */
@@ -436,7 +436,7 @@ async function rehabDemo() {
   if (chips) chips.innerHTML = SAMPLE.rehab.split(" ")
     .map((w) => `<span class="chip">${w}</span>`).join("");
   spot(card);
-  await speakInOwnVoice(SAMPLE.rehab);   // 同樣要等講完才前進
+  await speakDemoSentence(SAMPLE.rehab);   // 同樣要等講完才前進
 }
 function rehabScore() {
   const box = $("#rehabScore");
@@ -560,19 +560,19 @@ function langDemo(lang) {
 const VOICE_SYNTH_DELAY = 2000;
 
 /**
- * 用**使用者的專屬聲音**唸一句：亮出合成指示 → 停 2 秒 → 播預錄好的那一段。
+ * 演示裡「App 把句子唸出來」那一下：亮出合成指示 → 停 2 秒 → 用瀏覽器語音唸。
  *
- * 和 demoSpeak 的差別是聲音來源與那 2 秒。demoSpeak 走瀏覽器語音，用在旁白；
- * 這條用在「App 把句子唸出來」的地方，那正是使用者最想在影片裡聽到的東西。
- * prepareNarration 已經把這幾句和旁白一起預錄好了，所以不會真的卡十幾秒。
+ * **和旁白完全獨立。** 不借用旁白的預錄快取——借的話這句話會用旁白角色的
+ * 聲音唸出來，聽起來就變成旁白在唸它，而不是 App 在講話。
+ *
+ * 那 2 秒是給「合成需要時間」用的：真的按下去要等電腦跑 10～30 秒，
+ * 瞬間出聲會讓觀眾以為這個 App 是即時的。
  */
-function speakInOwnVoice(text) {
+function speakDemoSentence(text) {
   return withAudioFloor(async () => {
     const tag = showSynthesizing();
     try { await sleep(VOICE_SYNTH_DELAY); } finally { tag?.remove(); }
-    const clip = _clips.get(text);
-    if (clip) await playClip(clip);
-    else await browserNarrate(text);      // 沒錄到就退回瀏覽器語音，不要沒有聲音
+    await browserNarrate(text);
   });
 }
 
@@ -670,14 +670,13 @@ function mixDest() {
 
 /** 把選到的單元裡所有旁白先合成好（先問 IndexedDB，缺的才合成）。回成功句數。 */
 async function prepareNarration(units, onProgress) {
-  // 除了旁白，演示中「App 自己唸出來」的示範句也要一起合成。
-  // 那些原本走瀏覽器語音，而瀏覽器語音是繞過 WebAudio 的——錄影錄不到，
-  // 影片裡會出現「畫面按了朗讀但沒有聲音」。
-  const spoken = [SAMPLE.candidates[0], SAMPLE.rehab];
-  const texts = [...new Set([
-    ...units.flatMap((u) => u.steps.map((s) => s.cap)),
-    ...spoken,
-  ].filter(Boolean))];
+  // **只錄旁白。** 演示中「App 自己唸出來」的示範句不在這裡——它們走的是
+  // App 自己的發聲路徑（瀏覽器語音），和旁白是兩回事。混進來的話會被用旁白
+  // 角色的聲音合成，聽起來就變成旁白在唸那句話。
+  // （代價：瀏覽器語音繞過 WebAudio，錄影的音軌收不到那一句。見 speakDemoSentence。）
+  const texts = [...new Set(
+    units.flatMap((u) => u.steps.map((s) => s.cap)).filter(Boolean)
+  )];
   // 先把上次存下來的撈回來——這一步是「為什麼第二次不用等」的關鍵。
   for (const x of texts) {
     if (_clips.has(x)) continue;
