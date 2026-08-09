@@ -1,8 +1,8 @@
 // 重組 / 組句：走多供應商輪詢（providers.js）。
-import { runLlm, hasLlm } from "./providers.js?v=1.5.45";
-import { t as tr } from "./i18n.js?v=1.5.45";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
-import { DEFENSIVE_SYSTEM_PROMPT } from "./safety.js?v=1.5.45";
-import { toTraditionalSync } from "./zhconv.js?v=1.5.45";
+import { runLlm, hasLlm } from "./providers.js?v=1.5.46";
+import { t as tr } from "./i18n.js?v=1.5.46";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
+import { DEFENSIVE_SYSTEM_PROMPT } from "./safety.js?v=1.5.46";
+import { toTraditionalSync } from "./zhconv.js?v=1.5.46";
 
 // 第一層防禦：黏在所有 system prompt 最前面，先要求模型別生成自傷／絕望字眼。
 // 這只是「請求」不是保證——真正擋住的是 app.js 的分級閘門與 speech.js 的輸出消毒。
@@ -11,6 +11,10 @@ import { toTraditionalSync } from "./zhconv.js?v=1.5.45";
 // 唸出來卻是中文，就是因為這裡以前寫死了中文範例、又沒講輸出語言。
 const sysReconstruct = () =>
   DEFENSIVE_SYSTEM_PROMPT + "\n\n"+
+  // 語言指令放**最前面**，而且用目標語言自己寫。
+  // 只掛在最後那一行不夠：整段提示詞是中文的，模型會整段跟著中文走——
+  // 實測英文介面打英文碎詞，回來的候選句仍然有一半是中文。
+  outputLanguageDirective("candidates[].text") + "\n\n" +
   "你是輔助失語症患者溝通的語言助理。請用碎詞、地點與看到的物品，重組患者最可能想表達的句子。\n"+
   `\n【輸出語言】重組出來的句子一律用${outLang()}。使用者打什麼語言的碎詞不重要——\n`+
   `他看到的介面是${outLang()}，唸出去的話就必須是${outLang()}。\n`+
@@ -105,6 +109,27 @@ export function hasAnyLlmKey(){ return hasLlm(); }
  * 比單次呼叫更抗模型偶發幻覺。平行送出，總延遲不會變成 N 倍。
  * @returns {Promise<{text:string, confidence:number, alternatives:Array<{text,confidence}>}>}
  */
+/**
+ * 這句話的文字系統符不符合目標語言。
+ *
+ * 提示詞管不住模型——它是機率性的，而且整段指示是中文寫的，本來就會往中文偏。
+ * 所以出口再擋一次：語言不對的候選句直接丟掉。使用者看到看不懂的語言，
+ * 比少一個候選嚴重得多——那三句是要拿去對別人講出口的。
+ */
+function scriptMatches(text, lang){
+  const t = String(text || "");
+  if(!t.trim()) return false;
+  const kana   = /[\u3040-\u309f\u30a0-\u30ff]/.test(t);
+  const hangul = /[\uac00-\ud7af\u1100-\u11ff]/.test(t);
+  const han    = /[\u4e00-\u9fff]/.test(t);
+  switch(lang){
+    case "en": return !kana && !hangul && !han;      // 英文句子不該出現任何漢字假名諺文
+    case "ja": return kana || (han && !hangul);      // 日文一定有假名；純漢字也接受
+    case "ko": return hangul;                        // 韓文一定有諺文
+    default:   return han && !kana && !hangul;       // 中文要有漢字，且不能混假名諺文
+  }
+}
+
 export async function reconstruct(fragments, context){
   const u = `碎詞：${fragments}\n${context?("情境："+context):""}`.trim();
   const results = await Promise.all(
@@ -116,7 +141,15 @@ export async function reconstruct(fragments, context){
   // 這個 message 會被 app.js toast 出來給使用者看，所以不能寫死中文——
   // 英文介面的人重組失敗時會收到一句他看不懂的中文。
   if(!samples.length) throw new Error(tr("toast.reconstructFail"));
-  const ranked = rankBySelfConsistency(samples);
+  let ranked = rankBySelfConsistency(samples);
+
+  // 出口把關：語言不對的丟掉。全部都不對時寧可留著也不要空白——
+  // 語言錯的句子還能靠使用者自己看出來，一個候選都沒有他就完全無法溝通。
+  const want = curLang();
+  const kept = ranked.filter(c => scriptMatches(c.text, want));
+  if(kept.length) ranked = kept;
+  else console.warn("[llm] 候選句語言全部不符（想要 " + want + "），保留原樣", ranked.map(c=>c.text));
+
   return { text: ranked[0].text, confidence: ranked[0].confidence, alternatives: ranked };
 }
 /**
