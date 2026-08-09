@@ -1,9 +1,9 @@
 // TTS / STT：預設用瀏覽器原生 Web Speech API（免金鑰）；
 // 若開啟「本地語音引擎」且連得上語音中心，則改用 GPT-SoVITS 角色語音。
-import { state } from "./store.js?v=1.5.36";
-import { localTtsEnabled, localSpeak, stopLocalSpeak } from "./localtts.js?v=1.5.36";
-import { t } from "./i18n.js?v=1.5.36";
-import { sanitizeForSpeech } from "./safety.js?v=1.5.36";
+import { state } from "./store.js?v=1.5.37";
+import { localTtsEnabled, localSpeak, stopLocalSpeak } from "./localtts.js?v=1.5.37";
+import { t } from "./i18n.js?v=1.5.37";
+import { sanitizeForSpeech } from "./safety.js?v=1.5.37";
 
 // 讓上層（app.js）注入 toast，好把「本地語音失敗、已退回瀏覽器語音」的原因顯示出來，
 // 不再靜默吞錯——否則使用者只覺得「連上了卻無法合成」，看不到真正原因。
@@ -62,6 +62,21 @@ export function speak(text, { safetyChecked = false } = {}){
     return;
   }
   _webSpeak(text);
+}
+
+/**
+ * **直接用瀏覽器內建語音，不走電腦端 GPT-SoVITS。**
+ *
+ * 給「快速求救」那三顆用（我痛／喝水／廁所）。那三顆存在的理由就是
+ * 「現在就要讓旁邊的人聽懂」——走一般發聲路徑的話，開了專屬聲音的人
+ * 要等電腦合成 10～30 秒，電腦沒開更是直接合不出來。需要按「我很痛」
+ * 的那個當下，音色好聽完全不重要，出得了聲才重要。
+ *
+ * 第三層防禦照做：每一個對外發聲的函式都要自己消毒，這條也不例外。
+ */
+export function speakNow(text){
+  if(!text) return;
+  _webSpeak(sanitizeForSpeech(text));
 }
 
 /** 重症／高齡防呆模式專用：語調輕快化（消除機械沉悶感、建立正向反饋）。
