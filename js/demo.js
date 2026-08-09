@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.38";
-import { speak } from "./speech.js?v=1.5.38";
-import { applyI18n, t } from "./i18n.js?v=1.5.38";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.38";
+import { state } from "./store.js?v=1.5.39";
+import { speak } from "./speech.js?v=1.5.39";
+import { applyI18n, t } from "./i18n.js?v=1.5.39";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.39";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -292,7 +292,8 @@ async function press(sel) {
 async function typeInto(sel, text) {
   const el = $(sel);
   if (!el) return;
-  spot(el);
+  spot(el);              // spot() 會 scrollIntoView，輸入框一定看得到
+  await sleep(400);      // 但捲動是 smooth 的，不等它停的話前幾個字是在滑動中打的
   el.focus?.();
   el.value = "";
   for (const ch of text) {
