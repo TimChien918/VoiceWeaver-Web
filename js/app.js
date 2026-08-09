@@ -1,28 +1,26 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade, listAcousticRecordings, saveAcousticRecording } from "./store.js?v=1.5.48";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.48";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.48";
-import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.48";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.48";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.48";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.48";
-import { bindTap } from "./interaction.js?v=1.5.48";
-import { orderCards } from "./predict.js?v=1.5.48";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.48";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.48";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.48";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.48";
-import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.48";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.48";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.48";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.48";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.48";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.48";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.48";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.48";
-import * as Acoustic from "./acoustic.js?v=1.5.48";
-import * as Mic from "./acousticmic.js?v=1.5.48";
-import { applyI18n, t } from "./i18n.js?v=1.5.48";
-import { setupDemo } from "./demo.js?v=1.5.48";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.49";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.49";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.49";
+import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.49";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.49";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.49";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.49";
+import { bindTap } from "./interaction.js?v=1.5.49";
+import { orderCards } from "./predict.js?v=1.5.49";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.49";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.49";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.49";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.49";
+import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.49";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.49";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.49";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.49";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.49";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.49";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.49";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.49";
+import { applyI18n, t } from "./i18n.js?v=1.5.49";
+import { setupDemo } from "./demo.js?v=1.5.49";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -110,7 +108,7 @@ function fillSettings(){
   renderProviderList("#imgList", "imageApis", IMAGE_PROVIDERS);
   // 本地語音引擎
   $("#lt_enabled").checked = !!state.settings.localTtsEnabled;
-  { const el = $("#s_acoustic"); if(el) el.checked = !!state.settings.acousticMatch && Mic.isSupported(); }
+
   renderCloudList();
   // ngrok 雲端通道
   if($("#ng_token")){
@@ -297,21 +295,6 @@ function bindSettings(){
   $("#k_tgtoken").addEventListener("input", e=>{ state.apiKeys.tgtoken=e.target.value.trim(); save(); });
   $("#k_tgchat").addEventListener("input", e=>{ state.apiKeys.tgchat=e.target.value.trim(); save(); });
   $("#s_theme").addEventListener("change", e=>{ state.settings.theme=e.target.value; applyTheme(); save(); });
-  {
-    const el = $("#s_acoustic");
-    if(el){
-      // 瀏覽器不支援就不要讓他打開——打開了也只會在按錄音時才報錯
-      if(!Mic.isSupported()){ el.disabled = true; el.checked = false; }
-      el.addEventListener("change", e=>{
-        state.settings.acousticMatch = e.target.checked; save();
-        renderShortcuts();            // 每一列的「錄音」鈕跟著出現／消失
-        renderAcousticListen();       // 主畫面的「🎧 聽我說」也是
-        // 開關是關著登入的話，登入時那次載入被 acousticOn() 擋掉了，
-        // 這裡補一次；否則要重整頁面才會看到已經錄好的樣板。
-        if(e.target.checked) loadAcousticTemplates();
-      });
-    }
-  }
   $("#s_lang").addEventListener("change", e=>{ state.settings.lang=e.target.value;
     applyI18n(state.settings.lang);          // 先翻譯整個介面（含儲存狀態用的語言）
     populateVoiceDropdown();                  // 角色語音清單即時用快取重新篩選
@@ -328,7 +311,7 @@ function bindSettings(){
     renderClinicalBank(s=>{ const inp=$("#rehabTarget"); if(inp){ inp.value=s; $('.tab[data-tab="rehab"]')?.click(); } });
     renderAac();                              // AAC 分類 chip（「我的」分類名要跟著翻）
     setShortcutMsg("");                       // 舊語言的存檔／錯誤訊息不該留在畫面上
-    renderShortcuts();                        // 專屬發音的空狀態與「還沒錄音」提示
+
     renderCloudList();                        // 雲端／電腦清單的空狀態（實機掃到它留在舊語言）
     renderVoices();                           // 專屬聲音的空狀態與「缺權重」提示
     buildSettingsIndex();                     // 設定索引的每一列都取自 h3 的譯文
@@ -363,7 +346,7 @@ function bindSettings(){
   $("#lt_add").addEventListener("click", addCloudServer);
   $("#lt_url").addEventListener("keydown", e=>{ if(e.key==="Enter"){ e.preventDefault(); addCloudServer(); } });
   $("#lt_detect").addEventListener("click", refreshLocalVoices);
-  $("#btnAcousticListen")?.addEventListener("click", acousticListen);
+
   if($("#lib_refresh")) $("#lib_refresh").addEventListener("click", ()=>renderCloudLibrary().catch(()=>{}));
   if($("#lt_emotion")) $("#lt_emotion").addEventListener("change", e=>{ state.settings.voiceEmotion = e.target.value; save(); });
   // ngrok 雲端通道：token/domain 存帳號雲端 + 鏡射到配對文件（Colab 用配對碼取）
@@ -523,7 +506,7 @@ function setupTabs(){
       closeSettingsCard();
       // 每次切進設定就重讀一次雲端，不然手機上剛錄好的東西要重新整理才看得到——
       // 而使用者不會想到要重新整理，只會覺得兩邊沒有同步。
-      renderShortcuts().catch(()=>{});
+
       renderVoices().catch(()=>{});
     }
   }));
@@ -1160,7 +1143,7 @@ function showApp(user){
   // 生圖與文字重組的「電腦幫忙跑」也一樣（localHas 要偵測過才會是 true）。
   // 背景跑、失敗就安靜略過：連不上本來就會自動退回雲端／瀏覽器語音。
   if(localComputeEnabled()) refreshLocalVoices().catch(()=>{});
-  renderAcousticListen();   // 「🎧 聽我說」預設隱藏，錄過才出現
+
   renderAac(); renderCombo(); renderCcList(); renderQuickSos(); setupCrisis();
   setStoryToast(toast); setupStory();
   setupHeadControl(msg=>{ const el=$("#headStatus"); if(el) el.textContent = msg; });
@@ -1222,7 +1205,7 @@ function main(){
         showApp(u);
         // 登入之後才讀得到雲端樣板。不 await——這是背景工作，
         // 不該讓整個畫面等 Drive 回來（沒網路時那是好幾秒）。
-        loadAcousticTemplates();
+
       } else showLogin();
     },
     onSaved:(msg)=>{ const el=$("#saveState"); if(el) el.textContent=t(msg); }
@@ -1230,208 +1213,8 @@ function main(){
 }
 main();
 
-// ── 我的專屬發音（觸發詞 → 整句話）─────────────────────
-//
-// 文字（觸發詞、要說的話）和錄音兩邊都做得了，樣板存在使用者自己的 Drive 與
-// Firestore，手機與網頁讀同一份——在哪一端錄的，另一端就用得到。
-// 分工的價值在打字：照顧者可以在電腦上一次設好二三十句，
-// 患者只要挑幾句自己講得出來的錄起來就好。
-//
-// 要注意的是門檻是照「錄音那支麥克風」校準的。跨裝置拿來用不會壞，
-// 但靈敏度會偏——所以手機端 pull 時只在本機還沒有這個觸發詞時才整筆採用。
-async function renderShortcuts(){
-  const box = $("#shortcutList");
-  if(!box) return;
-  let list = [];
-  try{ list = await listShortcuts(); }
-  catch(e){ box.innerHTML = `<p class="tiny muted">${t("set.shortcutLoadFail")}${esc(e.message)}</p>`; return; }
 
-  if(!list.length){
-    box.innerHTML = `<p class="tiny muted">${t("set.shortcutEmpty")}</p>`;
-    return;
-  }
-  box.innerHTML = list.map(x=>`
-    <div class="row" style="align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--sep,#eee)">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:15px">${esc(x.spokenPhrase)}</div>
-        <div class="tiny" style="color:var(--accent,#007AFF)">${t("set.shortcutHears")}${quote(esc(x.keyword))}</div>
-        ${x.hasRecording ? "" :
-          `<div class="tiny muted">${t("set.shortcutNeedsRec")}</div>`}
-      </div>
-      ${acousticOn() ? `<button class="btn ghost sc-rec" data-id="${esc(String(x.id))}"
-          data-kw="${esc(x.keyword)}" data-ph="${esc(x.spokenPhrase)}" style="padding:4px 10px">🎙</button>` : ""}
-      <button class="btn ghost sc-del" data-id="${esc(String(x.id))}" style="padding:4px 10px">🗑</button>
-    </div>`).join("");
 
-  box.querySelectorAll(".sc-rec").forEach(b=>{
-    b.addEventListener("click", ()=>enrollShortcut(b.dataset.id, b.dataset.kw, b.dataset.ph));
-  });
-  box.querySelectorAll(".sc-del").forEach(b=>{
-    b.addEventListener("click", async ()=>{
-      try{ await deleteShortcut(b.dataset.id); await renderShortcuts(); }
-      catch(e){ setShortcutMsg(t("set.shortcutDelFail") + e.message); }
-    });
-  });
-}
-
-// ── 網頁端聲波比對（預設關閉）────────────────────────────
-//
-// 演算法整條都在 js/acoustic.js（App 端的 JS 移植，對照測試證實 DTW 距離
-// 相對誤差 3e-7、樣板 blob 位元相同）。這裡只負責錄音與畫面。
-
-function acousticOn(){ return !!state.settings.acousticMatch && Mic.isSupported(); }
-
-/** id → { exemplars, rejectionThreshold, marginThreshold, ... }。
- *
- *  這只是解碼後的快取；真正的家在雲端（Firestore + 使用者自己的 Drive）。
- *  以前它是唯一的存放處，於是重整頁面錄音就沒了，手機上錄好的也永遠讀不進來——
- *  「聽我說」那顆鈕靠 size>0 決定要不要出現，所以整個功能等於不存在。 */
-const _acousticTemplates = new Map();
-
-/** 雲端樣板 → 記憶體快取。登入完成、以及開關打開時各叫一次。 */
-async function loadAcousticTemplates(){
-  if(!acousticOn()) return;
-  let rows = [];
-  try{ rows = await listAcousticRecordings(); }
-  catch(e){ console.warn("[acoustic] 讀不到雲端樣板", e); return; }
-  for(const r of rows){
-    // 單筆壞掉（blob 是別的格式、被截斷）不該讓其他筆一起讀不進來
-    let exemplars;
-    try{ exemplars = Acoustic.decodeExemplarBundle(r.exemplarBlob); }
-    catch(e){ console.warn("[acoustic] 樣板解不開，跳過", r.id, e.message||e); continue; }
-    if(!exemplars.length) continue;
-    _acousticTemplates.set(String(r.id), {
-      id: String(r.id),
-      keyword: r.keyword || "",
-      // 要說的話跟著樣板一起帶進來。命中之後才去 listShortcuts() 查的話，
-      // 使用者講完要再等一次 Firestore ＋ 整個 Drive 資料夾走訪才聽得到回應。
-      spokenPhrase: r.spokenPhrase || "",
-      exemplars,
-      rejectionThreshold: Number(r.rejectionThreshold) || 0,
-      marginThreshold: Number(r.marginThreshold) || 0.15,
-      matchMode: r.matchMode || "Keyword",
-    });
-  }
-  renderAcousticListen();
-}
-
-/**
- * 登錄一句：連錄 MIN_TAKES 次。
- *
- * 每次之間會等使用者按一下，不做自動連錄——構音障礙的使用者需要喘口氣，
- * 而且被催促的錄音彼此差異會變大，門檻就跟著鬆掉。
- */
-async function enrollShortcut(id, keyword, spokenPhrase){
-  if(!acousticOn()) return;
-  const takes = [];
-  try{
-    for(let i=0;i<Mic.MIN_TAKES;i++){
-      setShortcutMsg(t("ac.recordPrompt").replace("{n}", i+1).replace("{total}", Mic.MIN_TAKES));
-      await Mic.startCapture();
-      await waitForStop();
-      const take = await Mic.stopCapture();
-      if(take.peak < Mic.MIN_PEAK){
-        setShortcutMsg(t("ac.tooQuiet"));
-        i--;                       // 沒出聲不算一次，重錄這一輪
-        await new Promise(r=>setTimeout(r,1200));
-        continue;
-      }
-      takes.push(take);
-    }
-    const tpl = Mic.buildTemplate(takes);
-    _acousticTemplates.set(String(id), {
-      id: String(id), keyword,
-      spokenPhrase: spokenPhrase || "",
-      exemplars: tpl.exemplars,
-      rejectionThreshold: tpl.threshold,
-      marginThreshold: 0.15,
-      matchMode: "Keyword",
-    });
-    const okMsg = t("ac.enrolled").replace("{kw}", keyword)
-                   .replace("{spread}", tpl.spread.toFixed(2))
-                   .replace("{thr}", tpl.threshold.toFixed(2));
-    setShortcutMsg(okMsg);
-    renderAcousticListen();   // 錄完第一句就要看得到「聽我說」
-    // 寫回雲端。使用者為了這段錄音講了五次，只留在這個分頁裡是不能接受的：
-    // 重整就沒了，手機也永遠拿不到。失敗不擋——本機這一份已經可以用了。
-    let synced = false;
-    try{
-      synced = await saveAcousticRecording(id, {
-        exemplarBlob: Acoustic.encodeExemplarBundle(tpl.exemplars),
-        rejectionThreshold: tpl.threshold,
-        marginThreshold: 0.15,
-      });
-    }catch(e){ console.warn("[acoustic] 樣板上傳失敗（本機仍可用）", e); }
-    if(!synced) setShortcutMsg(okMsg + " " + t("ac.localOnly"));
-  }catch(e){
-    Mic.cancelCapture();
-    setShortcutMsg(t("ac.enrollFail") + (e.message||e));
-  }
-}
-
-/** 錄音中：按畫面上任一處或等 3 秒自動停。這是最簡單、也最不會卡住的收音方式。 */
-function waitForStop(){
-  return new Promise(res=>{
-    const done = ()=>{ clearTimeout(timer); document.removeEventListener("pointerdown", done); res(); };
-    const timer = setTimeout(done, 3000);
-    document.addEventListener("pointerdown", done, { once:true });
-  });
-}
-
-/** 主畫面的「🎧 聽我說」：錄一次 → 比對 → 命中就唸出對應的整句話。 */
-function renderAcousticListen(){
-  const btn = $("#btnAcousticListen");
-  if(!btn) return;
-  btn.classList.toggle("hidden", !acousticOn() || _acousticTemplates.size === 0);
-}
-
-async function acousticListen(){
-  if(!acousticOn()) return;
-  const templates = [..._acousticTemplates.values()];
-  if(!templates.length){ toast(t("ac.noTemplates")); return; }
-  try{
-    await Mic.startCapture();
-    toast(t("ac.listening"));
-    await waitForStop();
-    const take = await Mic.stopCapture();
-    if(take.peak < Mic.MIN_PEAK){ toast(t("ac.tooQuiet")); return; }
-    const query = Acoustic.extractMfcc(take.samples);
-    const r = Acoustic.match(query, templates);
-    if(r.kind === "hit"){
-      const phrase = await phraseOf(r.template.id);
-      if(phrase){
-        $("#resultText").textContent = phrase; $("#result").classList.remove("hidden");
-        // 一定要過發聲閘門。這句是使用者自己設的沒錯，但設的時候和說出口的
-        // 當下是兩回事——「我很痛」該跳確認卡、危機類該鎖定並接到危機視窗。
-        // 其他每一條發聲路徑都過這一關，只有這裡漏掉的話，等於留了一個後門。
-        if(await passesSpeechGate(phrase)) speak(phrase);
-      }
-    }else if(r.kind === "ambiguous"){
-      // 誤觸發（替他說出沒想說的話）比沒觸發危險得多，所以不確定時讓他自己選
-      toast(t("ac.ambiguous"));
-    }else{
-      toast(t("ac.noMatch"));
-    }
-  }catch(e){ Mic.cancelCapture(); toast(t("ac.listenFail") + (e.message||e)); }
-}
-
-async function phraseOf(id){
-  // 快取先：載入樣板時就一起帶回來了，命中後不必再等一次網路往返
-  const cached = _acousticTemplates.get(String(id));
-  if(cached && cached.spokenPhrase) return cached.spokenPhrase;
-  try{
-    const list = await listShortcuts();
-    return (list.find(x=>String(x.id)===String(id))||{}).spokenPhrase || "";
-  }catch{ return ""; }
-}
-
-/**
- * Firebase 的錯誤碼翻成使用者看得懂的話。
- *
- * 原本是直接把 e.message 貼上去，於是畫面上會出現
- * 「Firebase: Error (auth/cancelled-popup-request).」——照顧者看到這個
- * 只能猜，而他真正需要知道的只有「再按一次就好」還是「要去改設定」。
- */
 function authErrorText(e){
   const code = String((e && (e.code || e.message)) || "");
   if(/popup-blocked/i.test(code))            return t("auth.popupBlocked");
@@ -1467,7 +1250,7 @@ function setupShortcuts(){
       await saveShortcut({ keyword: kw, spokenPhrase: ph });
       $("#sc_keyword").value = ""; $("#sc_phrase").value = "";
       setShortcutMsg(t("set.shortcutSaved"));
-      await renderShortcuts();
+
     }catch(e){ setShortcutMsg(e.message); }
   });
   // Enter 直接送出：照顧者要連續打很多句，每次都要移到按鈕很慢
@@ -1477,7 +1260,7 @@ function setupShortcuts(){
       if(e.key === "Enter"){ e.preventDefault(); btn.click(); }
     });
   });
-  renderShortcuts().catch(()=>{});
+
 }
 
 // ── 我的專屬聲音（Drive 上的語音模型）──────────────────────
@@ -1591,7 +1374,7 @@ async function renderVoices(){
           >${esc(t("set.voicesReauth"))}</button></p>`);
     }
     try{
-      const drive = await import("./drive.js?v=1.5.48");
+      const drive = await import("./drive.js?v=1.5.49");
       const d = await drive.diagnoseVoiceModels();
       // 同名根要先講。有兩個 VoiceWeaver 時，底下那些「沒有 Models」之類的
       // 描述全部都是在講錯的那一個資料夾，先看到它才不會被帶去修錯的地方。
