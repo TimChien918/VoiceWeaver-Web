@@ -23,6 +23,7 @@ export const STRINGS = {
   "btn.loc":     { "zh-TW":"📍 加入地點", "en":"📍 Add location", "ja":"📍 場所を追加", "ko":"📍 위치 추가" },
   "btn.cam":     { "zh-TW":"📷 拍照辨識", "en":"📷 Photo", "ja":"📷 写真認識", "ko":"📷 사진 인식" },
   "btn.compose": { "zh-TW":"✨ 重組成自然句", "en":"✨ Compose sentence", "ja":"✨ 自然な文に", "ko":"✨ 자연스러운 문장으로" },
+  "btn.synthesizing": { "zh-TW":"合成中…", "en":"Synthesising…", "ja":"合成中…", "ko":"합성 중…" },
   "btn.composing": { "zh-TW":"重組中…", "en":"Composing…", "ja":"再構成中…", "ko":"재구성 중…" },
   "btn.speak":   { "zh-TW":"🔊 朗讀", "en":"🔊 Speak", "ja":"🔊 読み上げ", "ko":"🔊 읽기" },
   "btn.regen":   { "zh-TW":"重組一次", "en":"Redo", "ja":"もう一度", "ko":"다시 구성" },

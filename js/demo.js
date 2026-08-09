@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.37";
-import { speak } from "./speech.js?v=1.5.37";
-import { applyI18n, t } from "./i18n.js?v=1.5.37";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.37";
+import { state } from "./store.js?v=1.5.38";
+import { speak } from "./speech.js?v=1.5.38";
+import { applyI18n, t } from "./i18n.js?v=1.5.38";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.38";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -376,7 +376,7 @@ async function confirmYes() {
   // **一定要 await。** 不等的話這一句只是被排進發言權佇列，等它真的輪到、
   // 播出來的時候畫面早就換到下一段字幕了——看起來就是「字幕跟講的話對不上」。
   // 等它講完，這一步才算結束。
-  await demoSpeak(SAMPLE.candidates[0]);
+  await speakInOwnVoice(SAMPLE.candidates[0]);
 }
 
 /** 在三個候選之間切換給人看，最後回到第一個。 */
@@ -435,7 +435,7 @@ async function rehabDemo() {
   if (chips) chips.innerHTML = SAMPLE.rehab.split(" ")
     .map((w) => `<span class="chip">${w}</span>`).join("");
   spot(card);
-  await demoSpeak(SAMPLE.rehab);   // 同樣要等講完才前進
+  await speakInOwnVoice(SAMPLE.rehab);   // 同樣要等講完才前進
 }
 function rehabScore() {
   const box = $("#rehabScore");
@@ -553,6 +553,40 @@ function langDemo(lang) {
 // 不用 GPT-SoVITS。理由與 App 端相同——那條路要現場合成，CPU 上一句十幾秒，
 // 畫面早就跳走了，聲音才姍姍來遲蓋在別的段落上。瀏覽器語音是即時的。
 // 而且要等它真的唸完才回來，並且和旁白共用同一個發言權，不會互相疊。
+// 專屬聲音「合成」的停頓。音檔是預錄好的，所以其實不必等，但真的按下去
+// 是要等電腦跑 10～30 秒的——瞬間出聲會讓觀眾以為這個 App 是即時的。
+// 停的長度是縮短的，但「要等」這件事本身不是演的。
+const VOICE_SYNTH_DELAY = 2000;
+
+/**
+ * 用**使用者的專屬聲音**唸一句：亮出合成指示 → 停 2 秒 → 播預錄好的那一段。
+ *
+ * 和 demoSpeak 的差別是聲音來源與那 2 秒。demoSpeak 走瀏覽器語音，用在旁白；
+ * 這條用在「App 把句子唸出來」的地方，那正是使用者最想在影片裡聽到的東西。
+ * prepareNarration 已經把這幾句和旁白一起預錄好了，所以不會真的卡十幾秒。
+ */
+function speakInOwnVoice(text) {
+  return withAudioFloor(async () => {
+    const tag = showSynthesizing();
+    try { await sleep(VOICE_SYNTH_DELAY); } finally { tag?.remove(); }
+    const clip = _clips.get(text);
+    if (clip) await playClip(clip);
+    else await browserNarrate(text);      // 沒錄到就退回瀏覽器語音，不要沒有聲音
+  });
+}
+
+/** 在結果卡下面掛一行「合成中…」，回傳那個節點讓呼叫端收掉。 */
+function showSynthesizing() {
+  const host = $("#result");
+  if (!host || host.classList.contains("hidden")) return null;
+  const el = document.createElement("div");
+  el.className = "tiny muted";
+  el.style.marginTop = "6px";
+  el.textContent = t("btn.synthesizing");
+  host.appendChild(el);
+  return el;
+}
+
 function demoSpeak(text) {
   // 排進同一條發言權：前面的旁白一定先講完，才輪到這一句；
   // 這一句講完放開之後，下一句旁白才拿得到發言權。回傳 promise 讓呼叫端 await。
