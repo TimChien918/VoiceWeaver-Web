@@ -150,12 +150,12 @@ export const STRINGS = {
   // ── 自動演示 ＋ 螢幕錄影 ──
   // 面板跟著介面語言走；影片裡的旁白與字幕一律英文（報告用途），
   // 單元名稱也保持英文——那是影片的段落名，會出現在錄進去的進度列上。
-  "demo.title":   { "zh-TW":"🎬 自動演示與螢幕錄影", "en":"🎬 Auto demo & screen recording", "ja":"🎬 自動デモと画面録画", "ko":"🎬 자동 데모 및 화면 녹화" },
+  "demo.title":   { "zh-TW":"🎬 功能介紹與螢幕錄影", "en":"🎬 Feature tour & screen recording", "ja":"🎬 機能紹介と画面録画", "ko":"🎬 기능 소개 및 화면 녹화" },
   "demo.desc":    { "zh-TW":"自動走過主要功能並錄影，錄完可以直接放進報告。以下全部是預先寫好的示範資料——不會呼叫 AI、不寫入雲端，也不會送出任何訊息（求救與危機介入只是重演畫面）。",
                     "en":"Walks through the app on its own and records the screen, so you can drop the clip straight into a report. Everything below is scripted sample data — no AI requests, no cloud writes, and no messages are ever sent (the SOS and crisis sections are simulated).",
                     "ja":"アプリを自動で一巡し、画面を録画します。以下はすべて用意されたサンプルデータで、AIを呼ばず、クラウドにも書き込まず、メッセージも送信しません（SOSと危機介入は再現のみ）。",
                     "ko":"앱을 자동으로 한 바퀴 돌며 화면을 녹화합니다. 아래는 모두 미리 작성된 샘플 데이터로 AI 요청도, 클라우드 기록도, 메시지 전송도 하지 않습니다(SOS와 위기 개입은 재현만)." },
-  "demo.sections":{ "zh-TW":"演示單元", "en":"Sections", "ja":"セクション", "ko":"섹션" },
+  "demo.sections":{ "zh-TW":"介紹單元", "en":"Sections", "ja":"セクション", "ko":"섹션" },
   "demo.all":     { "zh-TW":"全選", "en":"Select all", "ja":"すべて選択", "ko":"전체 선택" },
   "demo.none":    { "zh-TW":"清除", "en":"Clear", "ja":"クリア", "ko":"지우기" },
   "demo.unitsN":  { "zh-TW":"個單元", "en":"sections", "ja":"セクション", "ko":"섹션" },
@@ -173,7 +173,7 @@ export const STRINGS = {
                     "en":"Your browser will ask you to confirm — just press Share. Only this tab is captured: no address bar, no tab strip, no other windows. The narration is mixed into the file directly, so you do not need to tick “share tab audio”, and no microphone is used. One run saves two files: -narrated with the voice-over, and -silent with the same footage and no sound, for when you would rather talk over it yourself. Both land in your normal Downloads folder.",
                     "ja":"共有の確認が出たら共有を押すだけです。このタブだけを録画し、アドレスバーやタブバー、他のウィンドウは入りません。ナレーションはファイルに直接ミックスされるため「タブの音声を共有」は不要で、マイクも使いません。1 回の録画で 2 つのファイルが保存されます：ナレーション入りの -narrated と、同じ映像で音声なしの -silent（自分で説明したいとき用）。どちらも通常のダウンロードフォルダに入ります。",
                     "ko":"브라우저가 확인을 요청하면 공유만 누르세요. 이 탭만 녹화되며 주소창·탭 바·다른 창은 들어가지 않습니다. 내레이션은 파일에 직접 믹싱되므로 “탭 오디오 공유”를 켤 필요가 없고 마이크도 사용하지 않습니다. 한 번 녹화하면 두 개의 파일이 저장됩니다: 내레이션이 있는 -narrated, 같은 영상에 소리가 없는 -silent(직접 설명하고 싶을 때용). 둘 다 평소 다운로드 폴더에 들어갑니다." },
-  "demo.start":   { "zh-TW":"▶ 開始演示", "en":"▶ Start demo", "ja":"▶ デモを開始", "ko":"▶ 데모 시작" },
+  "demo.start":   { "zh-TW":"▶ 開始介紹", "en":"▶ Start tour", "ja":"▶ 紹介を開始", "ko":"▶ 소개 시작" },
   "demo.prep":    { "zh-TW":"準備旁白中…", "en":"Preparing narration…", "ja":"ナレーションを準備中…", "ko":"내레이션 준비 중…" },
   "demo.getReady":{ "zh-TW":"開始錄影——請把滑鼠移開畫面", "en":"Recording — move your mouse off the screen", "ja":"録画開始——マウスを画面外へ", "ko":"녹화 시작 — 마우스를 화면 밖으로" },
   "demo.wentHidden":{ "zh-TW":"提醒：錄影途中這個分頁被切走過，那段時間的畫面可能是黑的。要拿去做報告的話建議重錄一次，過程中不要切到其他分頁或視窗。",

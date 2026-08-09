@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.44";
-import { speak } from "./speech.js?v=1.5.44";
-import { applyI18n, t } from "./i18n.js?v=1.5.44";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.44";
+import { state } from "./store.js?v=1.5.45";
+import { speak } from "./speech.js?v=1.5.45";
+import { applyI18n, t } from "./i18n.js?v=1.5.45";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.45";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -108,7 +108,9 @@ function UNITS() {
         { cap: "Voice identity is usually lost along with speech, and rarely addressed.", act: () => goSetting("voice") },
         { cap: "A GPT-SoVITS model is trained from a few minutes of audio recorded before onset.", act: () => captionOnly() },
         { cap: "Weights live in the user's own Google Drive; synthesis runs on their own computer.", act: () => captionOnly() },
-        { cap: "Emotion is selected per sentence by choosing a matching reference clip.", act: () => captionOnly() },
+        // 這一段整段都在講「這是他自己的聲音」，所以一定要真的用 GPT-SoVITS 唸一句。
+        // 用旁白的角色等於自己打自己的臉，用瀏覽器機器音更糟——那是在示範這個功能不存在。
+        { cap: "Emotion is selected per sentence by choosing a matching reference clip.", act: () => speakInOwnVoice(SAMPLE.candidates[0]), hold: 1200 },
       ],
     },
     {
@@ -598,6 +600,22 @@ const VOICE_SYNTH_DELAY = 2000;
  * 那 2 秒是給「合成需要時間」用的：真的按下去要等電腦跑 10～30 秒，
  * 瞬間出聲會讓觀眾以為這個 App 是即時的。音檔是預錄的，所以停的是 2 秒不是 30 秒。
  */
+/**
+ * 用**專屬聲音**（GPT-SoVITS 預錄檔）唸一句。給「我的專屬聲音」那一段用。
+ *
+ * 角色刻意不是旁白那個（見 pickNarrationVoice），觀眾才聽得出這是
+ * 「他自己的聲音」，而不是旁白又講了一句。合不出來才退回瀏覽器語音。
+ */
+function speakInOwnVoice(text) {
+  return withAudioFloor(async () => {
+    const tag = showSynthesizing();
+    try { await sleep(VOICE_SYNTH_DELAY); } finally { tag?.remove(); }
+    const clip = _speakClips.get(text);
+    if (clip) await playClip(clip, 1.0);
+    else await browserNarrate(text);
+  });
+}
+
 function speakDemoSentence(text) {
   return withAudioFloor(async () => {
     const tag = showSynthesizing();
