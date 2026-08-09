@@ -1,28 +1,28 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade, listAcousticRecordings, saveAcousticRecording } from "./store.js?v=1.5.47";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.47";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.47";
-import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.47";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.47";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.47";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.47";
-import { bindTap } from "./interaction.js?v=1.5.47";
-import { orderCards } from "./predict.js?v=1.5.47";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.47";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.47";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.47";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.47";
-import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.47";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.47";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.47";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.47";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.47";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.47";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.47";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.47";
-import * as Acoustic from "./acoustic.js?v=1.5.47";
-import * as Mic from "./acousticmic.js?v=1.5.47";
-import { applyI18n, t } from "./i18n.js?v=1.5.47";
-import { setupDemo } from "./demo.js?v=1.5.47";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade, listAcousticRecordings, saveAcousticRecording } from "./store.js?v=1.5.48";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.48";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.48";
+import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.48";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.48";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.48";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.48";
+import { bindTap } from "./interaction.js?v=1.5.48";
+import { orderCards } from "./predict.js?v=1.5.48";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.48";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.48";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.48";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.48";
+import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.48";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.48";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.48";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.48";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.48";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.48";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.48";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.48";
+import * as Acoustic from "./acoustic.js?v=1.5.48";
+import * as Mic from "./acousticmic.js?v=1.5.48";
+import { applyI18n, t } from "./i18n.js?v=1.5.48";
+import { setupDemo } from "./demo.js?v=1.5.48";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -663,8 +663,10 @@ function setupAudioDirect(){
       $("#resultImg").classList.add("hidden");
       renderAltList();
       addHistory({ original: t("btn.audioDirect"), reconstructed: sentence });
-      markFirstSpeak(); recordInputSource(false);
-      speak(sentence);
+      recordInputSource(true);   // 這條路是語音輸入
+      // **不自動唸**（同 doCompose）。使用者沒按朗讀就發聲，等於替他決定要說什麼；
+      // 而且會繞過 passesSpeechGate，還會在背景觸發電腦端合成——那要 10～30 秒，
+      // 使用者感覺到的是「這個 App 好慢」，其實是在替他唸一句他還沒決定要說的話。
     }catch(e){
       cancelAudioCapture();
       toast(e.message || String(e));
@@ -1589,7 +1591,7 @@ async function renderVoices(){
           >${esc(t("set.voicesReauth"))}</button></p>`);
     }
     try{
-      const drive = await import("./drive.js?v=1.5.47");
+      const drive = await import("./drive.js?v=1.5.48");
       const d = await drive.diagnoseVoiceModels();
       // 同名根要先講。有兩個 VoiceWeaver 時，底下那些「沒有 Models」之類的
       // 描述全部都是在講錯的那一個資料夾，先看到它才不會被帶去修錯的地方。
