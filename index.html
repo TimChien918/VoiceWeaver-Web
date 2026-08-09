@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 <title>VoiceWeaver 網頁版</title>
-<link rel="stylesheet" href="style.css?v=1.5.32" />
+<link rel="stylesheet" href="style.css?v=1.5.33" />
 </head>
 <body>
   <!-- 登入閘 -->
@@ -290,7 +290,7 @@
           <div id="imgList"></div>
           <button id="addImg" class="btn ghost" style="margin-top:8px" data-i18n="set.addImg">＋ 新增生圖供應商</button>
         </div>
-        <div class="card">
+        <div class="card" data-setkey="acoustic">
           <h3 data-i18n="set.shortcutTitle">🎤 我的專屬發音</h3>
           <p class="tiny muted" data-i18n="set.shortcutDesc">設定「聽到哪幾個字 → 說出哪一句」。這裡只負責文字；聲音要在手機上錄，因為比對是拿使用者本人的錄音做波形對齊，別人的聲音沒有用。</p>
           <label class="row" style="align-items:flex-start;gap:8px;margin:6px 0">
@@ -308,7 +308,7 @@
           <button id="addShortcut" class="btn ghost" style="margin-top:8px" data-i18n="set.addShortcut">＋ 新增</button>
           <p id="shortcutMsg" class="tiny muted" style="margin:6px 0 0"></p>
         </div>
-        <div class="card">
+        <div class="card" data-setkey="voice">
           <h3 data-i18n="set.voicesTitle">🗣 我的專屬聲音</h3>
           <p class="tiny muted" data-i18n="set.voicesDesc">存在你自己 Google Drive 的 VoiceWeaver/Models/ 裡，手機、電腦、網頁看到的是同一份。這裡只列出有哪些聲音，合成仍然在電腦或 Colab 上跑。</p>
           <div id="voiceList"></div>
@@ -524,7 +524,7 @@
 
   <!-- 你的 Firebase 設定（複製 config.example.js 為 config.js 並填入）。沒有 config.js 時為純本機模式。 -->
   <script>window.__FIREBASE_CONFIG__ = null;</script>
-  <script src="config.js?v=1.5.32" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
-  <script type="module" src="js/app.js?v=1.5.32"></script>
+  <script src="config.js?v=1.5.33" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
+  <script type="module" src="js/app.js?v=1.5.33"></script>
 </body>
 </html>

@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.32";
-import { speak } from "./speech.js?v=1.5.32";
-import { applyI18n, t } from "./i18n.js?v=1.5.32";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.32";
+import { state } from "./store.js?v=1.5.33";
+import { speak } from "./speech.js?v=1.5.33";
+import { applyI18n, t } from "./i18n.js?v=1.5.33";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.33";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -315,10 +315,15 @@ function goTab(name) {
 // 設定分頁的子選單：走到某一張卡。key 對應卡片標題裡的關鍵字。
 function goSetting(key) {
   goTab("settings");
-  const want = { acoustic: "發音", voice: "聲音", cloud: "同步" }[key] || "";
+  // 用卡片上的 data-setkey 找，不要拿標題文字比中文關鍵字：介面切成
+  // 英文/日文/韓文之後一個都對不上，而且會靜靜地退回第一張卡——
+  // 旁白講發音模型，畫面卻開著文字供應商設定。
+  // cloud 指到「我的專屬聲音」，因為那張卡就是 Drive 曲庫，正是接下來兩句在講的東西。
+  const want = { acoustic: "acoustic", voice: "voice", cloud: "voice" }[key] || key;
   const rows = $$("#settingsIndex .setrow");
-  const hit = rows.find((r) => (r.textContent || "").includes(want)) || rows[0];
-  if (hit) { hit.click(); spot(hit); }
+  const hit = rows.find((r) => r.dataset.setkey === want);
+  if (!hit) { console.warn("[demo] 找不到設定卡", key); return; }
+  hit.click(); spot(hit);
 }
 
 // ── 各單元的腳本內容（樣本資料，不打任何 API）──────────────────────────
