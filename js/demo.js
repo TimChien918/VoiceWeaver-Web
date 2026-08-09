@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.34";
-import { speak } from "./speech.js?v=1.5.34";
-import { applyI18n, t } from "./i18n.js?v=1.5.34";
-import { localSynth, localVoices, detectLocalTts, localSpeak, localTtsEnabled } from "./localtts.js?v=1.5.34";
+import { state } from "./store.js?v=1.5.35";
+import { speak } from "./speech.js?v=1.5.35";
+import { applyI18n, t } from "./i18n.js?v=1.5.35";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.35";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -378,25 +378,7 @@ async function confirmYes() {
   // **一定要 await。** 不等的話這一句只是被排進發言權佇列，等它真的輪到、
   // 播出來的時候畫面早就換到下一段字幕了——看起來就是「字幕跟講的話對不上」。
   // 等它講完，這一步才算結束。
-  await demoSpeakReal(SAMPLE.candidates[0]);
-}
-
-/**
- * 演示裡「App 把句子唸出來」那一下——走**真的**專屬聲音，
- * 包含它在電腦上合成要花的那十幾二十秒。
- *
- * 以前這裡跟旁白共用瀏覽器語音，等於在影片裡演一個使用者實際上不會遇到的
- * 流程：真正的產品就是要等，而且等的是他自己的聲音。連不到電腦端才退回
- * 瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
- */
-function demoSpeakReal(text) {
-  return withAudioFloor(async () => {
-    if (localTtsEnabled()) {
-      try { await localSpeak(text, { awaitEnd: true }); return; }
-      catch (e) { console.warn("[demo] 專屬聲音合成失敗，改用瀏覽器語音", e); }
-    }
-    await browserNarrate(text);
-  });
+  await demoSpeak(SAMPLE.candidates[0]);
 }
 
 /** 在三個候選之間切換給人看，最後回到第一個。 */
