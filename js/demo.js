@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.31";
-import { speak } from "./speech.js?v=1.5.31";
-import { applyI18n, t } from "./i18n.js?v=1.5.31";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.31";
+import { state } from "./store.js?v=1.5.32";
+import { speak } from "./speech.js?v=1.5.32";
+import { applyI18n, t } from "./i18n.js?v=1.5.32";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.32";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -45,6 +45,8 @@ let _abort = false;          // 使用者按了 Stop
 let _narrate = true;         // 旁白模式
 let _voice = null;           // 旁白用的 EN 角色語音 {name, lang}
 let _rec = null, _chunks = [], _recStream = null;
+// 無聲版（同一次錄影的第二個輸出）
+let _recSilent = null, _chunksSilent = [];
 
 // ── 演示單元 ────────────────────────────────────────────────────────────
 // 每個單元是獨立的一段，使用者自己勾。step.cap＝字幕/旁白，step.act＝畫面動作。
@@ -795,32 +797,59 @@ async function startRecording() {
   const mime = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"]
     .find((m) => MediaRecorder.isTypeSupported(m)) || "";
   _chunks = [];
+  _chunksSilent = [];
   _recStream = screen;         // 要停的是螢幕分享本身；混音軌是共用的，不能停
   _rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 4_000_000 } : undefined);
   _rec.ondataavailable = (e) => { if (e.data && e.data.size) _chunks.push(e.data); };
+
+  // 第二份：同一條影像軌，不接旁白那條音軌 → 一次錄，兩個版本。
+  // （簡報時想自己口頭講解就用這一份，不必再跑一次演示、也不必再等一次預錄。）
+  // 影像軌是同一個 MediaStreamTrack，兩個 MediaRecorder 讀同一個來源，
+  // 所以兩支影片的畫面內容與時間軸完全一致。
+  // 建不起來就只出一份——為了第二份讓整次錄影失敗是本末倒置。
+  _recSilent = null;
+  try {
+    const silentMime = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]
+      .find((m) => MediaRecorder.isTypeSupported(m)) || "";
+    const silentStream = new MediaStream(screen.getVideoTracks());
+    _recSilent = new MediaRecorder(silentStream,
+      silentMime ? { mimeType: silentMime, videoBitsPerSecond: 4_000_000 } : undefined);
+    _recSilent.ondataavailable = (e) => { if (e.data && e.data.size) _chunksSilent.push(e.data); };
+  } catch (e) {
+    console.warn("[demo] 無聲版錄不起來，只輸出有旁白的那一份", e);
+    _recSilent = null;
+  }
+
   // 使用者在瀏覽器自己的分享列按「停止分享」→ 也要把檔案收好，不能就這樣丟掉。
   screen.getVideoTracks()[0].addEventListener("ended", () => { _abort = true; });
   _rec.start(1000);
+  try { _recSilent?.start(1000); } catch { _recSilent = null; }
 }
 
+/** @returns {Promise<{narrated: Blob|null, silent: Blob|null}>} */
 function stopRecording() {
-  return new Promise((resolve) => {
-    if (!_rec) { resolve(null); return; }
-    const rec = _rec; _rec = null;
-    rec.onstop = () => {
-      try { _recStream?.getTracks().forEach((t) => t.stop()); } catch {}
-      _recStream = null;
-      resolve(_chunks.length ? new Blob(_chunks, { type: rec.mimeType || "video/webm" }) : null);
-    };
+  const stopOne = (rec, chunks) => new Promise((resolve) => {
+    if (!rec) { resolve(null); return; }
+    rec.onstop = () => resolve(chunks.length
+      ? new Blob(chunks, { type: rec.mimeType || "video/webm" }) : null);
     try { rec.stop(); } catch { resolve(null); }
   });
+  const a = _rec, b = _recSilent;
+  _rec = null; _recSilent = null;
+  // 兩個都停完才收掉螢幕分享——先停軌的話後面那個 recorder 會拿到半截檔案
+  return Promise.all([stopOne(a, _chunks), stopOne(b, _chunksSilent)])
+    .then(([narrated, silent]) => {
+      try { _recStream?.getTracks().forEach((t) => t.stop()); } catch {}
+      _recStream = null;
+      return { narrated, silent };
+    });
 }
 
-function download(blob) {
+function download(blob, suffix = "") {
   if (!blob) return;
   const d = new Date();
   const p = (n) => String(n).padStart(2, "0");
-  const name = `VoiceWeaver-Demo-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.webm`;
+  const name = `VoiceWeaver-Demo-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}${suffix}.webm`;
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url; a.download = name;
@@ -960,7 +989,11 @@ async function run(ids, opts) {
     ui().classList.add("hidden");
     window.__VW_DEMO__ = false;
     if (recording) {
-      download(await stopRecording());
+      const out = await stopRecording();
+      // 一次錄影兩份：有旁白的、以及同一段畫面但沒有聲音的。
+      // 只出得來一份時就只下載那一份，不要跳出「下載失敗」嚇使用者。
+      download(out.narrated, out.silent ? "-narrated" : "");
+      download(out.silent, "-silent");
       // 錄完才發現中間黑掉一段，等於白錄一次。直接講。
       if (_wentHidden) alert(t("demo.wentHidden"));
     }
