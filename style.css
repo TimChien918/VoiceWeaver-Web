@@ -530,3 +530,16 @@ body.kiosk-on .demo-hud{ top:auto; right:auto;
 /* 演示錄影時把游標藏起來。分享畫面時游標一定會入鏡，停在某顆按鈕上
    整支影片都跟著那顆按鈕發亮，非常干擾。 */
 body.demo-nocursor, body.demo-nocursor * { cursor: none !important; }
+
+/* 意圖確認卡（內嵌版）。以前是 .modal 彈窗，會把候選句整個蓋掉——
+   而使用者要確認的正是「我選的是不是這一句」，蓋住它等於把判斷依據拿走。
+   改成長在結果卡裡，與 App 的 AacPendingConfirmCard 一致。 */
+.confirm-inline{
+  margin:12px 0 0; padding:14px;
+  border:2px solid var(--accent,#4c6ef5); border-radius:14px;
+  background:color-mix(in srgb, var(--accent,#4c6ef5) 10%, transparent);
+  text-align:center;
+}
+.confirm-inline h3{ margin:0 0 6px; font-size:1rem; }
+.confirm-inline .row{ display:flex; gap:8px; margin-top:10px; }
+.confirm-inline .row .btn{ flex:1; }

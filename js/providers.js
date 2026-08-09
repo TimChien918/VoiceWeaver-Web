@@ -1,7 +1,7 @@
 // 供應商目錄 + 呼叫器（同供應商可多把金鑰、可多選供應商，自動輪詢+備援）。
-import { state } from "./store.js?v=1.5.50";
-import { localHas, localText, localImage } from "./localtts.js?v=1.5.50";
-import { t } from "./i18n.js?v=1.5.50";
+import { state } from "./store.js?v=1.5.51";
+import { localHas, localText, localImage } from "./localtts.js?v=1.5.51";
+import { t } from "./i18n.js?v=1.5.51";
 
 // 文字 LLM 供應商（標 cors 者較可能可在瀏覽器直接呼叫）
 export const LLM_PROVIDERS = {

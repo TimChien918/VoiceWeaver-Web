@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 <title>VoiceWeaver 網頁版</title>
-<link rel="stylesheet" href="style.css?v=1.5.50" />
+<link rel="stylesheet" href="style.css?v=1.5.51" />
 </head>
 <body>
   <!-- 登入閘 -->
@@ -73,6 +73,20 @@
           <div id="altPick" class="hidden">
             <div class="tiny muted" data-i18n="alt.pickOne">挑一句最接近的</div>
             <div id="altList"></div>
+          </div>
+          <!-- 意圖確認：**內嵌在結果卡裡**，不用彈出視窗（與 App 的
+               AacPendingConfirmCard 一致）。彈窗會把候選句整個蓋掉——而使用者
+               要確認的正是「我選的是不是這一句」，蓋住它等於把判斷依據拿走。 -->
+          <div id="confirmDlg" class="confirm-inline hidden">
+            <p id="confirmWarn" class="tiny hidden" style="color:var(--danger)" data-i18n="confirm.medical">醫療相關內容，請確認</p>
+            <h3 data-i18n="confirm.title">是這個意思嗎？</h3>
+            <div id="confirmEmoji" class="confirm-emoji"></div>
+            <p id="confirmText" class="confirm-text"></p>
+            <p id="confirmReject" class="tiny muted hidden"></p>
+            <div class="row">
+              <button id="confirmYes" class="btn primary" data-i18n="confirm.yes">對，朗讀</button>
+              <button id="confirmNo" class="btn ghost" data-i18n="confirm.no">不對</button>
+            </div>
           </div>
           <!-- 主要動作：病人當下真正要的只有「唸出來」跟「都不對就重來」 -->
           <button id="btnSpeak" class="btn primary block" data-i18n="btn.speak">🔊 朗讀</button>
@@ -487,25 +501,13 @@
 
   <!-- 意圖確認大圖卡：AI 組完句子先讓使用者確認，按「對」才唸出來。
        不識字的使用者靠 emoji + 大字判斷；連續選錯 3 次會提議聯絡家人。 -->
-  <div id="confirmDlg" class="modal hidden">
-    <div class="modal-card confirm-card">
-      <p id="confirmWarn" class="tiny hidden" style="color:var(--danger)" data-i18n="confirm.medical">醫療相關內容，請確認</p>
-      <h3 data-i18n="confirm.title">是這個意思嗎？</h3>
-      <div id="confirmEmoji" class="confirm-emoji"></div>
-      <p id="confirmText" class="confirm-text"></p>
-      <p id="confirmReject" class="tiny muted hidden"></p>
-      <div class="row">
-        <button id="confirmYes" class="btn primary" data-i18n="confirm.yes">對，朗讀</button>
-        <button id="confirmNo" class="btn ghost" data-i18n="confirm.no">不對</button>
-      </div>
-    </div>
   </div>
   <div id="toast" class="toast hidden"></div>
   </div>
 
   <!-- 你的 Firebase 設定（複製 config.example.js 為 config.js 並填入）。沒有 config.js 時為純本機模式。 -->
   <script>window.__FIREBASE_CONFIG__ = null;</script>
-  <script src="config.js?v=1.5.50" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
-  <script type="module" src="js/app.js?v=1.5.50"></script>
+  <script src="config.js?v=1.5.51" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
+  <script type="module" src="js/app.js?v=1.5.51"></script>
 </body>
 </html>

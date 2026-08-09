@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.50";
-import { speak } from "./speech.js?v=1.5.50";
-import { applyI18n, t } from "./i18n.js?v=1.5.50";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.50";
+import { state } from "./store.js?v=1.5.51";
+import { speak } from "./speech.js?v=1.5.51";
+import { applyI18n, t } from "./i18n.js?v=1.5.51";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.51";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
