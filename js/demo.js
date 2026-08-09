@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.35";
-import { speak } from "./speech.js?v=1.5.35";
-import { applyI18n, t } from "./i18n.js?v=1.5.35";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.35";
+import { state } from "./store.js?v=1.5.36";
+import { speak } from "./speech.js?v=1.5.36";
+import { applyI18n, t } from "./i18n.js?v=1.5.36";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.36";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -145,13 +145,12 @@ function UNITS() {
     },
     {
       id: "crisis", icon: "🆘", title: "Crisis intervention", est: 22,
-      note: "Simulated — no message is sent.",
       steps: [
         { cap: "Post-stroke depression is common, and language loss is an independent risk factor.", act: () => goTab("compose") },
         { cap: "Every candidate sentence passes a risk classifier before synthesis.", act: () => captionOnly() },
         { cap: "A positive result blocks output — but blocking alone would leave the user stranded.", act: crisisMock, hold: 1800 },
         { cap: "So the interface changes: paced breathing, minimal controls, family contacted automatically.", act: () => spotSel("#crisisOrb"), hold: 2000 },
-        { cap: "Dismissal requires the contact to respond. Nothing was transmitted during this demo.", act: crisisClose, hold: 1200 },
+        { cap: "Dismissal requires the contact to respond.", act: crisisClose, hold: 1200 },
       ],
     },
     {
@@ -166,11 +165,10 @@ function UNITS() {
     },
     {
       id: "sos", icon: "🚨", title: "Emergency SOS", est: 14,
-      note: "Simulated — no message is sent.",
       steps: [
         { cap: "Composition latency is unacceptable in an emergency.", act: () => goTab("compose") },
         { cap: "Fixed phrases are therefore pinned above every screen, independent of the current tab.", act: () => spotSel("#quickSos"), hold: 1600 },
-        { cap: "The alert carries a location link. No message is transmitted during this demo.", act: () => spotSel("#btnSos"), hold: 1600 },
+        { cap: "The alert carries a location link.", act: () => spotSel("#btnSos"), hold: 1600 },
       ],
     },
     {
