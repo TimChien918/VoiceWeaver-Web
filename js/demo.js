@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.41";
-import { speak } from "./speech.js?v=1.5.41";
-import { applyI18n, t } from "./i18n.js?v=1.5.41";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.41";
+import { state } from "./store.js?v=1.5.43";
+import { speak } from "./speech.js?v=1.5.43";
+import { applyI18n, t } from "./i18n.js?v=1.5.43";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.43";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -66,22 +66,22 @@ function UNITS() {
     {
       id: "compose", icon: "💬", title: "Sentence reconstruction", est: 31,
       steps: [
-        { cap: "Input arrives as isolated content words, with the grammar missing.", act: () => goTab("compose") },
-        { cap: "Typing, dictation, or a photograph all feed the same buffer.", act: () => typeInto("#fragments", "water  rest  now") },
-        { cap: "A language model reconstructs the sentence, constrained by a defensive prompt.", act: async () => { await press("#btnCompose"); await reconstructWait(); } },
-        { cap: "Self-consistency sampling returns three candidates rather than one best guess.", act: showCandidates, hold: 1600 },
-        { cap: "Which candidate gets accepted is logged, and feeds the ranking of later phrasings.", act: pickCandidateDemo, hold: 1200 },
+        { cap: "Input arrives as isolated content words, with the grammar missing.", act: () => goTab("compose"), focus: "#fragments" },
+        { cap: "Typing, dictation, or a photograph all feed the same buffer.", act: () => typeInto("#fragments", "water  rest  now"), focus: "#fragments" },
+        { cap: "A language model reconstructs the sentence, constrained by a defensive prompt.", act: async () => { await press("#btnCompose"); await reconstructWait(); }, focus: "#btnCompose" },
+        { cap: "Self-consistency sampling returns three candidates rather than one best guess.", act: showCandidates, hold: 1600, focus: "#altList" },
+        { cap: "Which candidate gets accepted is logged, and feeds the ranking of later phrasings.", act: pickCandidateDemo, hold: 1200, focus: "#altList" },
         { cap: "A confirmation card stands between the model and the speaker. Nothing is spoken unverified.", act: showConfirm, hold: 1600 },
-        { cap: "Only a confirmed sentence reaches the synthesiser.", act: confirmYes },
+        { cap: "Only a confirmed sentence reaches the synthesiser.", act: confirmYes, focus: "#result" },
       ],
     },
     {
       id: "aac", icon: "🖼", title: "Picture cards (AAC)", est: 24,
       steps: [
         { cap: "For users with no reliable text output, the board replaces the keyboard entirely.", act: () => goTab("aac") },
-        { cap: "Colours follow the Fitzgerald Key: yellow nouns, green verbs, blue adjectives.", act: () => spotSel("#aacCats"), hold: 1400 },
+        { cap: "Colours follow the Fitzgerald Key: yellow nouns, green verbs, blue adjectives.", hold: 1400, focus: "#aacCats" },
         { cap: "Selections accumulate in a buffer instead of firing one word at a time.", act: aacPickDemo },
-        { cap: "The buffer can be spoken verbatim, or passed through the same reconstruction step.", act: () => spotSel("#aacCompose"), hold: 1200 },
+        { cap: "The buffer can be spoken verbatim, or passed through the same reconstruction step.", hold: 1200, focus: "#aacCompose" },
         { cap: "Card size has four steps; the grid drops to two columns, then one, as the type grows.", act: aacScaleDemo },
       ],
     },
@@ -89,8 +89,8 @@ function UNITS() {
       id: "customcards", icon: "📷", title: "Custom photo cards", est: 14,
       steps: [
         { cap: "Symbol sets are drawn for an average user, which is nobody in particular.", act: () => scrollTo("#ccList") },
-        { cap: "Photographs taken by the family become cards, downscaled and stored in the account.", act: () => typeInto("#ccWord", "my grandson") },
-        { cap: "Recognition of familiar objects is what makes the board usable at all.", act: () => spotSel("#ccAdd"), hold: 1400 },
+        { cap: "Photographs taken by the family become cards, downscaled and stored in the account.", act: () => typeInto("#ccWord", "my grandson"), focus: "#ccWord" },
+        { cap: "Recognition of familiar objects is what makes the board usable at all.", hold: 1400, focus: "#ccAdd" },
       ],
     },
     {
@@ -115,7 +115,7 @@ function UNITS() {
       id: "rehab", icon: "🏥", title: "Speech rehabilitation", est: 22,
       steps: [
         { cap: "Alongside communication, the same data supports structured rehabilitation.", act: () => goTab("rehab") },
-        { cap: "The phrase bank is bundled, so practice works with no network and no key.", act: () => spotSel("#rehabBank"), hold: 1400 },
+        { cap: "The phrase bank is bundled, so practice works with no network and no key.", hold: 1400, focus: "#rehabBank" },
         { cap: "The target is spoken, repeated back, and compared.", act: rehabDemo, hold: 1200 },
         { cap: "Scoring is per syllable, and mis-pronounced characters are highlighted individually.", act: rehabScore, hold: 1800 },
       ],
@@ -124,7 +124,7 @@ function UNITS() {
       id: "story", icon: "📖", title: "Picture storytelling", est: 16,
       steps: [
         { cap: "Repetition tasks plateau quickly for milder presentations.", act: () => scrollTo("#storyFrames") },
-        { cap: "Sequenced picture description requires the user to build the discourse themselves.", act: () => spotSel("#storyFrames"), hold: 1400 },
+        { cap: "Sequenced picture description requires the user to build the discourse themselves.", hold: 1400, focus: "#storyFrames" },
         { cap: "Feedback is graded on content, order and causality rather than on wording.", act: storyFeedback, hold: 1800 },
       ],
     },
@@ -132,9 +132,9 @@ function UNITS() {
       id: "report", icon: "📊", title: "Progress report", est: 20,
       steps: [
         { cap: "All of the above is instrumented, without asking the user to record anything.", act: () => goTab("report") },
-        { cap: "Session count, mean score, streak, and proportion of positive vocabulary.", act: () => spotSel(".stats"), hold: 1600 },
+        { cap: "Session count, mean score, streak, and proportion of positive vocabulary.", hold: 1600, focus: ".stats" },
         { cap: "Reaction time, first-candidate acceptance and undo rate act as coping indicators.", act: () => scrollTo("#bmReaction"), hold: 1600 },
-        { cap: "Exports as CSV or PDF for the treating clinician.", act: () => spotSel("#reportCsv"), hold: 1400 },
+        { cap: "Exports as CSV or PDF for the treating clinician.", hold: 1400, focus: "#reportCsv" },
       ],
     },
     {
@@ -150,7 +150,7 @@ function UNITS() {
         { cap: "Post-stroke depression is common, and language loss is an independent risk factor.", act: () => goTab("compose") },
         { cap: "Every candidate sentence passes a risk classifier before synthesis.", act: () => captionOnly() },
         { cap: "A positive result blocks output — but blocking alone would leave the user stranded.", act: crisisMock, hold: 1800 },
-        { cap: "So the interface changes: paced breathing, minimal controls, family contacted automatically.", act: () => spotSel("#crisisOrb"), hold: 2000 },
+        { cap: "So the interface changes: paced breathing, minimal controls, family contacted automatically.", hold: 2000, focus: "#crisisOrb" },
         { cap: "Dismissal requires the contact to respond.", act: crisisClose, hold: 1200 },
       ],
     },
@@ -167,9 +167,9 @@ function UNITS() {
     {
       id: "sos", icon: "🚨", title: "Emergency SOS", est: 14,
       steps: [
-        { cap: "Composition latency is unacceptable in an emergency.", act: () => goTab("compose") },
-        { cap: "Fixed phrases are therefore pinned above every screen, independent of the current tab.", act: () => spotSel("#quickSos"), hold: 1600 },
-        { cap: "The alert carries a location link.", act: () => spotSel("#btnSos"), hold: 1600 },
+        { cap: "Composition latency is unacceptable in an emergency.", act: () => goTab("compose"), focus: "#quickSos" },
+        { cap: "Fixed phrases are therefore pinned above every screen, independent of the current tab.", hold: 1600, focus: "#quickSos" },
+        { cap: "The alert carries a location link.", hold: 1600, focus: "#btnSos" },
       ],
     },
     {
@@ -304,6 +304,35 @@ async function typeInto(sel, text) {
     await sleep(55);
   }
 }
+
+/**
+ * 錄影池：保證「這一步在講的東西」真的在畫面上。
+ *
+ * 以前是每發現一次「旁白在講某個東西、畫面上卻沒有它」就補一次 scrollTo——
+ * 補到第三次就該把它變成規則。每一步用 focus 宣告自己在講哪個元素，
+ * 開講之前捲出來、亮一下，捲完再量一次位置；真的不在畫面上就留一筆警告，
+ * 不要靜靜地錄完一支對不上的影片。
+ */
+async function ensureVisible(sel, cap) {
+  if (!sel) return;                       // 片頭、純解說沒有特定對象
+  const el = $(sel);
+  if (!el) { console.warn(`[demo] 錄影池：找不到「${sel}」 — 「${(cap||"").slice(0,48)}」`); return; }
+  spot(el);                               // spot() 會 scrollIntoView({block:"center"})
+  await sleep(FOCUS_SETTLE);              // 等 smooth 捲動停下來再量，否則會誤報
+  const r = el.getBoundingClientRect();
+  const vh = window.innerHeight || document.documentElement.clientHeight;
+  const vw = window.innerWidth || document.documentElement.clientWidth;
+  const visible = r.bottom > 0 && r.top < vh && r.right > 0 && r.left < vw &&
+                  r.width > 0 && r.height > 0;
+  if (!visible) {
+    console.warn(`[demo] 錄影池：「${sel}」不在畫面上 — 「${(cap||"").slice(0,48)}」`,
+                 { top: Math.round(r.top), bottom: Math.round(r.bottom), viewportH: vh });
+  }
+}
+
+// 捲動動畫跑完要一點時間。不等就開始講，觀眾看到的是「畫面還在滑」而旁白
+// 已經在講那個東西了；而且太早量位置也會誤報。
+const FOCUS_SETTLE = 650;
 
 function goTab(name) {
   clearSpot();
@@ -1045,9 +1074,16 @@ async function run(ids, opts) {
         done++;
         progress(`${u.icon} ${u.title} · ${done}/${total}`);
         caption(s.cap);
-        // 動作與旁白同時跑：先讓畫面動起來，旁白在講的同時使用者已經看到變化。
         const t0 = Date.now();
+        // 動作與旁白同時跑：先讓畫面動起來，旁白在講的同時使用者已經看到變化。
         const acting = Promise.resolve().then(() => s.act?.()).catch(() => {});
+        // ── 錄影池 ──
+        // 旁白開始講之前，先把這一步要講的地方露出來並確認它真的看得見。
+        //
+        // **一定要在 acting 之後**：切分頁是寫在 act 裡的（goTab），先檢查的話
+        // 量到的是上一個分頁的畫面，會誤報而且捲錯地方。goTab 是同步的，
+        // 所以 acting 這個 microtask 一排下去分頁就換好了。
+        await ensureVisible(s.focus, s.cap);
         await Promise.all([acting, narrate(s.cap)]);
         if (_narrate && s.cap) await sleep(TAIL_PAD);   // 講完再讓畫面多停一下
         await sleep(s.hold ?? 0);

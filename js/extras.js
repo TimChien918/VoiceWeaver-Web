@@ -1,7 +1,7 @@
 // 進階功能（全部純 API / 瀏覽器）：生圖、定位、相機雲端辨識、Telegram 通報。
-import { state } from "./store.js?v=1.5.41";
-import { runImage } from "./providers.js?v=1.5.41";
-import { t } from "./i18n.js?v=1.5.41";
+import { state } from "./store.js?v=1.5.43";
+import { runImage } from "./providers.js?v=1.5.43";
+import { t } from "./i18n.js?v=1.5.43";
 
 // ── AI 生圖：走多供應商輪詢（pollinations 免金鑰保底）──
 export async function generateImage(prompt){ return runImage(prompt); }
