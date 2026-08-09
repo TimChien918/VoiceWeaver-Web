@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.33";
-import { speak } from "./speech.js?v=1.5.33";
-import { applyI18n, t } from "./i18n.js?v=1.5.33";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.33";
+import { state } from "./store.js?v=1.5.34";
+import { speak } from "./speech.js?v=1.5.34";
+import { applyI18n, t } from "./i18n.js?v=1.5.34";
+import { localSynth, localVoices, detectLocalTts, localSpeak, localTtsEnabled } from "./localtts.js?v=1.5.34";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -63,11 +63,11 @@ function UNITS() {
       ],
     },
     {
-      id: "compose", icon: "💬", title: "Sentence reconstruction", est: 26,
+      id: "compose", icon: "💬", title: "Sentence reconstruction", est: 31,
       steps: [
         { cap: "Input arrives as isolated content words, with the grammar missing.", act: () => goTab("compose") },
         { cap: "Typing, dictation, or a photograph all feed the same buffer.", act: () => typeInto("#fragments", "water  rest  now") },
-        { cap: "A language model reconstructs the sentence, constrained by a defensive prompt.", act: () => press("#btnCompose") },
+        { cap: "A language model reconstructs the sentence, constrained by a defensive prompt.", act: async () => { await press("#btnCompose"); await reconstructWait(); } },
         { cap: "Self-consistency sampling returns three candidates rather than one best guess.", act: showCandidates, hold: 1600 },
         { cap: "Which candidate gets accepted is logged, and feeds the ranking of later phrasings.", act: pickCandidateDemo, hold: 1200 },
         { cap: "A confirmation card stands between the model and the speaker. Nothing is spoken unverified.", act: showConfirm, hold: 1600 },
@@ -337,6 +337,21 @@ const SAMPLE = {
   story: "The AI teacher: good sequence and clear cause and effect. Try to add who the man was speaking to.",
 };
 
+// 按下重組之後真的要轉。候選句本身仍是固定樣本（錄影途中被 LLM 逾時或
+// 網路一抖毀掉整支影片是不能接受的），但**等待不能假**：用的是真的那顆
+// 按鈕的 disabled ＋「重組中…」文字，轉的是真實長度。直接跳出結果會讓
+// 觀眾以為這個 App 是即時的。
+const RECONSTRUCT_WAIT = 4500;
+
+async function reconstructWait() {
+  const btn = $("#btnCompose");
+  if (!btn) { await sleep(RECONSTRUCT_WAIT); return; }
+  const label = btn.textContent;
+  btn.disabled = true; btn.textContent = t("btn.composing");
+  try { await sleep(RECONSTRUCT_WAIT); }
+  finally { btn.disabled = false; btn.textContent = label; }
+}
+
 function showCandidates() {
   const res = $("#result"), txt = $("#resultText"), pick = $("#altPick"), list = $("#altList");
   if (!res) return;
@@ -363,7 +378,25 @@ async function confirmYes() {
   // **一定要 await。** 不等的話這一句只是被排進發言權佇列，等它真的輪到、
   // 播出來的時候畫面早就換到下一段字幕了——看起來就是「字幕跟講的話對不上」。
   // 等它講完，這一步才算結束。
-  await demoSpeak(SAMPLE.candidates[0]);
+  await demoSpeakReal(SAMPLE.candidates[0]);
+}
+
+/**
+ * 演示裡「App 把句子唸出來」那一下——走**真的**專屬聲音，
+ * 包含它在電腦上合成要花的那十幾二十秒。
+ *
+ * 以前這裡跟旁白共用瀏覽器語音，等於在影片裡演一個使用者實際上不會遇到的
+ * 流程：真正的產品就是要等，而且等的是他自己的聲音。連不到電腦端才退回
+ * 瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
+ */
+function demoSpeakReal(text) {
+  return withAudioFloor(async () => {
+    if (localTtsEnabled()) {
+      try { await localSpeak(text, { awaitEnd: true }); return; }
+      catch (e) { console.warn("[demo] 專屬聲音合成失敗，改用瀏覽器語音", e); }
+    }
+    await browserNarrate(text);
+  });
 }
 
 /** 在三個候選之間切換給人看，最後回到第一個。 */
