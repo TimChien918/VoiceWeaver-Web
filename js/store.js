@@ -513,6 +513,74 @@ async function _driveWrite(docId, rec){
   }catch(e){ /* 沒授權／離線都很正常 */ }
 }
 
+/**
+ * 取回**帶錄音**的樣板（給網頁端聲波比對用）。
+ *
+ * listShortcuts() 只回文字（觸發詞／要說的話），比對需要的是 exemplarBlob 本身。
+ * 兩個來源都讀、以 id 合併，Drive 優先——Drive 那份是使用者自己資料夾裡的檔案，
+ * 手機錄好音一定會寫在那裡；Firestore 那份在匿名登入或權限沒開時才是唯一來源。
+ * 沒有 blob 的一律不回：那種樣板拿去比對永遠不會命中，只會讓「聽我說」看起來壞掉。
+ */
+export async function listAcousticRecordings(){
+  if(!(_db && state.uid && state.uid!=="local")) return [];
+  const byId = new Map();
+
+  // Firestore 先放，Drive 後放蓋過去（同一筆以 Drive 為準）
+  try{
+    const snap = await getDocs(collection(_db,"users",state.uid,"acousticTemplates"));
+    for(const d of snap.docs){
+      const x = d.data() || {};
+      if(!(x.exemplarBlob||"").length) continue;
+      byId.set(String(d.id), { ...x, id: String(d.id) });
+    }
+  }catch(e){ /* 讀不到就靠 Drive */ }
+
+  try{
+    const d = await _drive();
+    if(d.driveReady()){
+      for(const x of await d.listAcoustic()){
+        if(!(x && (x.exemplarBlob||"").length)) continue;
+        byId.set(String(x.id||""), { ...x, id: String(x.id||"") });
+      }
+    }
+  }catch(e){ /* 沒授權／離線都很正常 */ }
+
+  return [...byId.values()].filter(x=>x.id);
+}
+
+/**
+ * 把網頁上錄好的樣板寫回雲端，手機才拿得到（換裝置不必重錄五次）。
+ *
+ * 門檻是照**這支麥克風**校準出來的，所以一起寫上去；手機端 pull 時本來就
+ * 只有在本機還沒有這個觸發詞時才會採用整筆，不會拿網頁的門檻去蓋手機自己的。
+ */
+export async function saveAcousticRecording(id, { exemplarBlob, rejectionThreshold, marginThreshold }){
+  const docId = String(id);
+  const patch = {
+    exemplarBlob: exemplarBlob || "",
+    rejectionThreshold: Number(rejectionThreshold) || 0,
+    marginThreshold: Number(marginThreshold) || 0.15,
+    updatedAt: Date.now(),
+  };
+  if(!(_db && state.uid && state.uid!=="local")) return false;
+  let ok = false;
+  try{
+    await setDoc(doc(_db,"users",state.uid,"acousticTemplates",docId), patch, { merge:true });
+    ok = true;
+  }catch(e){ /* 下面還有 Drive 那條路 */ }
+  try{
+    const d = await _drive();
+    if(d.driveReady()){
+      // 讀回原本那筆，才不會把觸發詞／要說的話清成空字串
+      const existing = (await d.readAcoustic(docId)) || {};
+      await d.saveAcoustic({ ...existing, ...patch, id: docId,
+        category: existing.category || "Custom" });
+      ok = true;
+    }
+  }catch(e){ /* 同上 */ }
+  return ok;
+}
+
 export async function deleteShortcut(id){
   if(_db && state.uid && state.uid!=="local"){
     // 兩邊都要刪。少刪任何一邊，下次取回都會把使用者刻意刪掉的救回來——

@@ -1,4 +1,4 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.31";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listShortcuts, saveShortcut, deleteShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade, listAcousticRecordings, saveAcousticRecording } from "./store.js?v=1.5.31";
 import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.31";
 import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.31";
 import { speak, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.31";
@@ -306,6 +306,9 @@ function bindSettings(){
         state.settings.acousticMatch = e.target.checked; save();
         renderShortcuts();            // 每一列的「錄音」鈕跟著出現／消失
         renderAcousticListen();       // 主畫面的「🎧 聽我說」也是
+        // 開關是關著登入的話，登入時那次載入被 acousticOn() 擋掉了，
+        // 這裡補一次；否則要重整頁面才會看到已經錄好的樣板。
+        if(e.target.checked) loadAcousticTemplates();
       });
     }
   }
@@ -1202,7 +1205,14 @@ function main(){
   bindLogin("#btnAnon", loginAnon);
 
   initAuth({
-    onUser:(u)=>{ if(u) showApp(u); else showLogin(); },
+    onUser:(u)=>{
+      if(u){
+        showApp(u);
+        // 登入之後才讀得到雲端樣板。不 await——這是背景工作，
+        // 不該讓整個畫面等 Drive 回來（沒網路時那是好幾秒）。
+        loadAcousticTemplates();
+      } else showLogin();
+    },
     onSaved:(msg)=>{ const el=$("#saveState"); if(el) el.textContent=t(msg); }
   });
 }
@@ -1210,10 +1220,13 @@ main();
 
 // ── 我的專屬發音（觸發詞 → 整句話）─────────────────────
 //
-// 網頁版只做文字設定。錄音留在手機上——比對是拿使用者本人的錄音做波形對齊，
-// 照顧者在電腦上錄自己的聲音對患者完全沒用。
-// 這樣切分的價值在打字：照顧者可以在電腦上一次設好二三十句，
-// 患者只要拿手機把每句錄幾次就好。
+// 文字（觸發詞、要說的話）和錄音兩邊都做得了，樣板存在使用者自己的 Drive 與
+// Firestore，手機與網頁讀同一份——在哪一端錄的，另一端就用得到。
+// 分工的價值在打字：照顧者可以在電腦上一次設好二三十句，
+// 患者只要挑幾句自己講得出來的錄起來就好。
+//
+// 要注意的是門檻是照「錄音那支麥克風」校準的。跨裝置拿來用不會壞，
+// 但靈敏度會偏——所以手機端 pull 時只在本機還沒有這個觸發詞時才整筆採用。
 async function renderShortcuts(){
   const box = $("#shortcutList");
   if(!box) return;
@@ -1234,12 +1247,12 @@ async function renderShortcuts(){
           `<div class="tiny muted">${t("set.shortcutNeedsRec")}</div>`}
       </div>
       ${acousticOn() ? `<button class="btn ghost sc-rec" data-id="${esc(String(x.id))}"
-          data-kw="${esc(x.keyword)}" style="padding:4px 10px">🎙</button>` : ""}
+          data-kw="${esc(x.keyword)}" data-ph="${esc(x.spokenPhrase)}" style="padding:4px 10px">🎙</button>` : ""}
       <button class="btn ghost sc-del" data-id="${esc(String(x.id))}" style="padding:4px 10px">🗑</button>
     </div>`).join("");
 
   box.querySelectorAll(".sc-rec").forEach(b=>{
-    b.addEventListener("click", ()=>enrollShortcut(b.dataset.id, b.dataset.kw));
+    b.addEventListener("click", ()=>enrollShortcut(b.dataset.id, b.dataset.kw, b.dataset.ph));
   });
   box.querySelectorAll(".sc-del").forEach(b=>{
     b.addEventListener("click", async ()=>{
@@ -1256,8 +1269,39 @@ async function renderShortcuts(){
 
 function acousticOn(){ return !!state.settings.acousticMatch && Mic.isSupported(); }
 
-/** keyword → { exemplars, threshold, marginThreshold, ... }，只放在這次工作階段。 */
+/** id → { exemplars, rejectionThreshold, marginThreshold, ... }。
+ *
+ *  這只是解碼後的快取；真正的家在雲端（Firestore + 使用者自己的 Drive）。
+ *  以前它是唯一的存放處，於是重整頁面錄音就沒了，手機上錄好的也永遠讀不進來——
+ *  「聽我說」那顆鈕靠 size>0 決定要不要出現，所以整個功能等於不存在。 */
 const _acousticTemplates = new Map();
+
+/** 雲端樣板 → 記憶體快取。登入完成、以及開關打開時各叫一次。 */
+async function loadAcousticTemplates(){
+  if(!acousticOn()) return;
+  let rows = [];
+  try{ rows = await listAcousticRecordings(); }
+  catch(e){ console.warn("[acoustic] 讀不到雲端樣板", e); return; }
+  for(const r of rows){
+    // 單筆壞掉（blob 是別的格式、被截斷）不該讓其他筆一起讀不進來
+    let exemplars;
+    try{ exemplars = Acoustic.decodeExemplarBundle(r.exemplarBlob); }
+    catch(e){ console.warn("[acoustic] 樣板解不開，跳過", r.id, e.message||e); continue; }
+    if(!exemplars.length) continue;
+    _acousticTemplates.set(String(r.id), {
+      id: String(r.id),
+      keyword: r.keyword || "",
+      // 要說的話跟著樣板一起帶進來。命中之後才去 listShortcuts() 查的話，
+      // 使用者講完要再等一次 Firestore ＋ 整個 Drive 資料夾走訪才聽得到回應。
+      spokenPhrase: r.spokenPhrase || "",
+      exemplars,
+      rejectionThreshold: Number(r.rejectionThreshold) || 0,
+      marginThreshold: Number(r.marginThreshold) || 0.15,
+      matchMode: r.matchMode || "Keyword",
+    });
+  }
+  renderAcousticListen();
+}
 
 /**
  * 登錄一句：連錄 MIN_TAKES 次。
@@ -1265,7 +1309,7 @@ const _acousticTemplates = new Map();
  * 每次之間會等使用者按一下，不做自動連錄——構音障礙的使用者需要喘口氣，
  * 而且被催促的錄音彼此差異會變大，門檻就跟著鬆掉。
  */
-async function enrollShortcut(id, keyword){
+async function enrollShortcut(id, keyword, spokenPhrase){
   if(!acousticOn()) return;
   const takes = [];
   try{
@@ -1283,16 +1327,30 @@ async function enrollShortcut(id, keyword){
       takes.push(take);
     }
     const tpl = Mic.buildTemplate(takes);
-    _acousticTemplates.set(id, {
-      id, keyword,
+    _acousticTemplates.set(String(id), {
+      id: String(id), keyword,
+      spokenPhrase: spokenPhrase || "",
       exemplars: tpl.exemplars,
       rejectionThreshold: tpl.threshold,
       marginThreshold: 0.15,
       matchMode: "Keyword",
     });
-    setShortcutMsg(t("ac.enrolled").replace("{kw}", keyword)
+    const okMsg = t("ac.enrolled").replace("{kw}", keyword)
                    .replace("{spread}", tpl.spread.toFixed(2))
-                   .replace("{thr}", tpl.threshold.toFixed(2)));
+                   .replace("{thr}", tpl.threshold.toFixed(2));
+    setShortcutMsg(okMsg);
+    renderAcousticListen();   // 錄完第一句就要看得到「聽我說」
+    // 寫回雲端。使用者為了這段錄音講了五次，只留在這個分頁裡是不能接受的：
+    // 重整就沒了，手機也永遠拿不到。失敗不擋——本機這一份已經可以用了。
+    let synced = false;
+    try{
+      synced = await saveAcousticRecording(id, {
+        exemplarBlob: Acoustic.encodeExemplarBundle(tpl.exemplars),
+        rejectionThreshold: tpl.threshold,
+        marginThreshold: 0.15,
+      });
+    }catch(e){ console.warn("[acoustic] 樣板上傳失敗（本機仍可用）", e); }
+    if(!synced) setShortcutMsg(okMsg + " " + t("ac.localOnly"));
   }catch(e){
     Mic.cancelCapture();
     setShortcutMsg(t("ac.enrollFail") + (e.message||e));
@@ -1329,7 +1387,13 @@ async function acousticListen(){
     const r = Acoustic.match(query, templates);
     if(r.kind === "hit"){
       const phrase = await phraseOf(r.template.id);
-      if(phrase){ $("#resultText").textContent = phrase; $("#result").classList.remove("hidden"); speak(phrase); }
+      if(phrase){
+        $("#resultText").textContent = phrase; $("#result").classList.remove("hidden");
+        // 一定要過發聲閘門。這句是使用者自己設的沒錯，但設的時候和說出口的
+        // 當下是兩回事——「我很痛」該跳確認卡、危機類該鎖定並接到危機視窗。
+        // 其他每一條發聲路徑都過這一關，只有這裡漏掉的話，等於留了一個後門。
+        if(await passesSpeechGate(phrase)) speak(phrase);
+      }
     }else if(r.kind === "ambiguous"){
       // 誤觸發（替他說出沒想說的話）比沒觸發危險得多，所以不確定時讓他自己選
       toast(t("ac.ambiguous"));
@@ -1340,6 +1404,9 @@ async function acousticListen(){
 }
 
 async function phraseOf(id){
+  // 快取先：載入樣板時就一起帶回來了，命中後不必再等一次網路往返
+  const cached = _acousticTemplates.get(String(id));
+  if(cached && cached.spokenPhrase) return cached.spokenPhrase;
   try{
     const list = await listShortcuts();
     return (list.find(x=>String(x.id)===String(id))||{}).spokenPhrase || "";

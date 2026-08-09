@@ -40,6 +40,7 @@ export const STRINGS = {
   "ac.noMatch": { "zh-TW":"沒有對到任何一句", "en":"That didn't match any of your phrases", "ja":"どの言い方にも一致しませんでした", "ko":"어떤 문장과도 맞지 않았습니다" },
   "ac.ambiguous": { "zh-TW":"聽起來像好幾句，請再說一次", "en":"That sounded like more than one phrase — please say it again", "ja":"複数の言い方に近く判断できません。もう一度お願いします", "ko":"여러 문장과 비슷해 판단할 수 없습니다. 다시 말해 주세요" },
   "ac.noTemplates": { "zh-TW":"還沒有在這台裝置錄過任何一句", "en":"You haven't recorded any phrase on this device yet", "ja":"この端末ではまだ何も録音していません", "ko":"이 기기에서 아직 아무것도 녹음하지 않았습니다" },
+  "ac.localOnly": { "zh-TW":"（只存在這台裝置：雲端沒寫成功）", "en":"(saved on this device only — the cloud copy failed)", "ja":"（この端末のみに保存：クラウドへの保存は失敗）", "ko":"(이 기기에만 저장됨 — 클라우드 저장 실패)" },
   "ac.listenFail": { "zh-TW":"比對失敗：", "en":"Matching failed: ", "ja":"照合に失敗しました：", "ko":"대조에 실패했습니다: " },
   // ── 登入／Drive 授權 ──
   // ── 「Drive 上還沒有語音模型」的實際原因（空清單有四種原因，畫面上長得一樣）──
