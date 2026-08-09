@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.40";
-import { speak } from "./speech.js?v=1.5.40";
-import { applyI18n, t } from "./i18n.js?v=1.5.40";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.40";
+import { state } from "./store.js?v=1.5.41";
+import { speak } from "./speech.js?v=1.5.41";
+import { applyI18n, t } from "./i18n.js?v=1.5.41";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.41";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -44,6 +44,7 @@ function withAudioFloor(fn) {
 let _abort = false;          // 使用者按了 Stop
 let _narrate = true;         // 旁白模式
 let _voice = null;           // 旁白用的 EN 角色語音 {name, lang}
+let _speakVoice = null;      // 示範發聲用的 EN 角色（花火），與旁白刻意不同
 let _rec = null, _chunks = [], _recStream = null;
 // 無聲版（同一次錄影的第二個輸出）
 let _recSilent = null, _chunksSilent = [];
@@ -560,19 +561,23 @@ function langDemo(lang) {
 const VOICE_SYNTH_DELAY = 2000;
 
 /**
- * 演示裡「App 把句子唸出來」那一下：亮出合成指示 → 停 2 秒 → 用瀏覽器語音唸。
+ * 演示裡「App 把句子唸出來」那一下：亮出合成指示 → 停 2 秒 → 播預錄好的那一段。
  *
- * **和旁白完全獨立。** 不借用旁白的預錄快取——借的話這句話會用旁白角色的
- * 聲音唸出來，聽起來就變成旁白在唸它，而不是 App 在講話。
+ * **用的角色和旁白不同**（花火 EN，見 SPEAK_VOICE_NAME）。共用旁白角色的話，
+ * 這句話聽起來就變成旁白在唸它，而不是 App 在講話——觀眾分不出哪一句是解說。
  *
  * 那 2 秒是給「合成需要時間」用的：真的按下去要等電腦跑 10～30 秒，
- * 瞬間出聲會讓觀眾以為這個 App 是即時的。
+ * 瞬間出聲會讓觀眾以為這個 App 是即時的。音檔是預錄的，所以停的是 2 秒不是 30 秒。
  */
 function speakDemoSentence(text) {
   return withAudioFloor(async () => {
     const tag = showSynthesizing();
     try { await sleep(VOICE_SYNTH_DELAY); } finally { tag?.remove(); }
-    await browserNarrate(text);
+    const clip = _speakClips.get(text);
+    // 不加速：旁白拉到 1.22 倍是為了不拖節奏，但這一句是「App 正在講話」，
+    // 加速會讓它聽起來像趕時間，也和真的按下去聽到的不一樣。
+    if (clip) await playClip(clip, 1.0);
+    else await browserNarrate(text);      // 連不到電腦端就退回瀏覽器語音（影片會沒這一句）
   });
 }
 
@@ -594,13 +599,24 @@ function demoSpeak(text) {
   return withAudioFloor(() => browserNarrate(text));
 }
 
+// 示範發聲用的角色，**刻意和旁白不同**。
+// 兩邊同一個聲音的話，「App 把句子唸出來」聽起來就像旁白在唸那句話，
+// 觀眾分不出哪一句是解說、哪一句是這個 App 講出來的。
+const SPEAK_VOICE_NAME = "花火";
+
 async function pickNarrationVoice() {
   _voice = null;
+  _speakVoice = null;
   try {
     if (!(await detectLocalTts(2000))) return;
     const vs = await localVoices();
-    const en = vs.find((v) => (v.lang || "").toUpperCase() === "EN");
-    if (en) _voice = { name: en.name, lang: "EN" };
+    const en = vs.filter((v) => (v.lang || "").toUpperCase() === "EN");
+    const isSpeak = (v) => (v.name || "").includes(SPEAK_VOICE_NAME);
+    const sp = en.find(isSpeak);
+    if (sp) _speakVoice = { name: sp.name, lang: "EN" };
+    // 旁白避開示範發聲那個角色；只有一個英文角色時還是用它（總比沒有旁白好）
+    const narr = en.find((v) => !isSpeak(v)) || en[0];
+    if (narr) _voice = { name: narr.name, lang: "EN" };
   } catch { /* 連不上就退瀏覽器語音 */ }
 }
 
@@ -645,7 +661,7 @@ function dbPut(key, blob) {
 }
 
 // 快取鍵要帶角色名：換了旁白角色就該重新合成，不然會播到上一個聲音。
-function clipKey(text) { return `${_voice?.name || "browser"}|${text}`; }
+function clipKey(text, voiceName) { return `${voiceName || _voice?.name || "browser"}|${text}`; }
 
 // 記憶體層（同一次執行內免走 IndexedDB）：句子文字 → Blob。
 //
@@ -654,6 +670,8 @@ function clipKey(text) { return `${_voice?.name || "browser"}|${text}`; }
 // 而用麥克風收喇叭又會把房間的雜音一起錄進去。走 WebAudio 就沒有這兩個問題——
 // 同一份聲音同時送去喇叭和錄影軌，錄到的是乾淨的原始音訊。
 const _clips = new Map();
+/** 示範發聲（花火 EN）的預錄快取，和旁白那份分開放。 */
+const _speakClips = new Map();
 
 let _ac = null;          // AudioContext（全程共用；每次 new 會被瀏覽器限制數量）
 let _mixDest = null;     // 錄影用的音訊匯流點
@@ -670,29 +688,36 @@ function mixDest() {
 
 /** 把選到的單元裡所有旁白先合成好（先問 IndexedDB，缺的才合成）。回成功句數。 */
 async function prepareNarration(units, onProgress) {
-  // **只錄旁白。** 演示中「App 自己唸出來」的示範句不在這裡——它們走的是
-  // App 自己的發聲路徑（瀏覽器語音），和旁白是兩回事。混進來的話會被用旁白
-  // 角色的聲音合成，聽起來就變成旁白在唸那句話。
-  // （代價：瀏覽器語音繞過 WebAudio，錄影的音軌收不到那一句。見 speakDemoSentence。）
-  const texts = [...new Set(
-    units.flatMap((u) => u.steps.map((s) => s.cap)).filter(Boolean)
-  )];
+  // 兩批、兩個角色：
+  //  ① 旁白 → _voice
+  //  ② 「App 把句子唸出來」的示範句 → _speakVoice（花火 EN）
+  // 分角色是為了讓觀眾分得出哪一句是解說、哪一句是這個 App 講出來的。
+  // 示範句也一定要預錄：瀏覽器自己的 TTS 繞過 WebAudio，錄影的音軌收不到，
+  // 影片裡會變成「畫面在唸但沒有聲音」。
+  const spoken = [SAMPLE.candidates[0], SAMPLE.rehab];
+  const jobs = [
+    ...[...new Set(units.flatMap((u) => u.steps.map((s) => s.cap)).filter(Boolean))]
+      .map((text) => ({ text, voice: _voice, store: _clips })),
+    ..._speakVoice ? spoken.map((text) => ({ text, voice: _speakVoice, store: _speakClips })) : [],
+  ].filter((j) => j.voice);
+
   // 先把上次存下來的撈回來——這一步是「為什麼第二次不用等」的關鍵。
-  for (const x of texts) {
-    if (_clips.has(x)) continue;
-    const hit = await dbGet(clipKey(x));
-    if (hit) _clips.set(x, hit);
+  for (const j of jobs) {
+    if (j.store.has(j.text)) continue;
+    const hit = await dbGet(clipKey(j.text, j.voice.name));
+    if (hit) j.store.set(j.text, hit);
   }
-  const todo = texts.filter((x) => !_clips.has(x));
-  let ok = _clips.size;
+  const todo = jobs.filter((j) => !j.store.has(j.text));
+  let ok = jobs.length - todo.length;
   for (let i = 0; i < todo.length; i++) {
     if (_abort) break;
     onProgress(i, todo.length);
+    const j = todo[i];
     try {
-      const blob = await localSynth(todo[i], { name: _voice.name, lang: "EN", emotion: "中立" });
+      const blob = await localSynth(j.text, { name: j.voice.name, lang: "EN", emotion: "中立" });
       if (blob) {
-        _clips.set(todo[i], blob);
-        await dbPut(clipKey(todo[i]), blob);   // 存起來，下次開頁面直接用
+        j.store.set(j.text, blob);
+        await dbPut(clipKey(j.text, j.voice.name), blob);   // 存起來，下次開頁面直接用
         ok++;
       }
     } catch {
@@ -710,7 +735,7 @@ async function prepareNarration(units, onProgress) {
  * BufferSource 的 playbackRate 是直接改取樣率，加速會連音高一起拉高（花栗鼠）。
  * 走 media element 才有瀏覽器的變速不變調。
  */
-function playClip(blob) {
+function playClip(blob, rate = NARRATION_RATE) {
   return new Promise((resolve) => {
     const ac = audioCtx();
     const url = URL.createObjectURL(blob);
@@ -718,7 +743,7 @@ function playClip(blob) {
     el.preservesPitch = true;
     el.mozPreservesPitch = true;
     el.webkitPreservesPitch = true;
-    el.playbackRate = NARRATION_RATE;
+    el.playbackRate = rate;
     let src = null;
     try {
       src = ac.createMediaElementSource(el);
