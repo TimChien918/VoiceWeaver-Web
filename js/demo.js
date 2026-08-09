@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.49";
-import { speak } from "./speech.js?v=1.5.49";
-import { applyI18n, t } from "./i18n.js?v=1.5.49";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.49";
+import { state } from "./store.js?v=1.5.50";
+import { speak } from "./speech.js?v=1.5.50";
+import { applyI18n, t } from "./i18n.js?v=1.5.50";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.50";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -91,15 +91,6 @@ function UNITS() {
         { cap: "Symbol sets are drawn for an average user, which is nobody in particular.", act: () => scrollTo("#ccList") },
         { cap: "Photographs taken by the family become cards, downscaled and stored in the account.", act: () => typeInto("#ccWord", "my grandson"), focus: "#ccWord" },
         { cap: "Recognition of familiar objects is what makes the board usable at all.", hold: 1400, focus: "#ccAdd" },
-      ],
-    },
-    {
-      id: "acoustic", icon: "🎤", title: "Personal pronunciation model", est: 20,
-      steps: [
-        { cap: "General speech recognition is trained on typical speech, so it fails here by design.", act: () => goSetting("acoustic") },
-        { cap: "Instead, a handful of keywords are enrolled from the user's own repeated attempts.", act: () => captionOnly() },
-        { cap: "Matching runs on MFCC features with dynamic time warping and a per-word threshold.", act: () => captionOnly() },
-        { cap: "The threshold comes from that user's own variance, not from a population average.", act: () => captionOnly() },
       ],
     },
     {
@@ -350,7 +341,7 @@ function goSetting(key) {
   // 英文/日文/韓文之後一個都對不上，而且會靜靜地退回第一張卡——
   // 旁白講發音模型，畫面卻開著文字供應商設定。
   // cloud 指到「我的專屬聲音」，因為那張卡就是 Drive 曲庫，正是接下來兩句在講的東西。
-  const want = { acoustic: "acoustic", voice: "voice", cloud: "voice" }[key] || key;
+  const want = { voice: "voice", cloud: "voice" }[key] || key;   // acoustic 那張卡已從網頁移除
   const rows = $$("#settingsIndex .setrow");
   const hit = rows.find((r) => r.dataset.setkey === want);
   if (!hit) { console.warn("[demo] 找不到設定卡", key); return; }

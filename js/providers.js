@@ -1,7 +1,7 @@
 // 供應商目錄 + 呼叫器（同供應商可多把金鑰、可多選供應商，自動輪詢+備援）。
-import { state } from "./store.js?v=1.5.49";
-import { localHas, localText, localImage } from "./localtts.js?v=1.5.49";
-import { t } from "./i18n.js?v=1.5.49";
+import { state } from "./store.js?v=1.5.50";
+import { localHas, localText, localImage } from "./localtts.js?v=1.5.50";
+import { t } from "./i18n.js?v=1.5.50";
 
 // 文字 LLM 供應商（標 cors 者較可能可在瀏覽器直接呼叫）
 export const LLM_PROVIDERS = {
@@ -100,21 +100,29 @@ export function hasLlm(){ return llmEntries().length>0 || localHas("text"); }
 export async function runLlm(sys, user, opts={}){
   const temp = opts.temperature ?? 0.5;
   let err;
-  // ① 電腦幫忙跑（Qwen, 9882）優先
+  // ① 雲端供應商優先（stable＝固定順序；否則輪替分攤額度）
+  //
+  // 順序是反過來的：以前本機（Qwen, 9882）排第一，但那是跑在使用者自己電腦上的
+  // 模型，比雲端 API 慢一個量級——而重組一次會**同時打三個**（self-consistency
+  // 取樣），使用者等的是最慢的那一個。「按下重組要等很久」就是這樣來的。
+  // 本機的價值在離線可用，不在速度，所以它該是退路而不是首選。
+  const list = opts.stable ? llmEntries() : rotate(llmEntries());
+  const online = navigator.onLine !== false;
+  if(online){
+    for(const e of list){
+      try{
+        const fn = e.provider==="gemini"?geminiText : e.provider==="cohere"?cohereText : openaiText;
+        const out = await fn(e, sys, user, temp);
+        if(out) return out.replace(/^[「"']|[」"']$/g,"").trim();
+      }catch(x){ err=x; console.warn(e.provider, x); }
+    }
+  }
+  // ② 電腦幫忙跑：沒網路、沒金鑰、或雲端全掛時的退路（慢，但至少能用）
   if(localHas("text")){
     try{ const out = await localText(sys, user, temp); if(out) return out.replace(/^[「"']|[」"']$/g,"").trim(); }
     catch(x){ err=x; console.warn("local text", x); }
   }
-  // ② 雲端供應商（stable＝固定順序；否則輪替分攤額度）
-  const list = opts.stable ? llmEntries() : rotate(llmEntries());
-  if(!list.length){ if(err) throw err; throw new Error(t("err.noProviders")); }
-  for(const e of list){
-    try{
-      const fn = e.provider==="gemini"?geminiText : e.provider==="cohere"?cohereText : openaiText;
-      const out = await fn(e, sys, user, temp);
-      if(out) return out.replace(/^[「"']|[」"']$/g,"").trim();
-    }catch(x){ err=x; console.warn(e.provider, x); }
-  }
+  if(!list.length && !localHas("text")) throw new Error(t("err.noProviders"));
   throw err || new Error(t("err.allProvidersFailed"));
 }
 
