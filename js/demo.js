@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.43";
-import { speak } from "./speech.js?v=1.5.43";
-import { applyI18n, t } from "./i18n.js?v=1.5.43";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.43";
+import { state } from "./store.js?v=1.5.44";
+import { speak } from "./speech.js?v=1.5.44";
+import { applyI18n, t } from "./i18n.js?v=1.5.44";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.44";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -592,7 +592,7 @@ const VOICE_SYNTH_DELAY = 2000;
 /**
  * 演示裡「App 把句子唸出來」那一下：亮出合成指示 → 停 2 秒 → 播預錄好的那一段。
  *
- * **用的角色和旁白不同**（花火 EN，見 SPEAK_VOICE_NAME）。共用旁白角色的話，
+ * **用的角色和旁白不同**（見 pickNarrationVoice：旁白用花火 EN，這裡取別的）。共用旁白角色的話，
  * 這句話聽起來就變成旁白在唸它，而不是 App 在講話——觀眾分不出哪一句是解說。
  *
  * 那 2 秒是給「合成需要時間」用的：真的按下去要等電腦跑 10～30 秒，
@@ -628,10 +628,9 @@ function demoSpeak(text) {
   return withAudioFloor(() => browserNarrate(text));
 }
 
-// 示範發聲用的角色，**刻意和旁白不同**。
-// 兩邊同一個聲音的話，「App 把句子唸出來」聽起來就像旁白在唸那句話，
-// 觀眾分不出哪一句是解說、哪一句是這個 App 講出來的。
-const SPEAK_VOICE_NAME = "花火";
+// 旁白固定用這個角色：整支影片同一個聲音，換台電腦、換個曲庫順序都一樣。
+// 不指名的話「取第一個英文角色」會隨曲庫內容變動，每次錄出來的旁白都可能不同。
+const NARRATION_VOICE_NAME = "花火";
 
 async function pickNarrationVoice() {
   _voice = null;
@@ -640,12 +639,13 @@ async function pickNarrationVoice() {
     if (!(await detectLocalTts(2000))) return;
     const vs = await localVoices();
     const en = vs.filter((v) => (v.lang || "").toUpperCase() === "EN");
-    const isSpeak = (v) => (v.name || "").includes(SPEAK_VOICE_NAME);
-    const sp = en.find(isSpeak);
-    if (sp) _speakVoice = { name: sp.name, lang: "EN" };
-    // 旁白避開示範發聲那個角色；只有一個英文角色時還是用它（總比沒有旁白好）
-    const narr = en.find((v) => !isSpeak(v)) || en[0];
+    const narr = en.find((v) => (v.name || "").includes(NARRATION_VOICE_NAME)) || en[0];
     if (narr) _voice = { name: narr.name, lang: "EN" };
+    // 「App 把句子唸出來」那一下要用**別的**角色。同一個聲音的話，那句話聽起來
+    // 就像旁白在唸它，觀眾分不出哪一句是解說、哪一句是這個 App 講出來的。
+    // 只有一個英文角色時就只好共用（總比沒有聲音好）。
+    const sp = en.find((v) => v.name !== narr?.name) || narr;
+    if (sp) _speakVoice = { name: sp.name, lang: "EN" };
   } catch { /* 連不上就退瀏覽器語音 */ }
 }
 
