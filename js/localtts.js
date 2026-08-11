@@ -4,8 +4,8 @@
 //   ① http://localhost / 127.0.0.1（瀏覽器例外，限「開網頁的電腦＝語音中心電腦」）
 //   ② https://<主機>.<tailnet>.ts.net（Tailscale serve 的真憑證網址，任何地方可連）
 // 連不上時上層會自動退回瀏覽器原生語音。
-import { state } from "./store.js?v=1.5.51";
-import { t } from "./i18n.js?v=1.5.51";
+import { state } from "./store.js?v=1.5.52";
+import { t } from "./i18n.js?v=1.5.52";
 
 let _base = null;   // 已確認可用的橋接 base URL
 
@@ -52,6 +52,13 @@ export function localHealth() { return { ..._health }; }
 // ngrok 免費版對「瀏覽器請求」會插一頁 HTML 警告攔截頁 → fetch 拿到 HTML、JSON 解析失敗
 // → Colab 節點被誤判成死的。帶 ngrok-skip-browser-warning 標頭即可繞過。
 // 只對 ngrok 網址帶（帶了會觸發 CORS preflight，別煩本機/Tailscale 的橋接）。
+// 這個 base 是不是要走隧道的遠端（Tailscale / ngrok）。同機的 127.0.0.1 / localhost
+// 不算。逾時要依這個分兩級——用同機的秒數去量隧道，量到的永遠是「連不上」。
+function isRemoteBase(base) {
+  const b = String(base || "");
+  return !/^https?:\/\/(127\.0\.0\.1|localhost)(:|\/|$)/i.test(b);
+}
+
 function _hdrs(base, extra) {
   const h = { ...(extra || {}) };
   if (/ngrok/i.test(base || "")) h["ngrok-skip-browser-warning"] = "1";
@@ -60,7 +67,9 @@ function _hdrs(base, extra) {
 
 async function _fetch(path, opts = {}, timeoutMs = 4000) {
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  // 短逾時（清單、切換之類）在隧道上要放寬；合成那種本來就給幾分鐘的不動它。
+  const ms = (isRemoteBase(_base) && timeoutMs < 15000) ? timeoutMs + 8000 : timeoutMs;
+  const t = setTimeout(() => ctrl.abort(), ms);
   try {
     return await fetch((_base || "") + path,
       { ...opts, headers: _hdrs(_base, opts.headers), signal: ctrl.signal });
@@ -76,7 +85,11 @@ export async function detectLocalTts(timeoutMs = 2500) {
   for (const base of candidates()) {
     try {
       const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), timeoutMs);
+      // 同機（127.0.0.1）幾毫秒就該回，2.5 秒綽綽有餘。
+      // 但 Tailscale／ngrok 的第一個請求要先把隧道拉起來（談不成直連還會繞中繼），
+      // 再加上 TLS 握手——2.5 秒常常不夠，於是明明電腦開著卻被判定「連不上」，
+      // 而且因為 detect 失敗，之後的合成連試都不會試。
+      const t = setTimeout(() => ctrl.abort(), isRemoteBase(base) ? 10000 : timeoutMs);
       const r = await fetch(base + "/health", { headers: _hdrs(base), signal: ctrl.signal });
       clearTimeout(t);
       if (!r.ok) continue;

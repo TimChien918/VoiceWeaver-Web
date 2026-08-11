@@ -6,10 +6,10 @@ import {
 import {
   getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, getDocs, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { t } from "./i18n.js?v=1.5.51";
+import { t } from "./i18n.js?v=1.5.52";
 
 const DEFAULTS = {
-  settings: { theme: "auto", lang: "zh-TW", rate: 0.95, font: 1.0,
+  settings: { theme: "auto", lang: "en", rate: 0.95, font: 1.0,
               // 使用模式（依嚴重程度，對齊 App）：
               //   mild 輕度＝鍵盤打字為主、完整功能
               //   moderate 中度＝超大圖卡預設展開、隱藏複雜設定
@@ -409,7 +409,7 @@ function saveLocalShortcuts(list){
 
 // Drive 用動態 import：drive.js 反過來要 store.js 的 driveToken，
 // 靜態互相 import 會踩到模組初始化順序。順便也讓沒用到 Drive 的人不必載這段。
-async function _drive(){ return import("./drive.js?v=1.5.51"); }
+async function _drive(){ return import("./drive.js?v=1.5.52"); }
 
 /**
  * 兩個雲端來源都讀：Firestore（即時、免 Drive 授權）與使用者自己 Drive 的

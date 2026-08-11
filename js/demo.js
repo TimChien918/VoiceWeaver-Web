@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.51";
-import { speak } from "./speech.js?v=1.5.51";
-import { applyI18n, t } from "./i18n.js?v=1.5.51";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.51";
+import { state } from "./store.js?v=1.5.52";
+import { speak } from "./speech.js?v=1.5.52";
+import { applyI18n, t } from "./i18n.js?v=1.5.52";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.52";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -110,7 +110,9 @@ function UNITS() {
         { cap: "Alongside communication, the same data supports structured rehabilitation.", act: () => goTab("rehab") },
         { cap: "The phrase bank is bundled, so practice works with no network and no key.", hold: 1400, focus: "#rehabBank" },
         { cap: "The target is spoken, repeated back, and compared.", act: rehabDemo, hold: 1200 },
-        { cap: "Scoring is per syllable, and mis-pronounced characters are highlighted individually.", act: rehabScore, hold: 1800 },
+        // 評分不是逐音節比對——那正是這個專案刻意不做的（llm.js 的 AI 評分看的是
+        // 語意／流暢／語氣，字元重疊率只是沒金鑰時的退路）。高亮錯字才是真的。
+        { cap: "Scoring is on meaning, fluency and tone, with mis-pronounced characters highlighted.", act: rehabScore, hold: 1800 },
       ],
     },
     {

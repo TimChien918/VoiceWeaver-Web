@@ -574,13 +574,14 @@ function pick(entry, lang){
 
 // 取單一字串（給 JS 動態文字用）
 export function t(key, lang){
-  const L = lang || (document.documentElement.getAttribute("data-lang")) || "zh-TW";
+  // 認不出語言時退回英文（和 App 的 AppLanguage.En 預設一致）。
+  const L = lang || (document.documentElement.getAttribute("data-lang")) || "en";
   return pick(STRINGS[key], L) || key;
 }
 
 // 套用到整個 DOM
 export function applyI18n(lang){
-  const L = lang || "zh-TW";
+  const L = lang || "en";
   document.documentElement.setAttribute("data-lang", L);
   document.documentElement.setAttribute("lang", L);
   document.querySelectorAll("[data-i18n]").forEach(el=>{
