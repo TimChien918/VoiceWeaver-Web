@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.52";
-import { speak } from "./speech.js?v=1.5.52";
-import { applyI18n, t } from "./i18n.js?v=1.5.52";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.52";
+import { state } from "./store.js?v=1.5.53";
+import { speak } from "./speech.js?v=1.5.53";
+import { applyI18n, t } from "./i18n.js?v=1.5.53";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.53";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -71,8 +71,13 @@ function UNITS() {
         { cap: "A language model reconstructs the sentence, constrained by a defensive prompt.", act: async () => { await press("#btnCompose"); await reconstructWait(); }, focus: "#btnCompose" },
         { cap: "Self-consistency sampling returns three candidates rather than one best guess.", act: showCandidates, hold: 1600, focus: "#altList" },
         { cap: "Which candidate gets accepted is logged, and feeds the ranking of later phrasings.", act: pickCandidateDemo, hold: 1200, focus: "#altList" },
-        { cap: "A confirmation card stands between the model and the speaker. Nothing is spoken unverified.", act: showConfirm, hold: 1600 },
-        { cap: "Only a confirmed sentence reaches the synthesiser.", act: confirmYes, focus: "#result" },
+        // 確認卡**不是**每一句都會出現：它只擋 classifyRisk() 的 "confirm" 等級
+        // （醫療／疼痛），而且可以在設定裡關掉（state.settings.confirmCard，預設開）。
+        // "normal" 的日常需求是直接唸出來的。這兩句原本寫成「沒有一句話未經確認就被唸出」
+        // ——那等於對外承諾每一句都要人工確認，實作並非如此。
+        // 註：showConfirm() 是演示強制叫出這張卡，樣本句本身其實是 "normal"。
+        { cap: "Medical or pain-related content raises a confirmation card before anything is spoken.", act: showConfirm, hold: 1600 },
+        { cap: "Confirming sends it to the synthesiser; everyday requests are spoken directly.", act: confirmYes, focus: "#result" },
       ],
     },
     {

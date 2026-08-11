@@ -1,26 +1,26 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.52";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.52";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.52";
-import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.52";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.52";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.52";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.52";
-import { bindTap } from "./interaction.js?v=1.5.52";
-import { orderCards } from "./predict.js?v=1.5.52";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.52";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.52";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.52";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.52";
-import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.52";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.52";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.52";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.52";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.52";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.52";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.52";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.52";
-import { applyI18n, t } from "./i18n.js?v=1.5.52";
-import { setupDemo } from "./demo.js?v=1.5.52";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.53";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS } from "./providers.js?v=1.5.53";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.53";
+import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.53";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.53";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.53";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.53";
+import { bindTap } from "./interaction.js?v=1.5.53";
+import { orderCards } from "./predict.js?v=1.5.53";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.53";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.53";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.53";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.53";
+import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.53";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.53";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.53";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.53";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.53";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.53";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.53";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.53";
+import { applyI18n, t } from "./i18n.js?v=1.5.53";
+import { setupDemo } from "./demo.js?v=1.5.53";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -1374,7 +1374,7 @@ async function renderVoices(){
           >${esc(t("set.voicesReauth"))}</button></p>`);
     }
     try{
-      const drive = await import("./drive.js?v=1.5.52");
+      const drive = await import("./drive.js?v=1.5.53");
       const d = await drive.diagnoseVoiceModels();
       // 同名根要先講。有兩個 VoiceWeaver 時，底下那些「沒有 Models」之類的
       // 描述全部都是在講錯的那一個資料夾，先看到它才不會被帶去修錯的地方。
