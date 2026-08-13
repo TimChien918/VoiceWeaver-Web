@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 <title>VoiceWeaver 網頁版</title>
-<link rel="stylesheet" href="style.css?v=1.5.55" />
+<link rel="stylesheet" href="style.css?v=1.5.56" />
 </head>
 <body>
   <!-- 登入閘 -->
@@ -291,6 +291,26 @@
           <span class="setback-chev">‹</span><span id="settingsBackLabel"></span>
         </button>
         <div id="settingsCards">
+        <!-- 用登入帳號自己的額度打 Gemini（OAuth 2.0，免金鑰）。
+             放在文字供應商之前：對照顧者來說，這是唯一一條不必先去申請 API 金鑰的路，
+             他該先看到這個，而不是先撞上一排要貼金鑰的欄位。 -->
+        <div class="card complex" data-setkey="quota">
+          <h3 data-i18n="set.gqTitle">🔑 用我的 Google 帳號額度（免金鑰）</h3>
+          <p class="tiny muted" data-i18n="set.gqDesc">不必去申請 API 金鑰：用你登入的這個 Google 帳號直接呼叫 Gemini，用量算在你自己的 Google Cloud 專案上。</p>
+          <p id="gqStatus" class="tiny"></p>
+          <button id="gqAuth" class="btn ghost" style="margin-top:6px" data-i18n="set.gqAuth">授權這個帳號</button>
+          <label class="lbl" data-i18n="set.gqProject">用量算在哪個專案</label>
+          <div class="row" style="margin:0;gap:6px">
+            <select id="gqProject" style="flex:1"></select>
+            <button id="gqReload" class="btn ghost" data-i18n="set.gqReload">重讀</button>
+          </div>
+          <div class="row" style="gap:6px;margin-top:8px">
+            <button id="gqEnable" class="btn ghost" data-i18n="set.gqEnable">啟用 Gemini API</button>
+            <button id="gqTest" class="btn ghost" data-i18n="set.gqTest">測試連線</button>
+          </div>
+          <p id="gqMsg" class="tiny muted" style="margin:6px 0 0"></p>
+          <p class="tiny muted" data-i18n="set.gqScopeNote">授權畫面會要求「查看及管理你的 Google Cloud 資料」——Google 的 AI API 走帳號身分時只收這個範圍。本網頁只用它做兩件事：列出你的專案、以及以你的名義呼叫 Gemini。授權隨時可以在 Google 帳號的「第三方應用程式」裡收回。</p>
+        </div>
         <div class="card complex">
           <h3 data-i18n="set.llmTitle">💬 文字供應商（重組／組句）</h3>
           <p class="tiny muted" data-i18n="set.llmDesc">可加多個供應商、同一家也能放多把金鑰；使用時自動輪詢＋失敗備援。</p>
@@ -507,7 +527,7 @@
 
   <!-- 你的 Firebase 設定（複製 config.example.js 為 config.js 並填入）。沒有 config.js 時為純本機模式。 -->
   <script>window.__FIREBASE_CONFIG__ = null;</script>
-  <script src="config.js?v=1.5.55" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
-  <script type="module" src="js/app.js?v=1.5.55"></script>
+  <script src="config.js?v=1.5.56" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
+  <script type="module" src="js/app.js?v=1.5.56"></script>
 </body>
 </html>

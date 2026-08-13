@@ -1,10 +1,16 @@
 // 供應商目錄 + 呼叫器（同供應商可多把金鑰、可多選供應商，自動輪詢+備援）。
-import { state } from "./store.js?v=1.5.55";
-import { localHas, localText, localImage } from "./localtts.js?v=1.5.55";
-import { t } from "./i18n.js?v=1.5.55";
+import { state } from "./store.js?v=1.5.56";
+import { localHas, localText, localImage } from "./localtts.js?v=1.5.56";
+import { googleApiFetch, googleApiError, accountQuotaReady } from "./gauth.js?v=1.5.56";
+import { t } from "./i18n.js?v=1.5.56";
 
 // 文字 LLM 供應商（標 cors 者較可能可在瀏覽器直接呼叫）
+//
+// oauth:true 的那一個不用金鑰——它拿「使用者登入的那個 Google 帳號」的授權去打，
+// 額度算在使用者自己的 Google Cloud 專案上（見 gauth.js）。對照顧者來說，
+// 這是唯一一條不必先去申請一把 API 金鑰的路。
 export const LLM_PROVIDERS = {
+  googleQuota:{ label:"Google Gemini", labelKey:"prov.googleQuota", needsKey:false, oauth:true, model:"gemini-3.5-flash" },
   gemini:     { label:"Google Gemini",  needsKey:true,  model:"gemini-3.5-flash" },
   groq:       { label:"Groq",           needsKey:true,  model:"qwen/qwen3.6-27b" },
   openrouter: { label:"OpenRouter",     needsKey:true,  model:"qwen/qwen3-14b" },
@@ -23,6 +29,7 @@ const OPENAI_BASE = {
 // 生圖供應商
 export const IMAGE_PROVIDERS = {
   pollinations:{ label:"Pollinations", needsKey:false },
+  googleQuota: { label:"Gemini Imagen", labelKey:"prov.googleQuotaImg", needsKey:false, oauth:true },
   gemini:      { label:"Gemini Imagen",          needsKey:true },
   huggingface: { label:"HuggingFace",            needsKey:true, model:"black-forest-labs/FLUX.1-schnell" },
   openai:      { label:"OpenAI (gpt-image-1)",   needsKey:true },
@@ -32,14 +39,37 @@ let _rot = 0;
 function rotate(list){ if(list.length<=1) return list; const o=_rot++%list.length; return list.slice(o).concat(list.slice(0,o)); }
 
 // ── LLM 文字 ────────────────────────────────────────
-async function geminiText(entry, sys, user, temp=0.5){
-  const model = entry.model || LLM_PROVIDERS.gemini.model;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(entry.key)}`;
-  const r = await fetch(url,{ method:"POST", headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ system_instruction:{parts:[{text:sys}]}, contents:[{parts:[{text:user}]}],
-      generationConfig:{ temperature:temp, maxOutputTokens:160 } }) });
+
+/** 這一筆是不是走「使用者帳號額度」（OAuth）而不是金鑰。 */
+function isOauth(entry){ return LLM_PROVIDERS[entry.provider]?.oauth === true; }
+
+/**
+ * 打一次 Gemini generateContent，兩種身分共用。
+ *
+ * 差別只有「怎麼證明你是誰」：金鑰是 `?key=`，帳號額度是 `Authorization: Bearer`
+ * ＋ `x-goog-user-project`（由 googleApiFetch 補上）。請求內容完全一樣，
+ * 所以原生音訊、視覺那些呼叫不必為了兩種身分各寫一份。
+ */
+export async function geminiCall(entry, body){
+  const model = entry.model || LLM_PROVIDERS[entry.provider]?.model || LLM_PROVIDERS.gemini.model;
+  const base = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+  const init = { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) };
+  if(isOauth(entry)){
+    const r = await googleApiFetch(base, init);
+    if(!r.ok) throw await googleApiError(r);
+    return r.json();
+  }
+  const r = await fetch(`${base}?key=${encodeURIComponent(entry.key)}`, init);
   if(!r.ok) throw new Error("Gemini "+r.status);
-  const j = await r.json(); return (j.candidates?.[0]?.content?.parts?.[0]?.text||"").trim();
+  return r.json();
+}
+function geminiTextOf(j){ return (j.candidates?.[0]?.content?.parts?.[0]?.text||"").trim(); }
+
+async function geminiText(entry, sys, user, temp=0.5){
+  const j = await geminiCall(entry, {
+    system_instruction:{parts:[{text:sys}]}, contents:[{parts:[{text:user}]}],
+    generationConfig:{ temperature:temp, maxOutputTokens:160 } });
+  return geminiTextOf(j);
 }
 /**
  * 原生音訊理解：把錄音直接餵給模型，不經語音轉文字。
@@ -51,24 +81,21 @@ async function geminiText(entry, sys, user, temp=0.5){
  * 目前只有 Gemini 風格的供應商吃 inline audio；沒有這種金鑰時由呼叫端退回
  * 原本的「瀏覽器 STT → 文字重組」流程。
  */
-export function hasNativeAudio(){
-  return llmEntries().some(e => e.provider === "gemini");
+/** 吃得下原生音訊的那幾筆（金鑰版與帳號額度版都是 Gemini，兩個都算）。 */
+export function geminiEntries(){
+  return llmEntries().filter(e => e.provider === "gemini" || e.provider === "googleQuota");
 }
+export function hasNativeAudio(){ return geminiEntries().length > 0; }
 
 export async function runAudioLlm(sys, audioBase64, mime){
-  const entry = llmEntries().find(e => e.provider === "gemini");
+  const entry = geminiEntries()[0];
   if(!entry) throw new Error(t("err.noNativeAudio"));
-  const model = entry.model || LLM_PROVIDERS.gemini.model;
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(entry.key)}`;
-  const r = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      system_instruction:{ parts:[{ text: sys }] },
-      contents:[{ parts:[{ inline_data:{ mime_type: mime, data: audioBase64 } }] }],
-      generationConfig:{ temperature:0.4, maxOutputTokens:160 }
-    }) });
-  if(!r.ok) throw new Error("Gemini audio " + r.status);
-  const j = await r.json();
-  return (j.candidates?.[0]?.content?.parts?.[0]?.text || "").trim().replace(/^[「"']|[」"']$/g,"");
+  const j = await geminiCall(entry, {
+    system_instruction:{ parts:[{ text: sys }] },
+    contents:[{ parts:[{ inline_data:{ mime_type: mime, data: audioBase64 } }] }],
+    generationConfig:{ temperature:0.4, maxOutputTokens:160 }
+  });
+  return geminiTextOf(j).replace(/^[「"']|[」"']$/g,"");
 }
 
 async function openaiText(entry, sys, user, temp=0.5){
@@ -90,7 +117,15 @@ async function cohereText(entry, sys, user, temp=0.5){
 }
 function llmEntries(){
   // 只留 web 支援的供應商（手機可能同步來 web 沒有的，如 cerebras → 跳過不報錯）
-  return (state.llmApis||[]).filter(e=>e.provider && LLM_PROVIDERS[e.provider] && (e.key || !LLM_PROVIDERS[e.provider].needsKey));
+  return (state.llmApis||[]).filter(e=>{
+    const p = e.provider && LLM_PROVIDERS[e.provider];
+    if(!p) return false;
+    // 帳號額度：沒授權或沒選專案時就當作「這一筆還不能用」，直接跳過去試下一家。
+    // 不擋在這裡的話，每一次重組都會先打一個一定失敗的請求（還會跳授權彈窗），
+    // 使用者只是想講一句話。
+    if(p.oauth) return accountQuotaReady();
+    return !!e.key || !p.needsKey;
+  });
 }
 // 有金鑰，或「電腦幫跑文字」可用 → 都算有文字能力
 export function hasLlm(){ return llmEntries().length>0 || localHas("text"); }
@@ -111,7 +146,8 @@ export async function runLlm(sys, user, opts={}){
   if(online){
     for(const e of list){
       try{
-        const fn = e.provider==="gemini"?geminiText : e.provider==="cohere"?cohereText : openaiText;
+        const fn = (e.provider==="gemini"||e.provider==="googleQuota")?geminiText
+                 : e.provider==="cohere"?cohereText : openaiText;
         const out = await fn(e, sys, user, temp);
         if(out) return out.replace(/^[「"']|[」"']$/g,"").trim();
       }catch(x){ err=x; console.warn(e.provider, x); }
@@ -128,7 +164,12 @@ export async function runLlm(sys, user, opts={}){
 
 // ── 生圖 ────────────────────────────────────────────
 function imageEntries(){
-  const list = (state.imageApis||[]).filter(e=>e.provider && IMAGE_PROVIDERS[e.provider] && (e.key || !IMAGE_PROVIDERS[e.provider].needsKey));
+  const list = (state.imageApis||[]).filter(e=>{
+    const p = e.provider && IMAGE_PROVIDERS[e.provider];
+    if(!p) return false;
+    if(p.oauth) return accountQuotaReady();     // 沒授權就跳過（同 llmEntries 的理由）
+    return !!e.key || !p.needsKey;
+  });
   // 永遠保底有 Pollinations（免金鑰）
   if(!list.some(e=>e.provider==="pollinations")) list.push({ provider:"pollinations", key:"" });
   return list;
@@ -143,10 +184,13 @@ export async function runImage(prompt){
     try{
       if(e.provider==="pollinations")
         return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`;
-      if(e.provider==="gemini"){
-        const url=`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${encodeURIComponent(e.key)}`;
-        const r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({ instances:[{prompt}], parameters:{sampleCount:1} })});
+      if(e.provider==="gemini" || e.provider==="googleQuota"){
+        const base="https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict";
+        const init={method:"POST",headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({ instances:[{prompt}], parameters:{sampleCount:1} })};
+        const r = IMAGE_PROVIDERS[e.provider].oauth
+          ? await googleApiFetch(base, init)
+          : await fetch(`${base}?key=${encodeURIComponent(e.key)}`, init);
         if(!r.ok) throw 0; const j=await r.json(); const b64=j.predictions?.[0]?.bytesBase64Encoded;
         if(b64) return "data:image/png;base64,"+b64;
       }

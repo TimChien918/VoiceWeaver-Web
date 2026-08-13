@@ -1,13 +1,10 @@
 // 進階功能（全部純 API / 瀏覽器）：生圖、定位、相機雲端辨識、Telegram 通報。
-import { state } from "./store.js?v=1.5.55";
-import { runImage } from "./providers.js?v=1.5.55";
-import { t } from "./i18n.js?v=1.5.55";
+import { state } from "./store.js?v=1.5.56";
+import { runImage, geminiEntries, geminiCall } from "./providers.js?v=1.5.56";
+import { t } from "./i18n.js?v=1.5.56";
 
 // ── AI 生圖：走多供應商輪詢（pollinations 免金鑰保底）──
 export async function generateImage(prompt){ return runImage(prompt); }
-
-// 從 LLM 清單找第一把 Gemini 金鑰（相機視覺用）
-function geminiKey(){ return (state.llmApis||[]).find(e=>e.provider==="gemini" && e.key)?.key || ""; }
 
 // ── 意圖→圖卡用的英文提示（簡單關鍵字對應，讓圖更貼切）──
 export function intentPrompt(sentence){
@@ -44,20 +41,16 @@ function visionPrompt(){
 
 // ── 相機雲端辨識：拍一張 → Gemini Vision 回傳看到的物品（依介面語言，逗號分隔）──
 export async function recognizePhoto(base64Jpeg){
-  const key = geminiKey();
-  if(!key) throw new Error(t("err.needGeminiVision"));
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(key)}`;
-  const r = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ contents:[{ role:"user", parts:[
+  // 金鑰版與「我的帳號額度」版都吃得下視覺，取第一筆可用的。
+  // 模型固定 gemini-2.0-flash（視覺任務不跟著文字重組那一格的模型走），
+  // 所以這裡另外指定，不要沿用清單裡那筆的 model。
+  const entry = geminiEntries()[0];
+  if(!entry) throw new Error(t("err.needGeminiVision"));
+  const j = await geminiCall({ ...entry, model:"gemini-2.0-flash" }, {
+    contents:[{ role:"user", parts:[
       { text: visionPrompt() },
       { inline_data:{ mime_type:"image/jpeg", data: base64Jpeg } }
-    ]}] }) });
-  if(!r.ok){
-    let msg = "Vision "+r.status;
-    try{ const e = await r.json(); msg += "：" + (e?.error?.message || JSON.stringify(e)); }catch{}
-    throw new Error(msg);
-  }
-  const j = await r.json();
+    ]}] });
   return (j.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
 }
 

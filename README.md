@@ -41,6 +41,7 @@ VoiceWeaver 有兩個版本，用同一個 Google 帳號登入即可雙向同步
 | **生圖** | Pollinations 意圖圖卡（免金鑰）／電腦或 Colab 的 SD-Turbo／Gemini／HuggingFace／OpenAI |
 | **角色語音** | 讓電腦或 Colab 幫忙跑 GPT-SoVITS，依句子自動偵測情緒切換語氣；雲端曲庫瀏覽＋隨選下載 |
 | **🆘 危機介入（雙向）** | 關鍵字攔截 → AI 判斷是本人求助還是代替他人求助（避免誤鎖住求救訊息）→ 立即通報家人（Telegram）＋前後鏡頭現場快照＋免登入視訊通話房；**家人可在 Telegram 回覆指令**：`/call` 強制加入視訊、`/camera` 要求再拍現場、`/end` 結束對話；使用者可傳安撫快捷語或錄約 6 秒語音訊息給家人；呼吸引導動畫陪伴等待；1925 安心專線／119／家人電話一鍵直撥；**對話視窗使用者無法自行關閉**，需家人 `/end` 才會結束 |
+| **免金鑰開通** | OAuth 2.0：用登入的那個 Google 帳號直接呼叫 Gemini，用量算在使用者自己的 Google Cloud 專案上——照顧者不必去申請、保管、貼上任何 API 金鑰 |
 | **雲端同步** | Firebase Firestore：API 金鑰、設定、最愛、復健日誌（與 Android App 同結構）自動同步 |
 | **離線備援** | 無 Firebase 時退回 localStorage，功能完整可用；LLM 全部失敗時句子重組退回規則模板、復健評分退回字元／詞語重疊率計算 |
 | **簡轉繁校正** | 部分雲端模型即使提示詞要求繁體，偶爾仍會吐出簡體字；用 OpenCC 字元＋詞組雙層對照校正（round-trip 驗證過，不會誤改本來就正確的繁體字） |
@@ -123,9 +124,33 @@ GitHub repo → **Settings → Pages → Source: main / (root) → Save**。
 
 > **Google 登入授權網域**：回 Firebase → Authentication → Settings → Authorized domains，加入 `你的帳號.github.io`。
 
-### 3. 填入 LLM 金鑰
+### 3. 讓它有 AI 可用（兩條路，選一條）
 
-登入後到「**設定**」分頁 → 新增文字供應商，填入 Gemini / Groq / OpenRouter 任一金鑰即可開始重組。
+**A. 用登入帳號自己的額度（OAuth 2.0，免申請金鑰）** ← 建議照顧者走這條
+
+登入後到「**設定 → 🔑 用我的 Google 帳號額度**」，三步：
+
+1. **授權這個帳號** —— 用你登入的那個 Google 帳號同意一次。
+2. **選一個專案** —— 用量會算在這個 Google Cloud 專案上。沒有的話到
+   [console.cloud.google.com](https://console.cloud.google.com) 建一個（免費），再按「重讀」。
+3. **啟用 Gemini API**、**測試連線** —— 通了就會自動加進文字供應商，重組立刻可用。
+
+不必去申請、保管、貼上任何 API 金鑰；網頁是以「你」的身分呼叫 Gemini，
+用量與帳單都在你自己的專案底下，看得到也停得掉。
+
+> **關於授權範圍**：同意畫面會要求 `cloud-platform`（「查看及管理你的 Google Cloud 資料」）。
+> 這是 Google 的 AI API 走使用者身分時唯一接受的範圍——網頁只用它做兩件事：列出你的專案、
+> 以你的名義呼叫 Gemini。**這個授權不會夾在一般登入裡順手拿走**，只有你在這張卡上按下
+> 「授權」才會要；隨時可以到 Google 帳號的「第三方應用程式」收回。
+>
+> **想少按幾次「重新授權」**：OAuth access token 一小時到期。在 `config.js` 填上
+> `window.__GOOGLE_OAUTH__.clientId`（見 `config.example.js`）就會改走 Google Identity
+> Services，過期時多半能安靜換一把新的，不會在講話講到一半跳出彈窗。
+
+**B. 自己貼 API 金鑰**
+
+到「**設定 → 💬 文字供應商**」新增供應商，填入 Gemini / Groq / OpenRouter 任一金鑰。
+兩條路可以並存——A 的免費額度用完時會自動換下一家。
 
 ### 4.（選用）緊急通報
 
@@ -161,6 +186,10 @@ GitHub repo → **Settings → Pages → Source: main / (root) → Save**。
 
 - LLM 金鑰儲存於使用者自己的瀏覽器（localStorage）與 Firestore，受 Firebase 安全規則保護，不存在程式碼中。
 - 請使用**可隨時撤銷的個人金鑰**，並定期到各供應商後台確認用量。
+- 「用我的 Google 帳號額度」拿到的 OAuth access token **只存在 sessionStorage**（關掉分頁就沒了、
+  一小時也會自動失效），不寫進 localStorage、不上雲、不與任何人同步——跨工作階段留存 access token
+  會擴大 XSS 的曝險面，而它換不到什麼。登出時連同記憶體那一份一起清掉，共用電腦上的下一個人
+  不會接手到前一個帳號的額度。
 - 部分供應商不允許瀏覽器直接呼叫（CORS）；本版預設使用可跨域的 Gemini / Groq / OpenRouter / Pollinations。
 - Telegram Bot Token／Chat ID 同樣只存在使用者自己的瀏覽器與 Firestore。
 - ngrok 授權碼透過配對碼從你的帳號雲端取用，不會出現在 Colab notebook 或程式碼裡。
@@ -175,6 +204,7 @@ s2t_map.txt / s2t_phrases.txt   簡轉繁字元／詞組對照表（zhconv.js �
 js/
 ├── app.js              主邏輯（分頁、重組、AAC、最愛、多語朗讀、雲端曲庫清單渲染、防呆模式切換）
 ├── store.js            Firebase 登入 + Firestore 同步（無 Firebase 退 localStorage）
+├── gauth.js             Google OAuth 2.0：用登入帳號自己的額度打 Gemini（免金鑰、計費走使用者專案）
 ├── safety.js            關鍵字攔截、風險分級（normal/confirm/lock）、輸出消毒
 ├── crisis.js            危機介入視窗（現場快照、家人指令、語音訊息、呼吸引導、專線）
 ├── llm.js               多供應商 LLM 重組（自我一致性排序）+ 危機意圖分類 + 復健 AI 評分 + AI 建議

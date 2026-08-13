@@ -1,0 +1,285 @@
+// 用「登入的那個 Google 帳號自己的額度」直接呼叫 Google 的 AI API（OAuth 2.0）。
+//
+// 為什麼要這條路：
+// 原本每一家供應商都要使用者自己去申請一把 API 金鑰，貼進設定裡。對照顧者來說
+// 那是一連串完全陌生的名詞（專案、金鑰、計費帳戶），光是「去哪裡申請」就會卡住，
+// 而他要的只是「讓這個網頁能講話」。既然他已經用 Google 帳號登入了，就讓網頁
+// 拿那個帳號的授權直接去打 Gemini——不必再有一把貼來貼去的金鑰。
+//
+// 用什麼身分打：OAuth 2.0 access token（`Authorization: Bearer`），不是 `?key=`。
+// 額度算在誰頭上：**使用者自己的 Google Cloud 專案**，用 `x-goog-user-project`
+// 這個標頭指定。這一點是整件事的重點，也是為什麼一定要問專案 ID——
+// 不指定的話，額度會算到「發出這個 OAuth 用戶端的那個專案」（也就是 VoiceWeaver
+// 自己的專案）頭上，變成全世界的使用者共用一份額度，很快就會互相打架。
+// 指定了才是「登入帳號本身的額度」。
+//
+// 兩種拿權杖的方式，能用哪個就用哪個：
+//   ① Google Identity Services（GIS）token client —— 要在 config.js 設 clientId。
+//      好處是可以**安靜地續期**（prompt:""），權杖過期時使用者多半不會被打斷。
+//   ② 沒設 clientId 時退回 Firebase 的 signInWithPopup，順便多要一個授權範圍。
+//      不必額外設定就能用，代價是一小時到期後要使用者自己按一下重新授權
+//      （跟 Drive 授權現在的處境一樣）。
+//
+// 關於授權範圍：cloud-platform 很大（等於整個 Google Cloud 的操作權）。
+// 這不是我們想要的最小權限，但 Generative Language API 走使用者帳號時就是收這個。
+// 所以它**預設不要**——只有使用者自己在設定裡按下「授權」才會去要，
+// 而且畫面上要老實講清楚這件事，不要夾在登入流程裡順手拿走。
+
+import { state, save, loginGoogle } from "./store.js?v=1.5.56";
+import { t } from "./i18n.js?v=1.5.56";
+
+/** Generative Language API 走使用者帳號時要的範圍（同時也才列得出專案清單）。 */
+export const CLOUD_SCOPE = "https://www.googleapis.com/auth/cloud-platform";
+
+const TOKEN_LS = "vw_gq_token";
+const EXP_LS   = "vw_gq_exp";
+// 快到期就當作已經過期：權杖在「送出請求」與「Google 檢查」之間還要跑一段網路，
+// 卡在最後幾秒送出去的那一次會拿到 401，而使用者只看得到「重組失敗」。
+const SKEW_MS = 60_000;
+
+let _token = "";
+let _expAt = 0;
+try{
+  _token = sessionStorage.getItem(TOKEN_LS) || "";
+  _expAt = +(sessionStorage.getItem(EXP_LS) || 0);
+}catch{}
+
+function remember(token, expiresInSec){
+  _token = token || "";
+  _expAt = token ? Date.now() + (expiresInSec || 3600) * 1000 : 0;
+  // 存在 sessionStorage 而不是 localStorage：跟 Drive 權杖同一個理由——
+  // access token 跨工作階段留存會擴大 XSS 的曝險面，而它一小時就失效。
+  try{
+    if(token){ sessionStorage.setItem(TOKEN_LS, token); sessionStorage.setItem(EXP_LS, String(_expAt)); }
+    else { sessionStorage.removeItem(TOKEN_LS); sessionStorage.removeItem(EXP_LS); }
+  }catch{}
+}
+
+function tokenAlive(){ return !!_token && Date.now() < _expAt - SKEW_MS; }
+
+/** 忘掉目前的權杖（登出、或 Google 說它無效時）。 */
+export function forgetToken(){ remember("", 0); }
+
+// ── 設定：使用者自己的 Google Cloud 專案 ──────────────────
+
+function quotaCfg(){
+  if(!state.settings.accountQuota || typeof state.settings.accountQuota !== "object"){
+    state.settings.accountQuota = { project: "" };
+  }
+  return state.settings.accountQuota;
+}
+
+/** 額度要算在哪個 Google Cloud 專案（空字串＝還沒選）。 */
+export function quotaProject(){ return (quotaCfg().project || "").trim(); }
+
+export function setQuotaProject(id){
+  quotaCfg().project = (id || "").trim();
+  save();
+}
+
+/** 這個分頁手上有沒有還沒過期的權杖（＝授權那一步做完了）。 */
+export function authorized(){ return tokenAlive(); }
+
+/** 這台瀏覽器現在就有辦法用帳號額度打 API 嗎（有權杖、也選好專案）。 */
+export function accountQuotaReady(){ return tokenAlive() && !!quotaProject(); }
+
+/** 已經授權過、只是這個分頁沒有權杖（重新整理／過期）→ 只要重新授權，不是要重新設定。 */
+export function needsReauth(){ return !!quotaProject() && !tokenAlive(); }
+
+// ── ① Google Identity Services ─────────────────────────
+
+function gisClientId(){ return (window.__GOOGLE_OAUTH__?.clientId || "").trim(); }
+
+/** 有沒有設 OAuth 用戶端 ID（有的話才有安靜續期）。 */
+export function hasGisClient(){ return !!gisClientId(); }
+
+let _gisLoading = null;
+function loadGis(){
+  if(window.google?.accounts?.oauth2) return Promise.resolve();
+  if(_gisLoading) return _gisLoading;
+  _gisLoading = new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = "https://accounts.google.com/gsi/client";
+    s.async = true;
+    s.onload = () => resolve();
+    // 載不到就讓呼叫端退回 Firebase 那條路，不要整個功能死在這裡
+    s.onerror = () => { _gisLoading = null; reject(new Error("gisLoadFailed")); };
+    document.head.appendChild(s);
+  });
+  return _gisLoading;
+}
+
+let _tc = null;
+async function gisToken(interactive){
+  await loadGis();
+  if(!_tc){
+    _tc = window.google.accounts.oauth2.initTokenClient({
+      client_id: gisClientId(),
+      scope: CLOUD_SCOPE,
+      callback: () => {},          // 每次請求前才換成當下那一組 resolve/reject
+    });
+  }
+  return new Promise((resolve, reject) => {
+    _tc.callback = (res) => {
+      if(res && res.access_token){ remember(res.access_token, res.expires_in); resolve(res.access_token); }
+      else reject(new Error(res?.error || "noToken"));
+    };
+    _tc.error_callback = (err) => reject(new Error(err?.type || err?.message || "gisError"));
+    // prompt:"" ＝「已經同意過就不要再問一次」。使用者的 Google 工作階段還在時
+    // 這一步不會打斷他；不在時會失敗，由呼叫端顯示「請重新授權」。
+    try{ _tc.requestAccessToken({ prompt: interactive ? "consent" : "" }); }
+    catch(e){ reject(e); }
+  });
+}
+
+// ── ② Firebase 彈窗（沒設 clientId 時的退路）─────────────
+
+async function firebaseToken(){
+  const res = await loginGoogle({ extraScopes: [CLOUD_SCOPE] });
+  if(!res?.token) throw new Error("noToken");
+  // Firebase 不會告訴我們這個權杖能活多久；Google 的 access token 一律是一小時。
+  remember(res.token, 3600);
+  return res.token;
+}
+
+// ── 對外：拿一個可用的權杖 ──────────────────────────────
+
+/**
+ * 目前可用的 access token。
+ *
+ * interactive=false：只做不打擾使用者的續期，失敗就丟錯（畫面顯示「請重新授權」）。
+ * interactive=true ：該跳同意畫面就跳——只能從使用者的點擊裡呼叫，
+ *                    否則彈窗會被瀏覽器擋掉。
+ */
+export async function googleToken({ interactive = false } = {}){
+  if(tokenAlive()) return _token;
+  if(hasGisClient()){
+    try{ return await gisToken(interactive); }
+    catch(e){
+      // GIS 載不動（擋追蹤的外掛常常連 accounts.google.com 一起擋）才換另一條路；
+      // 其他錯誤是這條路自己的問題（使用者關掉彈窗、工作階段過期），照實往上丟，
+      // 不要拿 Firebase 彈窗去蓋掉它——那會變成關掉一個彈窗又跳出另一個。
+      if(String(e.message) !== "gisLoadFailed") throw interactive ? e : authNeeded();
+    }
+  }
+  if(!interactive) throw authNeeded();
+  return firebaseToken();
+}
+
+/**
+ * 「要重新授權」這件事。
+ *
+ * 訊息用譯好的句子而不是 needsAuth 這種代碼：這個錯誤會一路冒到畫面上
+ * （設定卡的訊息列、重組失敗的提示），而使用者看到 needsAuth 只會困惑。
+ * 要判斷型別的地方看 e.code，不要比對訊息文字——那會在換語言時失效。
+ */
+function authNeeded(){
+  const e = new Error(t("gq.errExpired"));
+  e.code = "needsAuth";
+  return e;
+}
+
+/** 使用者按下「授權」：一定跳同意畫面，回傳有沒有拿到權杖。 */
+export async function authorize(){
+  forgetToken();                       // 舊的可能是別的帳號或別的範圍拿的
+  const tok = await googleToken({ interactive: true });
+  return !!tok;
+}
+
+// ── 打 Google API：自動帶權杖與計費專案，401 自動續一次 ──
+
+/**
+ * 送一個帶著使用者身分的 Google API 請求。
+ *
+ * @param url      完整網址
+ * @param opts     fetch 選項
+ * @param withProject 要不要帶 x-goog-user-project（列專案清單時不能帶——
+ *                    那時候還不知道要選哪個，帶一個空的或錯的反而整個請求被拒）
+ */
+export async function googleApiFetch(url, opts = {}, { withProject = true } = {}){
+  const send = async (token) => {
+    const headers = { ...(opts.headers || {}), Authorization: "Bearer " + token };
+    const proj = quotaProject();
+    if(withProject && proj) headers["x-goog-user-project"] = proj;
+    return fetch(url, { ...opts, headers });
+  };
+
+  let res = await send(await googleToken());
+  if(res.status === 401){
+    // 權杖被撤銷或提早失效：清掉之後再要一次（GIS 那條路多半可以安靜換到新的）。
+    forgetToken();
+    // 換不到就把原本那個 401 交回去。硬把「換權杖失敗」丟出來的話，呼叫端
+    // 就少了一個 Response 可以翻譯，畫面上會出現一句沒頭沒尾的技術訊息；
+    // 401 走 googleApiError 反而會變成「授權過期了，請按重新授權」。
+    try{ res = await send(await googleToken()); }
+    catch{ return res; }
+  }
+  return res;
+}
+
+/**
+ * 把 Google 的錯誤翻成使用者看得懂的一句話。
+ *
+ * 這裡值得多花力氣：這條路最常見的兩種失敗都不是「壞掉了」，而是「還差一個步驟」，
+ * 但原文訊息長得像系統錯誤（SERVICE_DISABLED、PERMISSION_DENIED），
+ * 照顧者看到只會以為是網頁有問題，然後放棄。
+ */
+export async function googleApiError(res){
+  let body = null;
+  try{ body = await res.json(); }catch{}
+  const err = body?.error || {};
+  const status = err.status || "";
+  const msg = err.message || `HTTP ${res.status}`;
+  const proj = quotaProject();
+
+  if(res.status === 401) return new Error(t("gq.errExpired"));
+  if(status === "PERMISSION_DENIED" && /SERVICE_DISABLED|has not been used in project|is disabled/i.test(msg))
+    return new Error(t("gq.errApiDisabled").replace("{project}", proj));
+  if(status === "PERMISSION_DENIED" && /serviceusage\.services\.use|caller does not have permission/i.test(msg))
+    return new Error(t("gq.errNoProjectPerm").replace("{project}", proj));
+  if(status === "RESOURCE_EXHAUSTED") return new Error(t("gq.errQuota").replace("{project}", proj));
+  return new Error(msg);
+}
+
+// ── 專案：列出使用者自己的 Google Cloud 專案 ────────────────
+
+/**
+ * 使用者名下的專案清單（只留活著的）。
+ *
+ * 為什麼要列而不是叫他自己打：專案 ID 跟專案名稱長得不一樣（「我的專案」的 ID
+ * 可能是 my-project-418302），使用者手打十之八九會打錯，而打錯的症狀是
+ * 一個看不懂的 403——他不會知道問題出在那一格。
+ */
+export async function listProjects(){
+  const url = "https://cloudresourcemanager.googleapis.com/v1/projects?filter="
+            + encodeURIComponent("lifecycleState:ACTIVE") + "&pageSize=200";
+  const res = await googleApiFetch(url, {}, { withProject: false });
+  if(!res.ok) throw await googleApiError(res);
+  const j = await res.json();
+  return (j.projects || []).map(p => ({ id: p.projectId, name: p.name || p.projectId }));
+}
+
+/** 在使用者的專案上啟用 Generative Language API（沒啟用的話每一次呼叫都會 403）。 */
+export async function enableGenerativeLanguage(){
+  const proj = quotaProject();
+  if(!proj) throw new Error(t("gq.errNoProject"));
+  const url = `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(proj)}`
+            + "/services/generativelanguage.googleapis.com:enable";
+  const res = await googleApiFetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" },
+                                   { withProject: false });
+  if(!res.ok) throw await googleApiError(res);
+  return true;
+}
+
+/** 真的打一次最小的請求，確認整條路（授權＋專案＋API 已啟用）是通的。 */
+export async function testAccountQuota(model){
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`;
+  const res = await googleApiFetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contents: [{ parts: [{ text: "hi" }] }],
+                           generationConfig: { maxOutputTokens: 1 } }),
+  });
+  if(!res.ok) throw await googleApiError(res);
+  return true;
+}

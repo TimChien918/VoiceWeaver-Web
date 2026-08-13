@@ -6,7 +6,7 @@ import {
 import {
   getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, getDocs, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { t } from "./i18n.js?v=1.5.55";
+import { t } from "./i18n.js?v=1.5.56";
 
 const DEFAULTS = {
   settings: { theme: "auto", lang: "en", rate: 0.95, font: 1.0,
@@ -31,7 +31,10 @@ const DEFAULTS = {
               // 所以要不要開由使用者決定，而且開了之後建議在網頁上重新登錄一組。
               acousticMatch: false,
               // 本地 GPT-SoVITS 語音引擎（透過語音中心橋接）
-              localTtsEnabled: false, localTtsUrl: "", localComputeServers: [], localVoiceName: "", localVoiceLang: "", voiceEmotion: "" },
+              localTtsEnabled: false, localTtsUrl: "", localComputeServers: [], localVoiceName: "", localVoiceLang: "", voiceEmotion: "",
+              // 用登入帳號自己的額度打 Gemini（OAuth 2.0，免金鑰）時，額度算在哪個
+              // Google Cloud 專案。空的代表還沒設定；詳見 gauth.js 開頭。
+              accountQuota: { project: "" } },
   // 單一欄位的金鑰（通報用）
   apiKeys:  { tgtoken: "", tgchat: "", ngrokToken: "", ngrokDomain: "", ngrokPairCode: "" },
   // 多供應商、多金鑰清單（每筆 {id, provider, key, model}）→ 重組/生圖自動輪詢
@@ -225,6 +228,10 @@ export async function loginGoogle(opts = {}){
     const provider = new GoogleAuthProvider();
     provider.addScope(DRIVE_SCOPE);                       // 同一個同意畫面順便要 Drive 權限
     provider.addScope(DRIVE_METADATA_SCOPE);              // 看得到別的程式建立的語音模型
+    // 額外範圍（例如「用我的帳號額度打 Gemini」要的 cloud-platform）。
+    // **一定要由呼叫端明講才加。** 那個範圍很大，夾在登入流程裡順手拿走
+    // 是不老實的；只有使用者在設定裡自己按下授權時才會走到這裡。
+    for(const s of (opts.extraScopes || [])) provider.addScope(s);
     // 換帳號時一定要強迫出現選擇畫面：Google 預設會直接用上次那個帳號登回去，
     // 於是使用者按了「換帳號」卻換不掉，畫面完全沒有變化。
     if(opts.chooseAccount) provider.setCustomParameters({ prompt: "select_account" });
@@ -241,7 +248,9 @@ export async function loginGoogle(opts = {}){
         sessionStorage.setItem(DRIVE_SCOPE_MARK, SCOPE_GEN);
       }
     }catch{}
-    return { uid: res.user?.uid, email: res.user?.email, drive: !!_driveToken };
+    // token 也回傳出去：gauth.js 沒設 OAuth 用戶端 ID 時，就是靠這一把
+    // （多要了 cloud-platform 範圍的）權杖去打 Gemini。
+    return { uid: res.user?.uid, email: res.user?.email, drive: !!_driveToken, token: _driveToken };
   })();
   try { return await _popupPending; }
   finally { _popupPending = null; }
@@ -281,7 +290,13 @@ export async function loginAnon(){
 export async function logout(){
   _driveToken = null;
   _email = "";
-  try{ sessionStorage.removeItem("vw_drive_token"); sessionStorage.removeItem(DRIVE_SCOPE_MARK); }catch{}
+  try{
+    sessionStorage.removeItem("vw_drive_token"); sessionStorage.removeItem(DRIVE_SCOPE_MARK);
+    // 帳號額度的 OAuth 權杖也要一起丟。留著的話下一個登入的人（同一台共用電腦的
+    // 另一位照顧者）會用到前一個帳號的額度。gauth.js 記憶體裡那一份由呼叫端
+    // forgetToken() 清掉；這裡負責的是重新整理之後不要又被撿回來。
+    sessionStorage.removeItem("vw_gq_token"); sessionStorage.removeItem("vw_gq_exp");
+  }catch{}
   if(_auth) await signOut(_auth);
   else { location.reload(); }
 }
@@ -409,7 +424,7 @@ function saveLocalShortcuts(list){
 
 // Drive 用動態 import：drive.js 反過來要 store.js 的 driveToken，
 // 靜態互相 import 會踩到模組初始化順序。順便也讓沒用到 Drive 的人不必載這段。
-async function _drive(){ return import("./drive.js?v=1.5.55"); }
+async function _drive(){ return import("./drive.js?v=1.5.56"); }
 
 /**
  * 兩個雲端來源都讀：Firestore（即時、免 Drive 授權）與使用者自己 Drive 的
