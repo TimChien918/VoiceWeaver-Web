@@ -6,7 +6,7 @@ import {
 import {
   getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, getDocs, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { t } from "./i18n.js?v=1.5.56";
+import { t } from "./i18n.js?v=1.5.57";
 
 const DEFAULTS = {
   settings: { theme: "auto", lang: "en", rate: 0.95, font: 1.0,
@@ -34,12 +34,14 @@ const DEFAULTS = {
               localTtsEnabled: false, localTtsUrl: "", localComputeServers: [], localVoiceName: "", localVoiceLang: "", voiceEmotion: "",
               // 用登入帳號自己的額度打 Gemini（OAuth 2.0，免金鑰）時，額度算在哪個
               // Google Cloud 專案。空的代表還沒設定；詳見 gauth.js 開頭。
-              accountQuota: { project: "" } },
+              accountQuota: { project: "" },
+              ttsVoice: "" },      // 雲端 TTS 嗓音（空＝用 TTS_VOICES 第一個）
   // 單一欄位的金鑰（通報用）
   apiKeys:  { tgtoken: "", tgchat: "", ngrokToken: "", ngrokDomain: "", ngrokPairCode: "" },
   // 多供應商、多金鑰清單（每筆 {id, provider, key, model}）→ 重組/生圖自動輪詢
   llmApis:  [],
   imageApis:[],
+  ttsApis:  [],
 };
 
 let _idc = 0;
@@ -80,6 +82,7 @@ export const state = {
   apiKeys: structuredClone(DEFAULTS.apiKeys),
   llmApis: [],
   imageApis: [],
+  ttsApis: [],     // 雲端語音合成供應商（沒設就用瀏覽器內建語音保底）
   favorites: [],   // 我的最愛常用句
   // 行為數據彙總（治療師評估用）：只存彙總不存逐筆；清歷史不影響它。
   behavior: {},
@@ -117,6 +120,7 @@ function applyLoaded(d){
   state.apiKeys  = { ...DEFAULTS.apiKeys,  ...(d.apiKeys||{}) };
   state.llmApis  = Array.isArray(d.llmApis) ? d.llmApis : [];
   state.imageApis= Array.isArray(d.imageApis) ? d.imageApis : [];
+  state.ttsApis  = Array.isArray(d.ttsApis) ? d.ttsApis : [];
   state.favorites= Array.isArray(d.favorites) ? d.favorites : [];
   state.customCards = Array.isArray(d.customCards) ? d.customCards : [];
   state.behavior = (d.behavior && typeof d.behavior === "object") ? d.behavior : {};
@@ -161,6 +165,20 @@ export function initAuth({ onUser, onSaved }){
 
 // 登入合一：同一次 Google 登入既是 Firebase 身分，也拿到 Drive 權限（drive.file）。
 export const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
+
+/**
+ * 用登入帳號自己的額度呼叫 Gemini 要的範圍（gauth.js 也匯出同一個常數）。
+ *
+ * **登入時就一起要。** 這是刻意的取捨：不在登入時拿的話，使用者登入完會看到
+ * 一個「還不能講話」的 App，要自己到設定裡找一張卡、按授權、選專案，
+ * 而這個 App 的使用者本來就不擅長在設定裡定位——等於預設是壞的。
+ *
+ * 代價是同意畫面上會多一項「查看及管理你的 Google Cloud 資料」，而且它很大。
+ * 換來的是「登入完就能用」。使用者不同意也不會卡住：拿不到這個範圍時，
+ * 帳號額度那幾筆供應商會被自動跳過，其餘功能（瀏覽器語音、貼金鑰的供應商、
+ * 電腦端運算）完全照舊。
+ */
+export const CLOUD_SCOPE = "https://www.googleapis.com/auth/cloud-platform";
 
 /**
  * 只讀「檔案清單」的權限。**列出專屬聲音一定要有這個。**
@@ -228,9 +246,8 @@ export async function loginGoogle(opts = {}){
     const provider = new GoogleAuthProvider();
     provider.addScope(DRIVE_SCOPE);                       // 同一個同意畫面順便要 Drive 權限
     provider.addScope(DRIVE_METADATA_SCOPE);              // 看得到別的程式建立的語音模型
-    // 額外範圍（例如「用我的帳號額度打 Gemini」要的 cloud-platform）。
-    // **一定要由呼叫端明講才加。** 那個範圍很大，夾在登入流程裡順手拿走
-    // 是不老實的；只有使用者在設定裡自己按下授權時才會走到這裡。
+    provider.addScope(CLOUD_SCOPE);                       // 用這個帳號自己的額度打 Gemini（見 gauth.js）
+    // 呼叫端還可以再加（目前沒有人用，留著給日後的功能）
     for(const s of (opts.extraScopes || [])) provider.addScope(s);
     // 換帳號時一定要強迫出現選擇畫面：Google 預設會直接用上次那個帳號登回去，
     // 於是使用者按了「換帳號」卻換不掉，畫面完全沒有變化。
@@ -304,6 +321,7 @@ export async function logout(){
 // ── 載入 ───────────────────────────────────────────
 function snapshot(){
   return { settings:state.settings, apiKeys:state.apiKeys, llmApis:state.llmApis, imageApis:state.imageApis,
+           ttsApis:state.ttsApis,
            favorites:state.favorites, customCards:state.customCards, behavior:state.behavior };
 }
 function loadLocal(){
@@ -424,7 +442,7 @@ function saveLocalShortcuts(list){
 
 // Drive 用動態 import：drive.js 反過來要 store.js 的 driveToken，
 // 靜態互相 import 會踩到模組初始化順序。順便也讓沒用到 Drive 的人不必載這段。
-async function _drive(){ return import("./drive.js?v=1.5.56"); }
+async function _drive(){ return import("./drive.js?v=1.5.57"); }
 
 /**
  * 兩個雲端來源都讀：Firestore（即時、免 Drive 授權）與使用者自己 Drive 的

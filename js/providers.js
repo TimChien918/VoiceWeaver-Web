@@ -1,8 +1,8 @@
 // 供應商目錄 + 呼叫器（同供應商可多把金鑰、可多選供應商，自動輪詢+備援）。
-import { state } from "./store.js?v=1.5.56";
-import { localHas, localText, localImage } from "./localtts.js?v=1.5.56";
-import { googleApiFetch, googleApiError, accountQuotaReady } from "./gauth.js?v=1.5.56";
-import { t } from "./i18n.js?v=1.5.56";
+import { state } from "./store.js?v=1.5.57";
+import { localHas, localText, localImage } from "./localtts.js?v=1.5.57";
+import { googleApiFetch, googleApiError, accountQuotaReady } from "./gauth.js?v=1.5.57";
+import { t } from "./i18n.js?v=1.5.57";
 
 // 文字 LLM 供應商（標 cors 者較可能可在瀏覽器直接呼叫）
 //
@@ -35,13 +35,38 @@ export const IMAGE_PROVIDERS = {
   openai:      { label:"OpenAI (gpt-image-1)",   needsKey:true },
 };
 
+// 語音合成供應商（雲端 TTS）。
+//
+// 這一層擺在「專屬聲音（GPT-SoVITS）」與「瀏覽器內建語音」之間：
+//   專屬聲音   —— 是使用者本人／家人的音色，有的話永遠優先，那是整個功能的意義所在，
+//                 但要電腦或 Colab 開著。
+//   雲端 TTS   —— 這一層。電腦沒開時的「好聽的聲音」，而且與文字、生圖走同一份帳號額度。
+//   瀏覽器語音 —— 永遠的保底，免金鑰、零延遲，出得了聲最重要。
+//
+// 沒有 pollinations 那種免金鑰保底項：瀏覽器內建語音本來就是保底，不必在清單裡再放一個。
+export const TTS_PROVIDERS = {
+  googleQuota: { label:"Gemini TTS", labelKey:"prov.googleQuotaTts", needsKey:false, oauth:true, model:TTS_MODEL_DEFAULT() },
+  gemini:      { label:"Gemini TTS", needsKey:true, model:TTS_MODEL_DEFAULT() },
+};
+// 函式而不是常數：TTS_PROVIDERS 是模組載入時就求值的，寫在它上面才看得到。
+function TTS_MODEL_DEFAULT(){ return "gemini-2.5-flash-preview-tts"; }
+
+/** Gemini 內建嗓音（設定頁下拉用）。名稱是 API 的字面值，不翻譯。 */
+export const TTS_VOICES = ["Kore","Puck","Charon","Fenrir","Aoede","Leda","Orus","Zephyr"];
+
 let _rot = 0;
 function rotate(list){ if(list.length<=1) return list; const o=_rot++%list.length; return list.slice(o).concat(list.slice(0,o)); }
 
 // ── LLM 文字 ────────────────────────────────────────
 
-/** 這一筆是不是走「使用者帳號額度」（OAuth）而不是金鑰。 */
-function isOauth(entry){ return LLM_PROVIDERS[entry.provider]?.oauth === true; }
+/**
+ * 這一筆是不是走「使用者帳號額度」（OAuth）而不是金鑰。
+ *
+ * 認 provider 這個字，不是去查某一本目錄——geminiCall 同時服務文字、視覺、TTS
+ * 三份清單，只查 LLM_PROVIDERS 的話，TTS 那筆會查不到而被當成要金鑰的，
+ * 然後帶著一把空金鑰打過去。googleQuota 在三本目錄裡是同一件事。
+ */
+function isOauth(entry){ return entry.provider === "googleQuota"; }
 
 /**
  * 打一次 Gemini generateContent，兩種身分共用。
@@ -210,4 +235,99 @@ export async function runImage(prompt){
   }
   // 全部失敗 → 退 Pollinations
   return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`;
+}
+
+// ── 語音合成（雲端 TTS）────────────────────────────────
+
+function ttsEntries(){
+  return (state.ttsApis||[]).filter(e=>{
+    const p = e.provider && TTS_PROVIDERS[e.provider];
+    if(!p) return false;
+    if(p.oauth) return accountQuotaReady();     // 沒授權就跳過（同 llmEntries 的理由）
+    return !!e.key || !p.needsKey;
+  });
+}
+
+/** 有沒有設定好可用的雲端語音（app.js 用來決定要不要顯示相關提示）。 */
+export function hasCloudTts(){ return ttsEntries().length > 0; }
+
+/**
+ * Gemini TTS 回來的是**裸 PCM**，不是可以直接丟給 <audio> 的檔案。
+ *
+ * mimeType 長得像 `audio/L16;codec=pcm;rate=24000`——沒有檔頭、沒有容器，
+ * 直接當成 wav 播會是一片雜訊（前 44 個位元組會被當成取樣值）。
+ * 補一個 44 bytes 的 RIFF 檔頭，取樣率從 mimeType 讀，讀不到才退 24000
+ * （猜錯取樣率的症狀是聲音變快或變慢，不是不出聲，很難查）。
+ */
+function pcmToWavBlob(bytes, mimeType){
+  const rate = +(/rate=(\d+)/.exec(mimeType||"")?.[1]) || 24000;
+  const numCh = 1, bits = 16;
+  const blockAlign = numCh * bits / 8;
+  const buf = new ArrayBuffer(44 + bytes.length);
+  const dv = new DataView(buf);
+  const ascii = (off, s) => { for(let i=0;i<s.length;i++) dv.setUint8(off+i, s.charCodeAt(i)); };
+  ascii(0, "RIFF");  dv.setUint32(4, 36 + bytes.length, true);  ascii(8, "WAVE");
+  ascii(12, "fmt "); dv.setUint32(16, 16, true);                dv.setUint16(20, 1, true);
+  dv.setUint16(22, numCh, true);       dv.setUint32(24, rate, true);
+  dv.setUint32(28, rate * blockAlign, true);
+  dv.setUint16(32, blockAlign, true);  dv.setUint16(34, bits, true);
+  ascii(36, "data"); dv.setUint32(40, bytes.length, true);
+  new Uint8Array(buf, 44).set(bytes);
+  return new Blob([buf], { type:"audio/wav" });
+}
+
+function b64Bytes(b64){
+  const s = atob(b64);
+  const a = new Uint8Array(s.length);
+  for(let i=0;i<s.length;i++) a[i] = s.charCodeAt(i);
+  return a;
+}
+
+// 同時只播一句：不停掉前一句的話，連按兩次朗讀會兩句疊在一起講。
+let _audio = null;
+export function stopCloudTts(){
+  if(!_audio) return;
+  try{ _audio.pause(); URL.revokeObjectURL(_audio.src); }catch{}
+  _audio = null;
+}
+
+async function geminiTts(entry, text){
+  const voice = state.settings.ttsVoice || TTS_VOICES[0];
+  const j = await geminiCall({ ...entry, model: entry.model || TTS_PROVIDERS[entry.provider].model }, {
+    contents: [{ parts: [{ text }] }],
+    generationConfig: {
+      responseModalities: ["AUDIO"],
+      speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
+    },
+  });
+  const part = j.candidates?.[0]?.content?.parts?.find(p => p.inlineData || p.inline_data);
+  const inline = part?.inlineData || part?.inline_data;
+  if(!inline?.data) throw new Error("TTS no audio");
+  const mime = inline.mimeType || inline.mime_type || "";
+  const bytes = b64Bytes(inline.data);
+  // L16/PCM 要自己包檔頭；哪天 API 改回傳 wav/mp3 就直接用它的容器。
+  return /pcm|L16/i.test(mime) ? pcmToWavBlob(bytes, mime) : new Blob([bytes], { type: mime || "audio/wav" });
+}
+
+/**
+ * 用雲端 TTS 唸一句。成功回 true、沒有可用供應商或全部失敗回 false
+ * （呼叫端據此退回瀏覽器語音——發不出聲比音色差嚴重得多）。
+ */
+export async function runTts(text, { rate } = {}){
+  const list = ttsEntries();
+  if(!list.length || navigator.onLine === false) return false;
+  for(const e of rotate(list)){
+    try{
+      const blob = await geminiTts(e, text);
+      stopCloudTts();
+      const audio = new Audio(URL.createObjectURL(blob));
+      audio.playbackRate = rate || state.settings.rate || 1;
+      _audio = audio;
+      // 播完就把 blob 網址收掉，不然一個下午的對話會留下幾百個沒釋放的物件
+      audio.addEventListener("ended", () => { if(_audio === audio) stopCloudTts(); }, { once:true });
+      await audio.play();
+      return true;
+    }catch(x){ console.warn("tts", e.provider, x); }
+  }
+  return false;
 }

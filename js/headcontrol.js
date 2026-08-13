@@ -10,8 +10,8 @@
 //  - One-Euro 濾波：低速時抑制抖動（頭部本來就會微顫），快速移動時放行，
 //    這是頭控最關鍵的一步；單純平均會變得又鈍又飄。
 //  - dwell 觸發用「進度環」給視覺回饋，並在離開元素時歸零，避免誤觸。
-import { t } from "./i18n.js?v=1.5.56";
-import { state, save } from "./store.js?v=1.5.56";
+import { t } from "./i18n.js?v=1.5.57";
+import { state, save } from "./store.js?v=1.5.57";
 
 const MP = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619";
 const NOSE = 1, L_OUT = 33, R_OUT = 263;

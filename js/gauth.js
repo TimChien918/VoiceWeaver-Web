@@ -22,14 +22,18 @@
 //
 // 關於授權範圍：cloud-platform 很大（等於整個 Google Cloud 的操作權）。
 // 這不是我們想要的最小權限，但 Generative Language API 走使用者帳號時就是收這個。
-// 所以它**預設不要**——只有使用者自己在設定裡按下「授權」才會去要，
-// 而且畫面上要老實講清楚這件事，不要夾在登入流程裡順手拿走。
+// **登入時就一起要**（見 store.js 的 CLOUD_SCOPE）：不然使用者登入完會拿到一個
+// 「還不能講話」的 App，得自己到設定裡找一張卡、按授權、選專案——而這個 App 的
+// 使用者本來就不擅長在設定裡定位，等於預設是壞的。
+// 不同意也不會卡住：拿不到權杖時帳號額度那幾筆供應商自動跳過，其餘功能照舊。
+//
+// 拿到權杖之後 autoSetup() 會在背景把剩下的鋪完（挑專案、啟用 API），
+// 所以正常情況下使用者從頭到尾不用選任何東西；設定卡是給要改的人用的。
 
-import { state, save, loginGoogle } from "./store.js?v=1.5.56";
-import { t } from "./i18n.js?v=1.5.56";
+import { state, save, loginGoogle, CLOUD_SCOPE } from "./store.js?v=1.5.57";
+import { t } from "./i18n.js?v=1.5.57";
 
-/** Generative Language API 走使用者帳號時要的範圍（同時也才列得出專案清單）。 */
-export const CLOUD_SCOPE = "https://www.googleapis.com/auth/cloud-platform";
+export { CLOUD_SCOPE };
 
 const TOKEN_LS = "vw_gq_token";
 const EXP_LS   = "vw_gq_exp";
@@ -59,6 +63,17 @@ function tokenAlive(){ return !!_token && Date.now() < _expAt - SKEW_MS; }
 
 /** 忘掉目前的權杖（登出、或 Google 說它無效時）。 */
 export function forgetToken(){ remember("", 0); }
+
+/**
+ * 收下一把從別處拿到的權杖。
+ *
+ * 一般登入（loginGoogle）本身就會要 cloud-platform，拿回來的那把權杖跟這裡
+ * 自己去要的是同一種東西。收下它，使用者就不必為了同一件事再同意一次——
+ * 「登入完就能用」靠的就是這一步。
+ */
+export function adoptToken(token, expiresInSec){
+  if(token) remember(token, expiresInSec || 3600);
+}
 
 // ── 設定：使用者自己的 Google Cloud 專案 ──────────────────
 
@@ -282,4 +297,96 @@ export async function testAccountQuota(model){
   });
   if(!res.ok) throw await googleApiError(res);
   return true;
+}
+
+// ── 登入後自動把整條路鋪好 ────────────────────────────────
+
+const AUTO_PREFIX = "voiceweaver-";   // 本網頁自己建的專案認得出來
+
+/** 這個專案有沒有啟用 Generative Language API。問不到就當作沒有。 */
+async function apiEnabled(projectId){
+  try{
+    const url = `https://serviceusage.googleapis.com/v1/projects/${encodeURIComponent(projectId)}`
+              + "/services/generativelanguage.googleapis.com";
+    const res = await googleApiFetch(url, {}, { withProject: false });
+    if(!res.ok) return false;
+    return (await res.json()).state === "ENABLED";
+  }catch{ return false; }
+}
+
+/**
+ * 使用者一個 Google Cloud 專案都沒有時，幫他建一個。
+ *
+ * 為什麼敢這樣做：沒有專案就等於「這條路完全走不通」，而這時候沒有任何東西
+ * 好讓使用者選——不是替他做決定，是把唯一的選項準備好。建出來的專案在他自己
+ * 帳號底下，看得到也刪得掉，名字就叫 VoiceWeaver，一眼認得出是誰建的。
+ *
+ * 建立是非同步的（回一個 Operation），所以要等它真的好；等太久就放棄，
+ * 由設定卡顯示「請自己建一個」——背景工作不該把使用者卡在那裡。
+ */
+async function createProject(){
+  const id = AUTO_PREFIX + Math.random().toString(36).slice(2, 8) + Date.now().toString(36).slice(-4);
+  const res = await googleApiFetch("https://cloudresourcemanager.googleapis.com/v1/projects",
+    { method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ projectId: id, name: "VoiceWeaver" }) },
+    { withProject: false });
+  if(!res.ok) throw await googleApiError(res);
+  // 最多等約 30 秒。專案要「真的存在」之後才啟用得了 API。
+  for(let i=0; i<10; i++){
+    await new Promise(r => setTimeout(r, 3000));
+    const chk = await googleApiFetch(
+      `https://cloudresourcemanager.googleapis.com/v1/projects/${encodeURIComponent(id)}`,
+      {}, { withProject: false });
+    if(chk.ok && (await chk.json()).lifecycleState === "ACTIVE") return { id, name: "VoiceWeaver" };
+  }
+  throw new Error(t("gq.errCreateSlow"));
+}
+
+/**
+ * 登入之後在背景把「用我的帳號額度」整條路鋪好，不用使用者自己選。
+ *
+ * 回傳一個狀態字串給畫面用：
+ *   ready       —— 好了，可以直接講話
+ *   noToken     —— 使用者沒同意 cloud-platform（或匿名登入）→ 安靜略過
+ *   noProjects  —— 一個專案都沒有，而且自動建立也失敗了
+ *   listFailed  —— 列不出專案（多半是沒同意範圍）
+ *
+ * 全程失敗都不拋錯：這是背景工作，使用者只是想登入。走不通就退回原本的
+ * 「瀏覽器語音＋自己貼金鑰」，不要在登入完的第一個畫面丟一串錯誤給他。
+ */
+export async function autoSetup(){
+  if(!tokenAlive()) return "noToken";
+
+  // 已經選好專案：只確認 API 開著（開過的話這一步幾乎是零成本）
+  if(quotaProject()){
+    if(!(await apiEnabled(quotaProject()))){
+      try{ await enableGenerativeLanguage(); }catch{}
+    }
+    return "ready";
+  }
+
+  let projects;
+  try{ projects = await listProjects(); }
+  catch{ return "listFailed"; }
+
+  let pick = null;
+  if(projects.length === 1) pick = projects[0];
+  else if(projects.length > 1){
+    // 挑「已經啟用過 Gemini API 的那個」——那多半就是他上次用的。
+    // 問太多次會拖慢登入，所以只看前 10 個。
+    for(const p of projects.slice(0, 10)){
+      if(await apiEnabled(p.id)){ pick = p; break; }
+    }
+    // 都沒啟用過就挑本網頁自己建過的；再沒有就挑第一個。
+    // 挑第一個是在「替他決定」沒錯，但設定卡上會明白寫出用的是哪一個，
+    // 而且下拉隨時可以改——比讓他登入完發現不能講話好。
+    pick = pick || projects.find(p => p.id.startsWith(AUTO_PREFIX)) || projects[0];
+  } else {
+    try{ pick = await createProject(); }
+    catch(e){ console.warn("autoSetup createProject", e); return "noProjects"; }
+  }
+
+  setQuotaProject(pick.id);
+  try{ await enableGenerativeLanguage(); }catch(e){ console.warn("autoSetup enable", e); }
+  return "ready";
 }

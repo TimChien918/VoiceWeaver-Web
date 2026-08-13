@@ -41,7 +41,8 @@ VoiceWeaver 有兩個版本，用同一個 Google 帳號登入即可雙向同步
 | **生圖** | Pollinations 意圖圖卡（免金鑰）／電腦或 Colab 的 SD-Turbo／Gemini／HuggingFace／OpenAI |
 | **角色語音** | 讓電腦或 Colab 幫忙跑 GPT-SoVITS，依句子自動偵測情緒切換語氣；雲端曲庫瀏覽＋隨選下載 |
 | **🆘 危機介入（雙向）** | 關鍵字攔截 → AI 判斷是本人求助還是代替他人求助（避免誤鎖住求救訊息）→ 立即通報家人（Telegram）＋前後鏡頭現場快照＋免登入視訊通話房；**家人可在 Telegram 回覆指令**：`/call` 強制加入視訊、`/camera` 要求再拍現場、`/end` 結束對話；使用者可傳安撫快捷語或錄約 6 秒語音訊息給家人；呼吸引導動畫陪伴等待；1925 安心專線／119／家人電話一鍵直撥；**對話視窗使用者無法自行關閉**，需家人 `/end` 才會結束 |
-| **免金鑰開通** | OAuth 2.0：用登入的那個 Google 帳號直接呼叫 Gemini，用量算在使用者自己的 Google Cloud 專案上——照顧者不必去申請、保管、貼上任何 API 金鑰 |
+| **免金鑰開通** | OAuth 2.0：用登入的那個 Google 帳號直接呼叫 Gemini，用量算在使用者自己的 Google Cloud 專案上。**登入完自動鋪好**（挑專案／必要時建專案、啟用 API、加進文字＋語音＋生圖三份清單），照顧者不必申請金鑰、也不必自己選 |
+| **雲端語音** | Gemini TTS 走同一份帳號額度：比瀏覽器機械音自然得多，電腦沒開也有好聲音；專屬聲音（GPT-SoVITS）永遠優先，兩者都不可用時退回瀏覽器語音 |
 | **雲端同步** | Firebase Firestore：API 金鑰、設定、最愛、復健日誌（與 Android App 同結構）自動同步 |
 | **離線備援** | 無 Firebase 時退回 localStorage，功能完整可用；LLM 全部失敗時句子重組退回規則模板、復健評分退回字元／詞語重疊率計算 |
 | **簡轉繁校正** | 部分雲端模型即使提示詞要求繁體，偶爾仍會吐出簡體字；用 OpenCC 字元＋詞組雙層對照校正（round-trip 驗證過，不會誤改本來就正確的繁體字） |
@@ -124,24 +125,29 @@ GitHub repo → **Settings → Pages → Source: main / (root) → Save**。
 
 > **Google 登入授權網域**：回 Firebase → Authentication → Settings → Authorized domains，加入 `你的帳號.github.io`。
 
-### 3. 讓它有 AI 可用（兩條路，選一條）
+### 3. 讓它有 AI 可用
 
-**A. 用登入帳號自己的額度（OAuth 2.0，免申請金鑰）** ← 建議照顧者走這條
+**A. 用登入帳號自己的額度（OAuth 2.0，免申請金鑰）— 什麼都不用做**
 
-登入後到「**設定 → 🔑 用我的 Google 帳號額度**」，三步：
-
-1. **授權這個帳號** —— 用你登入的那個 Google 帳號同意一次。
-2. **選一個專案** —— 用量會算在這個 Google Cloud 專案上。沒有的話到
-   [console.cloud.google.com](https://console.cloud.google.com) 建一個（免費），再按「重讀」。
-3. **啟用 Gemini API**、**測試連線** —— 通了就會自動加進文字供應商，重組立刻可用。
+用 Google 登入之後就已經好了。登入時的同意畫面會一併要求 Gemini 需要的權限，
+接著網頁會在背景自動：挑一個你的 Google Cloud 專案（一個都沒有就幫你建一個叫
+VoiceWeaver 的）→ 啟用 Gemini API → 把「我的帳號額度」加進**文字、語音、生圖**
+三份供應商清單。登入完直接就能重組、朗讀、生圖。
 
 不必去申請、保管、貼上任何 API 金鑰；網頁是以「你」的身分呼叫 Gemini，
 用量與帳單都在你自己的專案底下，看得到也停得掉。
 
+要改用哪個專案、換嗓音、或整個關掉，到「**設定 → 🔑 用我的 Google 帳號額度**」
+與「**🔊 語音供應商**」。自動流程走不通時（例如你按了不同意），那張卡也會告訴你
+卡在哪一步、下一步該做什麼。
+
 > **關於授權範圍**：同意畫面會要求 `cloud-platform`（「查看及管理你的 Google Cloud 資料」）。
-> 這是 Google 的 AI API 走使用者身分時唯一接受的範圍——網頁只用它做兩件事：列出你的專案、
-> 以你的名義呼叫 Gemini。**這個授權不會夾在一般登入裡順手拿走**，只有你在這張卡上按下
-> 「授權」才會要；隨時可以到 Google 帳號的「第三方應用程式」收回。
+> 這是 Google 的 AI API 走使用者身分時唯一接受的範圍，而且**它很大**。之所以放在登入時
+> 一起要，是因為不這樣做的話，使用者登入完會拿到一個「還不能講話」的 App，得自己進設定
+> 找一張卡按授權——對這個 App 的使用者而言，那等於預設是壞的。
+> 網頁只用它做三件事：列出（必要時建立）你的專案、啟用 Gemini API、以你的名義呼叫 Gemini。
+> 不同意也不會卡住，只是帳號額度那幾筆供應商會被自動跳過，其餘功能照舊。
+> 授權隨時可以到 Google 帳號的「第三方應用程式」收回。
 >
 > **想少按幾次「重新授權」**：OAuth access token 一小時到期。在 `config.js` 填上
 > `window.__GOOGLE_OAUTH__.clientId`（見 `config.example.js`）就會改走 Google Identity
@@ -163,7 +169,8 @@ GitHub repo → **Settings → Pages → Source: main / (root) → Save**。
 ## 技術說明
 
 - **語言**：純 ES6 模組（無打包工具），可直接用 GitHub Pages 靜態托管。
-- **TTS / STT**：預設瀏覽器原生 Web Speech API（免金鑰），辨識語言跟著介面語言走；連上電腦／Colab 時 TTS 改用 GPT-SoVITS 角色聲音（`js/localtts.js`）。
+- **TTS 三層**：專屬聲音（GPT-SoVITS，要電腦／Colab 開著）→ 雲端 TTS（Gemini，走帳號額度）→ 瀏覽器原生 Web Speech API。上面兩層任何一種失敗都自動落到下一層，最底層免金鑰、零延遲，所以「按了朗讀卻沒聲音」不會發生。快速求救那三顆與重症防呆模式刻意直接走瀏覽器語音——那些場合出得了聲比音色重要。Gemini TTS 回的是裸 PCM，`js/providers.js` 補 RIFF 檔頭後才播。
+- **STT**：瀏覽器原生 Web Speech API（免金鑰），辨識語言跟著介面語言走。
 - **LLM**：多供應商自動輪詢＋失敗換下一家（`js/providers.js`），復健評分會改用固定順序而非輪替，避免同一句話因為換了模型而分數飄動。
 - **句子重組**：`js/llm.js` 對同一組碎詞平行取樣多次，每次回傳多個候選句，攤平後依「相同文意出現次數、再看平均信心」排序取前三；JSON 解析容忍截斷與格式錯誤，絕不把解析失敗的原始 JSON 當作一句話唸出來。
 - **危機意圖分類**：`classifyCrisisIntent()` 獨立於句子重組之外呼叫，刻意不掛安全防禦提示詞，因為那會讓分類任務被模型拒答。
@@ -209,7 +216,7 @@ js/
 ├── crisis.js            危機介入視窗（現場快照、家人指令、語音訊息、呼吸引導、專線）
 ├── llm.js               多供應商 LLM 重組（自我一致性排序）+ 危機意圖分類 + 復健 AI 評分 + AI 建議
 ├── localtts.js          電腦／Colab 橋接（偵測、角色切換、合成、曲庫瀏覽與下載）
-├── providers.js         LLM / 生圖供應商清單與輪詢邏輯
+├── providers.js         LLM / 語音 / 生圖供應商清單與輪詢邏輯（含 Gemini TTS 的 PCM→WAV）
 ├── speech.js            TTS（含 speakIn 多語）/ STT，跟著介面語言走
 ├── audiodirect.js       原生音訊直接理解（跳過 STT，餵給支援音訊的模型）
 ├── rehab.js             語音復健（整段分句、隊列練習、錯誤高亮、streak）
