@@ -30,8 +30,8 @@
 // 拿到權杖之後 autoSetup() 會在背景把剩下的鋪完（挑專案、啟用 API），
 // 所以正常情況下使用者從頭到尾不用選任何東西；設定卡是給要改的人用的。
 
-import { state, save, loginGoogle, CLOUD_SCOPE, clearCloudScopeBlock } from "./store.js?v=1.5.59";
-import { t } from "./i18n.js?v=1.5.59";
+import { state, save, loginGoogle, CLOUD_SCOPE, clearCloudScopeBlock } from "./store.js?v=1.5.60";
+import { t } from "./i18n.js?v=1.5.60";
 
 export { CLOUD_SCOPE };
 
