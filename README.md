@@ -131,7 +131,8 @@ GitHub repo → **Settings → Pages → Source: main / (root) → Save**。
 
 用 Google 登入之後就已經好了。登入時的同意畫面會一併要求 Gemini 需要的權限，
 接著網頁會在背景自動：挑一個你的 Google Cloud 專案（一個都沒有就幫你建一個叫
-VoiceWeaver 的）→ 啟用 Gemini API → 把「我的帳號額度」加進**文字、語音、生圖**
+VoiceWeaver 的）→ 啟用 Gemini API → **在你的專案裡開一把限定只打得動 Gemini 的金鑰**
+→ 把它加進**文字、語音、生圖**
 三份供應商清單（三處都叫 **Google Gemini OAuth 2.0**）。登入完直接就能重組、朗讀、生圖。
 
 不必去申請、保管、貼上任何 API 金鑰；網頁是以「你」的身分呼叫 Gemini，
@@ -141,17 +142,27 @@ VoiceWeaver 的）→ 啟用 Gemini API → 把「我的帳號額度」加進**�
 與「**🔊 語音供應商**」。自動流程走不通時（例如你按了不同意），那張卡也會告訴你
 卡在哪一步、下一步該做什麼。
 
-> **關於授權範圍**：同意畫面會要求 `cloud-platform`（「查看及管理你的 Google Cloud 資料」）。
-> 這是 Google 的 AI API 走使用者身分時唯一接受的範圍，而且**它很大**。之所以放在登入時
-> 一起要，是因為不這樣做的話，使用者登入完會拿到一個「還不能講話」的 App，得自己進設定
-> 找一張卡按授權——對這個 App 的使用者而言，那等於預設是壞的。
-> 網頁只用它做三件事：列出（必要時建立）你的專案、啟用 Gemini API、以你的名義呼叫 Gemini。
-> 不同意也不會卡住，只是帳號額度那幾筆供應商會被自動跳過，其餘功能照舊。
-> 授權隨時可以到 Google 帳號的「第三方應用程式」收回。
+> **OAuth 是用來「開通」，不是用來「呼叫」的**
 >
-> **想少按幾次「重新授權」**：OAuth access token 一小時到期。在 `config.js` 填上
-> `window.__GOOGLE_OAUTH__.clientId`（見 `config.example.js`）就會改走 Google Identity
-> Services，過期時多半能安靜換一把新的，不會在講話講到一半跳出彈窗。
+> `generativelanguage.googleapis.com`（Gemini API）**不收使用者的 OAuth 權杖**——拿
+> Bearer token 去打 `generateContent` 一律回 403「Request had insufficient authentication
+> scopes」，而且沒有任何範圍解得開，`cloud-platform` 也不行。那個端點就是設計成收 API 金鑰的。
+> Google 自己的 Gemini CLI 走的是 `cloudcode-pa.googleapis.com/v1internal`，一個沒有文件、
+> request 格式不同的內部端點。**Google AI Studio 做得到「登入就直接用你帳號的額度」，
+> 是因為它是 Google 第一方應用程式；第三方網頁沒有這條路。**
+>
+> 所以這裡的做法是：用 OAuth 在**你自己的專案裡開一把 Gemini 金鑰**（限定只打得動
+> Gemini），之後就拿那把金鑰呼叫。對你來說結果一樣——沒有去申請、沒有複製貼上任何東西，
+> 用量算在你自己的專案上——但走的是 Google 真正支援的路。
+>
+> 副作用是好的：**API 金鑰不會過期**，所以日常使用不再受 access token「一小時到期」的影響；
+> OAuth 只在第一次開通時用得到。
+>
+> **關於授權範圍**：同意畫面會要求 `cloud-platform`（「查看及管理你的 Google Cloud 資料」），
+> 而且**它很大**。網頁只用它做四件事：列出（必要時建立）你的專案、啟用 Gemini API、
+> 啟用 API Keys API、在你的專案裡開那把金鑰。不同意也不會卡住，只是那幾筆供應商會被
+> 自動跳過，其餘功能照舊。授權隨時可以到 Google 帳號的「第三方應用程式」收回，
+> 金鑰也隨時可以在 Cloud Console 的「憑證」裡刪掉（名稱是 `VoiceWeaver`）。
 
 **B. 自己貼 API 金鑰**
 
