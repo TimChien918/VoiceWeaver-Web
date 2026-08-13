@@ -1,7 +1,8 @@
 // 供應商目錄 + 呼叫器（同供應商可多把金鑰、可多選供應商，自動輪詢+備援）。
-import { state } from "./store.js?v=1.5.62";
-import { localHas, localText, localImage } from "./localtts.js?v=1.5.62";
-import { t } from "./i18n.js?v=1.5.62";
+import { state } from "./store.js?v=1.5.63";
+import { localHas, localText, localImage } from "./localtts.js?v=1.5.63";
+import { sharedEntry, countSharedUse } from "./shared.js?v=1.5.63";
+import { t } from "./i18n.js?v=1.5.63";
 
 // 文字 LLM 供應商（標 cors 者較可能可在瀏覽器直接呼叫）
 //
@@ -162,6 +163,13 @@ function llmEntries(){
     if(!p) return false;
     return !!e.key || !p.needsKey;
   });
+  // 活動期間借站方的金鑰。**只在使用者自己一把都沒有時才借**——
+  // 他自己設了就用他自己的，額度算他的，不該去消耗別人的。
+  // 插在最前面：借來的是正規金鑰，品質比免金鑰保底好。
+  if(!list.length){
+    const sh = sharedEntry("llm");
+    if(sh) list.unshift(sh);
+  }
   // 永遠保底有一個免金鑰的（同 imageEntries 的做法）。**放在最後**：
   // 使用者自己貼的金鑰品質比較好，該先用；這一筆是「什麼都沒設也能講話」。
   if(!list.some(e => e.provider === "pollinations")) list.push({ provider:"pollinations", key:"", model:"" });
@@ -195,7 +203,12 @@ export async function runLlm(sys, user, opts={}){
                  : e.provider==="cohere"?cohereText
                  : e.provider==="pollinations"?pollinationsText : openaiText;
         const out = await fn(e, sys, user, temp);
-        if(out) return out.replace(/^[「"']|[」"']$/g,"").trim();
+        if(out){
+          // 借來的金鑰才計數，而且**成功才算**——失敗不該吃掉使用者的額度。
+          // 不 await：計數是記帳，不該讓使用者多等一趟 Firestore。
+          if(e.__shared) countSharedUse();
+          return out.replace(/^[「"']|[」"']$/g,"").trim();
+        }
       }catch(x){ err=x; console.warn(e.provider, x); }
     }
   }
@@ -215,6 +228,11 @@ function imageEntries(){
     if(!p) return false;
     return !!e.key || !p.needsKey;
   });
+  // 活動期間借站方的金鑰（同 llmEntries 的理由：只在自己沒有時借）
+  if(!list.some(e => e.key)){
+    const sh = sharedEntry("image");
+    if(sh) list.unshift(sh);
+  }
   // 永遠保底有 Pollinations（免金鑰）
   if(!list.some(e=>e.provider==="pollinations")) list.push({ provider:"pollinations", key:"" });
   return list;
@@ -226,6 +244,7 @@ export async function runImage(prompt){
     catch(x){ console.warn("local image", x); }
   }
   for(const e of rotate(imageEntries())){
+    const done = (url)=>{ if(e.__shared) countSharedUse(); return url; };
     try{
       if(e.provider==="pollinations")
         return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`;
@@ -235,12 +254,12 @@ export async function runImage(prompt){
           body:JSON.stringify({ instances:[{prompt}], parameters:{sampleCount:1} })};
         const r = await fetch(`${base}?key=${encodeURIComponent(e.key)}`, init);
         if(!r.ok) throw 0; const j=await r.json(); const b64=j.predictions?.[0]?.bytesBase64Encoded;
-        if(b64) return "data:image/png;base64,"+b64;
+        if(b64) return done("data:image/png;base64,"+b64);
       }
       if(e.provider==="huggingface"){
         const r=await fetch(`https://router.huggingface.co/hf-inference/models/${e.model||IMAGE_PROVIDERS.huggingface.model}`,
           {method:"POST",headers:{"Authorization":"Bearer "+e.key,"Content-Type":"application/json"},body:JSON.stringify({inputs:prompt})});
-        if(!r.ok) throw 0; const blob=await r.blob(); return URL.createObjectURL(blob);
+        if(!r.ok) throw 0; const blob=await r.blob(); return done(URL.createObjectURL(blob));
       }
       if(e.provider==="openai"){
         const r=await fetch("https://api.openai.com/v1/images/generations",{method:"POST",
@@ -258,11 +277,17 @@ export async function runImage(prompt){
 // ── 語音合成（雲端 TTS）────────────────────────────────
 
 function ttsEntries(){
-  return (state.ttsApis||[]).filter(e=>{
+  const list = (state.ttsApis||[]).filter(e=>{
     const p = e.provider && TTS_PROVIDERS[e.provider];
     if(!p) return false;
     return !!e.key || !p.needsKey;
   });
+  // 活動期間借站方的金鑰（同上：只在自己沒有時借）
+  if(!list.length){
+    const sh = sharedEntry("tts");
+    if(sh) list.unshift(sh);
+  }
+  return list;
 }
 
 /** 有沒有設定好可用的雲端語音（app.js 用來決定要不要顯示相關提示）。 */
@@ -336,6 +361,7 @@ export async function runTts(text, { rate } = {}){
   for(const e of rotate(list)){
     try{
       const blob = await geminiTts(e, text);
+      if(e.__shared) countSharedUse();
       stopCloudTts();
       const audio = new Audio(URL.createObjectURL(blob));
       audio.playbackRate = rate || state.settings.rate || 1;
