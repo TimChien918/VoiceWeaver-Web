@@ -269,6 +269,10 @@ export const STRINGS = {
   "providers.accountPh": { "zh-TW":"Cloudflare 帳戶 ID", "en":"Cloudflare Account ID", "ja":"Cloudflare アカウント ID", "ko":"Cloudflare 계정 ID" },
   "providers.keyPh": { "zh-TW":"API 金鑰", "en":"API key", "ja":"API キー", "ko":"API 키" },
   "err.needCfAccount": { "zh-TW":"Cloudflare 這一筆還缺帳戶 ID", "en":"This Cloudflare entry still needs an Account ID", "ja":"この Cloudflare の項目にはアカウント ID が必要です", "ko":"이 Cloudflare 항목에는 계정 ID가 필요합니다" },
+  "providers.test": { "zh-TW":"測試這一筆", "en":"Test this entry", "ja":"この項目をテスト", "ko":"이 항목 테스트" },
+  "providers.testing": { "zh-TW":"測試中……", "en":"Testing…", "ja":"テスト中……", "ko":"테스트 중…" },
+  "providers.testOk": { "zh-TW":"✅ 通了（{info}）", "en":"✅ Works ({info})", "ja":"✅ 成功（{info}）", "ko":"✅ 성공 ({info})" },
+  "providers.testFail": { "zh-TW":"❌ 不通：", "en":"❌ Failed: ", "ja":"❌ 失敗：", "ko":"❌ 실패: " },
   "providers.del": { "zh-TW":"刪除", "en":"Delete", "ja":"削除", "ko":"삭제" },
   // ── 用登入帳號自己的額度（OAuth 2.0，免金鑰）──
   "shared.note": { "zh-TW":"🎁 活動期間：你正在借用站方的 API 金鑰，今天還可以用 {left} / {limit} 次。想不受限就在下面加上自己的金鑰。", "en":"🎁 Event period: you're borrowing the site's API key — {left} of {limit} uses left today. Add your own key below to remove the limit.", "ja":"🎁 イベント期間中：サイト提供の API キーを借用中です。本日あと {left} / {limit} 回。制限をなくすには下で自分のキーを追加してください。", "ko":"🎁 이벤트 기간: 사이트의 API 키를 빌려 쓰는 중입니다. 오늘 {left}/{limit}회 남았습니다. 제한을 없애려면 아래에서 본인 키를 추가하세요." },

@@ -1,29 +1,29 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.65";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES } from "./providers.js?v=1.5.65";
-import { initShared, sharedAvailable, sharedUsage, campaignActive } from "./shared.js?v=1.5.65";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.66";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES, testEntry } from "./providers.js?v=1.5.66";
+import { initShared, sharedAvailable, sharedUsage, campaignActive } from "./shared.js?v=1.5.66";
 import { WEBGPU_MODELS, webgpuSupported, probeWebgpu, webgpuEnabled, setWebgpuEnabled, webgpuModel,
-         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.5.65";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.65";
-import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.65";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.65";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.65";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.65";
-import { bindTap } from "./interaction.js?v=1.5.65";
-import { orderCards } from "./predict.js?v=1.5.65";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.65";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.65";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.65";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.65";
-import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.65";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.65";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.65";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.65";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.65";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.65";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.65";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.65";
-import { applyI18n, t } from "./i18n.js?v=1.5.65";
-import { setupDemo } from "./demo.js?v=1.5.65";
+         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.5.66";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.66";
+import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.66";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.66";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.66";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.66";
+import { bindTap } from "./interaction.js?v=1.5.66";
+import { orderCards } from "./predict.js?v=1.5.66";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.66";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.66";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.66";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.66";
+import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.66";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.66";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.66";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.66";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.66";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.66";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.66";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.66";
+import { applyI18n, t } from "./i18n.js?v=1.5.66";
+import { setupDemo } from "./demo.js?v=1.5.66";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -402,6 +402,9 @@ function bindSettings(){
 }
 
 // 多供應商/多金鑰清單：供應商下拉 + 金鑰欄 + 刪除
+/** listKey → testEntry 的用途代號。 */
+const PROVIDER_KIND = { llmApis:"llm", imageApis:"image", ttsApis:"tts" };
+
 function renderProviderList(containerId, listKey, catalog){
   const box = $(containerId); const list = state[listKey] || [];
   // 容器不在畫面上就安靜跳過。這裡如果炸掉，整個 fillSettings 會中斷，
@@ -419,8 +422,10 @@ function renderProviderList(containerId, listKey, catalog){
     return `<div class="prow" data-i="${i}" style="border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px">
       <div class="row" style="margin:0;gap:6px">
         <select class="p-prov" style="flex:1">${opts(e.provider)}</select>
+        <span class="chip p-test" title="${t("providers.test")}">🔍</span>
         <span class="chip p-del" title="${t("providers.del")}">🗑</span>
       </div>
+      <p class="p-result tiny muted" style="margin:6px 0 0"></p>
       ${p.needsAccount?`<input class="p-acct" type="text" placeholder="${t("providers.accountPh")}" value="${escapeHtml(e.account||"")}" autocomplete="off" style="margin-top:6px"/>`:""}
       ${needsKey?`<input class="p-key" type="password" placeholder="${t("providers.keyPh")}" value="${escapeHtml(e.key||"")}" autocomplete="off" style="margin-top:6px"/>`:`<p class="tiny muted" style="margin:6px 0 0">${escapeHtml(freeNote)}</p>`}
     </div>`;
@@ -431,6 +436,26 @@ function renderProviderList(containerId, listKey, catalog){
     row.querySelector(".p-key")?.addEventListener("input", e=>{ state[listKey][i].key=e.target.value.trim(); save(); });
     row.querySelector(".p-acct")?.addEventListener("input", e=>{ state[listKey][i].account=e.target.value.trim(); save(); });
     row.querySelector(".p-del").addEventListener("click", ()=>{ state[listKey].splice(i,1); save(); renderProviderList(containerId,listKey,catalog); });
+    row.querySelector(".p-test").addEventListener("click", async ()=>{
+      const out = row.querySelector(".p-result");
+      const btn = row.querySelector(".p-test");
+      if(btn.dataset.busy) return;              // 連點兩下不要打兩次
+      btn.dataset.busy = "1";
+      out.textContent = t("providers.testing");
+      out.classList.remove("err");
+      try{
+        // 測「畫面上這一筆現在的內容」，不是存檔時的——使用者剛改完金鑰
+        // 還沒失焦就按測試是很自然的動作。
+        const res = await testEntry(PROVIDER_KIND[listKey], state[listKey][i]);
+        out.textContent = t("providers.testOk").replace("{info}", res || "");
+      }catch(err){
+        // 原文照登：403、API key not valid、quota exceeded 那幾句才是線索，
+        // 翻成「測試失敗」等於把唯一有用的資訊丟掉。
+        out.textContent = t("providers.testFail") + ((err && err.message) || err);
+        out.classList.add("err");
+      }
+      btn.dataset.busy = "";
+    });
   });
 }
 
@@ -1487,7 +1512,7 @@ async function renderVoices(){
           >${esc(t("set.voicesReauth"))}</button></p>`);
     }
     try{
-      const drive = await import("./drive.js?v=1.5.65");
+      const drive = await import("./drive.js?v=1.5.66");
       const d = await drive.diagnoseVoiceModels();
       // 同名根要先講。有兩個 VoiceWeaver 時，底下那些「沒有 Models」之類的
       // 描述全部都是在講錯的那一個資料夾，先看到它才不會被帶去修錯的地方。

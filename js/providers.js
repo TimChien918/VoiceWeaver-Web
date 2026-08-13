@@ -1,9 +1,9 @@
 // 供應商目錄 + 呼叫器（同供應商可多把金鑰、可多選供應商，自動輪詢+備援）。
-import { state } from "./store.js?v=1.5.65";
-import { localHas, localText, localImage } from "./localtts.js?v=1.5.65";
-import { sharedEntry, countSharedUse } from "./shared.js?v=1.5.65";
-import { webgpuUsable, webgpuGenerate } from "./webgpu.js?v=1.5.65";
-import { t } from "./i18n.js?v=1.5.65";
+import { state } from "./store.js?v=1.5.66";
+import { localHas, localText, localImage } from "./localtts.js?v=1.5.66";
+import { sharedEntry, countSharedUse } from "./shared.js?v=1.5.66";
+import { webgpuUsable, webgpuGenerate } from "./webgpu.js?v=1.5.66";
+import { t } from "./i18n.js?v=1.5.66";
 
 // 文字 LLM 供應商（標 cors 者較可能可在瀏覽器直接呼叫）
 //
@@ -62,6 +62,24 @@ function TTS_MODEL_DEFAULT(){ return "gemini-3.1-flash-tts-preview"; }
 /** Gemini 內建嗓音（設定頁下拉用）。名稱是 API 的字面值，不翻譯。 */
 export const TTS_VOICES = ["Kore","Puck","Charon","Fenrir","Aoede","Leda","Orus","Zephyr"];
 
+/**
+ * 把 HTTP 錯誤變成一句有線索的訊息。
+ *
+ * 原本只丟「Gemini 400」——而回應主體裡那句「API key not valid」才是使用者
+ * 真正需要的東西。金鑰打錯、額度用完、模型不存在，三種在畫面上長得一模一樣，
+ * 等於要他自己猜。
+ */
+async function httpError(label, res){
+  let detail = "";
+  try{
+    const j = await res.json();
+    detail = j?.error?.message || j?.error?.type || j?.message || "";
+  }catch{
+    try{ detail = (await res.text()).slice(0, 160); }catch{}
+  }
+  return new Error(`${label} ${res.status}${detail ? "：" + detail : ""}`);
+}
+
 let _rot = 0;
 function rotate(list){ if(list.length<=1) return list; const o=_rot++%list.length; return list.slice(o).concat(list.slice(0,o)); }
 
@@ -80,7 +98,7 @@ export async function geminiCall(entry, body){
   const init = { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) };
   if(!entry.key) throw new Error("Gemini: no key");
   const r = await fetch(`${base}?key=${encodeURIComponent(entry.key)}`, init);
-  if(!r.ok) throw new Error("Gemini "+r.status);
+  if(!r.ok) throw await httpError("Gemini", r);
   return r.json();
 }
 function geminiTextOf(j){ return (j.candidates?.[0]?.content?.parts?.[0]?.text||"").trim(); }
@@ -160,7 +178,7 @@ async function openaiText(entry, sys, user, temp=0.5){
     headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+entry.key },
     body: JSON.stringify({ model, temperature:temp, max_tokens:160,
       messages:[{role:"system",content:sys},{role:"user",content:user}] }) });
-  if(!r.ok) throw new Error(entry.provider+" "+r.status);
+  if(!r.ok) throw await httpError(entry.provider, r);
   const j = await r.json(); return (j.choices?.[0]?.message?.content||"").trim();
 }
 async function cohereText(entry, sys, user, temp=0.5){
@@ -168,7 +186,7 @@ async function cohereText(entry, sys, user, temp=0.5){
     headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+entry.key },
     body: JSON.stringify({ model: entry.model||LLM_PROVIDERS.cohere.model,
       messages:[{role:"system",content:sys},{role:"user",content:user}], temperature:temp }) });
-  if(!r.ok) throw new Error("Cohere "+r.status);
+  if(!r.ok) throw await httpError("Cohere", r);
   const j = await r.json(); return (j.message?.content?.[0]?.text||"").trim();
 }
 function llmEntries(){
@@ -252,6 +270,41 @@ export async function runLlm(sys, user, opts={}){
 }
 
 // ── 生圖 ────────────────────────────────────────────
+
+/**
+ * 打一家生圖供應商。成功回圖片網址／dataURL，這一家不認得就回 null。
+ *
+ * 抽成一支是為了讓「測試」按鈕跟正式流程走**完全同一條路**——測試如果是
+ * 另一份實作，就會出現「測起來過、實際上不通」，那比沒有測試更糟。
+ */
+export async function imageOnce(e, prompt){
+  if(e.provider==="pollinations")
+    return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`;
+  if(e.provider==="gemini"){
+    const base="https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict";
+    const r = await fetch(`${base}?key=${encodeURIComponent(e.key)}`, {method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ instances:[{prompt}], parameters:{sampleCount:1} })});
+    if(!r.ok) throw await httpError("Imagen", r);
+    const b64=(await r.json()).predictions?.[0]?.bytesBase64Encoded;
+    return b64 ? "data:image/png;base64,"+b64 : null;
+  }
+  if(e.provider==="huggingface"){
+    const r=await fetch(`https://router.huggingface.co/hf-inference/models/${e.model||IMAGE_PROVIDERS.huggingface.model}`,
+      {method:"POST",headers:{"Authorization":"Bearer "+e.key,"Content-Type":"application/json"},body:JSON.stringify({inputs:prompt})});
+    if(!r.ok) throw await httpError("HuggingFace", r);
+    return URL.createObjectURL(await r.blob());
+  }
+  if(e.provider==="openai"){
+    const r=await fetch("https://api.openai.com/v1/images/generations",{method:"POST",
+      headers:{"Authorization":"Bearer "+e.key,"Content-Type":"application/json"},
+      body:JSON.stringify({model:"gpt-image-1",prompt,size:"512x512"})});
+    if(!r.ok) throw await httpError("OpenAI image", r);
+    const b64=(await r.json()).data?.[0]?.b64_json;
+    return b64 ? "data:image/png;base64,"+b64 : null;
+  }
+  return null;
+}
 function imageEntries(){
   const list = (state.imageApis||[]).filter(e=>{
     const p = e.provider && IMAGE_PROVIDERS[e.provider];
@@ -274,30 +327,9 @@ export async function runImage(prompt){
     catch(x){ console.warn("local image", x); }
   }
   for(const e of rotate(imageEntries())){
-    const done = (url)=>{ if(e.__shared) countSharedUse(); return url; };
     try{
-      if(e.provider==="pollinations")
-        return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`;
-      if(e.provider==="gemini"){
-        const base="https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict";
-        const init={method:"POST",headers:{"Content-Type":"application/json"},
-          body:JSON.stringify({ instances:[{prompt}], parameters:{sampleCount:1} })};
-        const r = await fetch(`${base}?key=${encodeURIComponent(e.key)}`, init);
-        if(!r.ok) throw 0; const j=await r.json(); const b64=j.predictions?.[0]?.bytesBase64Encoded;
-        if(b64) return done("data:image/png;base64,"+b64);
-      }
-      if(e.provider==="huggingface"){
-        const r=await fetch(`https://router.huggingface.co/hf-inference/models/${e.model||IMAGE_PROVIDERS.huggingface.model}`,
-          {method:"POST",headers:{"Authorization":"Bearer "+e.key,"Content-Type":"application/json"},body:JSON.stringify({inputs:prompt})});
-        if(!r.ok) throw 0; const blob=await r.blob(); return done(URL.createObjectURL(blob));
-      }
-      if(e.provider==="openai"){
-        const r=await fetch("https://api.openai.com/v1/images/generations",{method:"POST",
-          headers:{"Authorization":"Bearer "+e.key,"Content-Type":"application/json"},
-          body:JSON.stringify({model:"gpt-image-1",prompt,size:"512x512"})});
-        if(!r.ok) throw 0; const j=await r.json(); const b64=j.data?.[0]?.b64_json;
-        if(b64) return "data:image/png;base64,"+b64;
-      }
+      const url = await imageOnce(e, prompt);
+      if(url){ if(e.__shared) countSharedUse(); return url; }
     }catch(x){ console.warn("image",e.provider,x); }
   }
   // 全部失敗 → 退 Pollinations
@@ -403,4 +435,49 @@ export async function runTts(text, { rate } = {}){
     }catch(x){ console.warn("tts", e.provider, x); }
   }
   return false;
+}
+
+// ── 測試一筆供應商設定 ──────────────────────────────
+//
+// 為什麼值得做：設定頁上填完金鑰之後，使用者唯一能確認「這把到底行不行」的
+// 方法是回去重組一句話，而失敗時看到的是「重組失敗」——那句話不會告訴他
+// 是哪一家壞了、是金鑰錯還是額度滿。一筆一顆測試鈕，答案就直接指到那一行。
+//
+// **一律走正式流程那幾支**（geminiText / openaiText / imageOnce / geminiTts）。
+// 測試如果自己寫一份，就會出現「測起來過、實際上不通」，那比沒有測試更糟。
+
+/** 這一家的文字呼叫器是哪一支（與 runLlm 的挑法保持一致）。 */
+function textFnOf(provider){
+  return provider === "gemini"       ? geminiText
+       : provider === "cohere"       ? cohereText
+       : provider === "pollinations" ? pollinationsText
+       : openaiText;
+}
+
+/**
+ * 測一筆設定。成功回一句可以顯示的摘要，失敗就把錯誤丟出去讓畫面顯示原文——
+ * 那句原文（403、API key not valid、quota exceeded…）才是使用者要的線索。
+ *
+ * @param kind  "llm" | "image" | "tts"
+ */
+export async function testEntry(kind, entry){
+  if(kind === "llm"){
+    // 用最短的輸入、溫度 0：測的是「打不打得通」，不是品質，不必燒額度。
+    const out = await textFnOf(entry.provider)(entry, "Reply with the single word: OK", "ping", 0);
+    if(!out) throw new Error("empty response");
+    return out.replace(/\s+/g, " ").trim().slice(0, 40);
+  }
+  if(kind === "image"){
+    const url = await imageOnce(entry, "a small red circle on white background");
+    if(!url) throw new Error("no image");
+    // Pollinations 是「組出網址就算成功」（真正的圖是 <img> 去抓的），
+    // 所以這裡只回報拿到什麼形式，不假裝驗證過畫面。
+    return url.startsWith("data:") ? "data URL" : url.slice(0, 48) + "…";
+  }
+  if(kind === "tts"){
+    const blob = await geminiTts(entry, "測試");
+    if(!blob || !blob.size) throw new Error("no audio");
+    return Math.round(blob.size / 1024) + " KB";
+  }
+  throw new Error("unknown kind: " + kind);
 }
