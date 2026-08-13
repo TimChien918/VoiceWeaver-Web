@@ -149,7 +149,21 @@ GitHub repo → **Settings → Pages → Source: main / (root) → Save**。
 自己已經填了金鑰的人不受影響——永遠優先用他自己的。
 
 **① 把金鑰放進 Firestore**：建一份文件 `shared/apiKeys`，內容是三份清單
-（可各放多把，使用者會隨機抽一把，分散負載）：
+（可各放多把，使用者會隨機抽一把，分散負載）。
+
+有服務帳戶金鑰的話可以一行指令搞定（不必在主控台一個欄位一個欄位點）：
+
+```bash
+node tools/publish-shared-keys.mjs <服務帳戶.json> --key AIza你的活動專用金鑰
+node tools/publish-shared-keys.mjs <服務帳戶.json> --key AIza… --dry-run   # 先看會寫什麼
+node tools/publish-shared-keys.mjs <服務帳戶.json> --delete                 # 活動結束後清掉
+```
+
+> 這支刻意做成在**你自己電腦上**跑的腳本，而不是網頁的功能：網頁端要能做這件事，
+> 就得把服務帳戶私鑰交給瀏覽器，那等於公開它——而那把私鑰繞過所有安全規則，
+> 是整個專案（含所有使用者資料）的最高權限。
+
+手動建的話，文件內容長這樣：
 
 ```json
 {
