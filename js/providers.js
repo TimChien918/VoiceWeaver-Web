@@ -1,8 +1,8 @@
 // 供應商目錄 + 呼叫器（同供應商可多把金鑰、可多選供應商，自動輪詢+備援）。
-import { state } from "./store.js?v=1.5.60";
-import { localHas, localText, localImage } from "./localtts.js?v=1.5.60";
-import { googleApiFetch, googleApiError, accountQuotaReady } from "./gauth.js?v=1.5.60";
-import { t } from "./i18n.js?v=1.5.60";
+import { state } from "./store.js?v=1.5.61";
+import { localHas, localText, localImage } from "./localtts.js?v=1.5.61";
+import { googleApiError, accountQuotaReady, accountApiKey } from "./gauth.js?v=1.5.61";
+import { t } from "./i18n.js?v=1.5.61";
 
 // 文字 LLM 供應商（標 cors 者較可能可在瀏覽器直接呼叫）
 //
@@ -64,32 +64,34 @@ function rotate(list){ if(list.length<=1) return list; const o=_rot++%list.lengt
 // ── LLM 文字 ────────────────────────────────────────
 
 /**
- * 這一筆是不是走「使用者帳號額度」（OAuth）而不是金鑰。
+ * 這一筆該用哪一把金鑰。
  *
- * 認 provider 這個字，不是去查某一本目錄——geminiCall 同時服務文字、視覺、TTS
- * 三份清單，只查 LLM_PROVIDERS 的話，TTS 那筆會查不到而被當成要金鑰的，
- * 然後帶著一把空金鑰打過去。googleQuota 在三本目錄裡是同一件事。
+ * googleQuota 那幾筆的金鑰不存在項目本身，而是「開通時在使用者專案裡開出來的
+ * 那一把」（見 gauth.js）——三份清單共用同一把，所以不必各存一份，
+ * 使用者換專案時也只有一個地方要改。
+ *
+ * 認 provider 這個字，不是去查某一本目錄：geminiCall 同時服務文字、視覺、TTS
+ * 三份清單，只查 LLM_PROVIDERS 的話 TTS 那筆會查不到。
  */
-function isOauth(entry){ return entry.provider === "googleQuota"; }
+function keyOf(entry){ return entry.provider === "googleQuota" ? accountApiKey() : entry.key; }
 
 /**
  * 打一次 Gemini generateContent，兩種身分共用。
  *
- * 差別只有「怎麼證明你是誰」：金鑰是 `?key=`，帳號額度是 `Authorization: Bearer`
- * ＋ `x-goog-user-project`（由 googleApiFetch 補上）。請求內容完全一樣，
- * 所以原生音訊、視覺那些呼叫不必為了兩種身分各寫一份。
+ * 兩種來源（使用者自己貼的金鑰／開通時自動開出來的金鑰）只差在金鑰哪裡來，
+ * 請求本身完全一樣，所以原生音訊、視覺、TTS 那些呼叫不必各寫一份。
  */
 export async function geminiCall(entry, body){
   const model = entry.model || LLM_PROVIDERS[entry.provider]?.model || LLM_PROVIDERS.gemini.model;
   const base = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const init = { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) };
-  if(isOauth(entry)){
-    const r = await googleApiFetch(base, init);
-    if(!r.ok) throw await googleApiError(r);
-    return r.json();
-  }
-  const r = await fetch(`${base}?key=${encodeURIComponent(entry.key)}`, init);
-  if(!r.ok) throw new Error("Gemini "+r.status);
+  const key = keyOf(entry);
+  if(!key) throw new Error("Gemini: no key");
+  // **一律走 ?key=。** 這個端點不收使用者的 OAuth 權杖（拿 Bearer 打會回 403
+  // 「insufficient authentication scopes」，而且沒有任何範圍解得開）。
+  // 帳號額度那幾筆用的是開通時自動開出來的金鑰，所以兩種來源在這裡完全一樣。
+  const r = await fetch(`${base}?key=${encodeURIComponent(key)}`, init);
+  if(!r.ok) throw await googleApiError(r);
   return r.json();
 }
 function geminiTextOf(j){ return (j.candidates?.[0]?.content?.parts?.[0]?.text||"").trim(); }
@@ -217,9 +219,7 @@ export async function runImage(prompt){
         const base="https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict";
         const init={method:"POST",headers:{"Content-Type":"application/json"},
           body:JSON.stringify({ instances:[{prompt}], parameters:{sampleCount:1} })};
-        const r = IMAGE_PROVIDERS[e.provider].oauth
-          ? await googleApiFetch(base, init)
-          : await fetch(`${base}?key=${encodeURIComponent(e.key)}`, init);
+        const r = await fetch(`${base}?key=${encodeURIComponent(keyOf(e))}`, init);
         if(!r.ok) throw 0; const j=await r.json(); const b64=j.predictions?.[0]?.bytesBase64Encoded;
         if(b64) return "data:image/png;base64,"+b64;
       }

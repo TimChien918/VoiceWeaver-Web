@@ -1,31 +1,31 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade, cloudScopeBlocked, markCloudScopeBlocked } from "./store.js?v=1.5.60";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES } from "./providers.js?v=1.5.60";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade, cloudScopeBlocked, markCloudScopeBlocked } from "./store.js?v=1.5.61";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES } from "./providers.js?v=1.5.61";
 import { authorize as gqAuthorize, accountQuotaReady, needsReauth as gqNeedsReauth, quotaProject,
-         setQuotaProject, listProjects, enableGenerativeLanguage, testAccountQuota,
+         setQuotaProject, listProjects, enableGenerativeLanguage, testAccountQuota, accountApiKey,
          forgetToken as gqForget, hasGisClient, authorized as gqAuthorized,
          adoptToken as gqAdopt, autoSetup as gqAutoSetup,
-         silentToken as gqSilentToken } from "./gauth.js?v=1.5.60";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.60";
-import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.60";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.60";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.60";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.60";
-import { bindTap } from "./interaction.js?v=1.5.60";
-import { orderCards } from "./predict.js?v=1.5.60";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.60";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.60";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.60";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.60";
-import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.60";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.60";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.60";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.60";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.60";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.60";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.60";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.60";
-import { applyI18n, t } from "./i18n.js?v=1.5.60";
-import { setupDemo } from "./demo.js?v=1.5.60";
+         silentToken as gqSilentToken } from "./gauth.js?v=1.5.61";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.61";
+import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.61";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.61";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.61";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.61";
+import { bindTap } from "./interaction.js?v=1.5.61";
+import { orderCards } from "./predict.js?v=1.5.61";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.61";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.61";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.61";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.61";
+import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.61";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.61";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.61";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.61";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.61";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.61";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.61";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.61";
+import { applyI18n, t } from "./i18n.js?v=1.5.61";
+import { setupDemo } from "./demo.js?v=1.5.61";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -425,10 +425,11 @@ function renderProviderList(containerId, listKey, catalog){
     // 三種狀態要分開講。以前「沒授權」跟「沒選專案」共用同一句，而登入完
     // 自動補進來的那一筆最常見的處境正是後者——畫面叫他去授權，他去按了
     // 卻發現早就授權過了，然後就不知道還能做什麼。
+    // 「好了」與「還沒好」兩種就夠——差在第幾步由那張卡自己講，
+    // 在每一行都重複一次只會讓清單變得很吵。
     const freeNote = p.oauth
       ? (accountQuotaReady() ? t("providers.oauthReady").replace("{project}", quotaProject())
-         : gqAuthorized()    ? t("providers.oauthNoProject")
-                             : t("providers.oauthNeedAuth"))
+                             : t("providers.oauthNeedSetup"))
       : t("providers.keyFree");
     return `<div class="prow" data-i="${i}" style="border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px">
       <div class="row" style="margin:0;gap:6px">
@@ -564,8 +565,11 @@ function renderAccountQuota(){
   const ready = accountQuotaReady();
   const proj = quotaProject();
 
+  // 每一步都有自己的一句話。使用者卡住的時候，唯一有用的訊息是「你現在在第幾步」。
   status.textContent = needLogin ? t("gq.needLogin")
     : ready ? t("gq.ready").replace("{project}", proj)
+    // 專案選好了、金鑰還沒開出來——這是開通的最後一步，多半是權限或 API 沒啟用
+    : proj && !accountApiKey() ? t("gq.needKey")
     // 授權過了、只差選專案。這一句一定要跟「還沒授權」分開講——不然使用者按完
     // 同意畫面回來，看到的還是「還沒授權」，會以為剛剛那一步沒成功而一直重按。
     : gqAuthorized() ? t("gq.pickProjectNow")
@@ -1635,7 +1639,7 @@ async function renderVoices(){
           >${esc(t("set.voicesReauth"))}</button></p>`);
     }
     try{
-      const drive = await import("./drive.js?v=1.5.60");
+      const drive = await import("./drive.js?v=1.5.61");
       const d = await drive.diagnoseVoiceModels();
       // 同名根要先講。有兩個 VoiceWeaver 時，底下那些「沒有 Models」之類的
       // 描述全部都是在講錯的那一個資料夾，先看到它才不會被帶去修錯的地方。
