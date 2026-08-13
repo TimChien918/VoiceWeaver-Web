@@ -1,27 +1,29 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.64";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES } from "./providers.js?v=1.5.64";
-import { initShared, sharedAvailable, sharedUsage, campaignActive } from "./shared.js?v=1.5.64";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.64";
-import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.64";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.64";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.64";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.64";
-import { bindTap } from "./interaction.js?v=1.5.64";
-import { orderCards } from "./predict.js?v=1.5.64";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.64";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.64";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.64";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.64";
-import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.64";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.64";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.64";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.64";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.64";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.64";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.64";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.64";
-import { applyI18n, t } from "./i18n.js?v=1.5.64";
-import { setupDemo } from "./demo.js?v=1.5.64";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.65";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES } from "./providers.js?v=1.5.65";
+import { initShared, sharedAvailable, sharedUsage, campaignActive } from "./shared.js?v=1.5.65";
+import { WEBGPU_MODELS, webgpuSupported, probeWebgpu, webgpuEnabled, setWebgpuEnabled, webgpuModel,
+         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.5.65";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.65";
+import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.65";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.65";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.65";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.65";
+import { bindTap } from "./interaction.js?v=1.5.65";
+import { orderCards } from "./predict.js?v=1.5.65";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.65";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.65";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.65";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.65";
+import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.65";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.65";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.65";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.65";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.65";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.65";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.65";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.65";
+import { applyI18n, t } from "./i18n.js?v=1.5.65";
+import { setupDemo } from "./demo.js?v=1.5.65";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -109,6 +111,7 @@ function fillSettings(){
   renderProviderList("#imgList", "imageApis", IMAGE_PROVIDERS);
   renderProviderList("#ttsList", "ttsApis", TTS_PROVIDERS);
   renderSharedNote();
+  renderWebgpu();
   renderTtsVoices();
   // 本地語音引擎
   $("#lt_enabled").checked = !!state.settings.localTtsEnabled;
@@ -340,6 +343,7 @@ function bindSettings(){
     });
   }
   setupShortcuts();
+  setupWebgpu();
   setupVoices();
   // 新增一筆預設是「要貼金鑰」的那種。免金鑰的帳號額度有自己那張卡（要授權、
   // 要選專案），從這顆按鈕生出來的話會是一筆立刻就在報錯的供應商。
@@ -447,6 +451,64 @@ function renderSharedNote(){
   if(!on) return;
   const { used, limit } = sharedUsage();
   el.textContent = t("shared.note").replace("{left}", Math.max(0, limit - used)).replace("{limit}", limit);
+}
+
+/**
+ * 本機 WebGPU 那張卡。
+ *
+ * 沒有 WebGPU 的裝置（多數手機、Safari）要明白講出來，而不是給一顆按了沒反應
+ * 的按鈕——那會讓人以為是網頁壞了，而不是這台裝置做不到。
+ */
+function renderWebgpu(){
+  const st = $("#wgStatus");
+  if(!st) return;
+  const sel = $("#s_wgModel");
+  if(sel && !sel.options.length){
+    sel.innerHTML = WEBGPU_MODELS.map(m => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.label)}</option>`).join("");
+  }
+  if(sel) sel.value = webgpuModel();
+  const chk = $("#s_wgEnabled");
+  if(chk) chk.checked = webgpuEnabled();
+
+  const ok = webgpuSupported();
+  st.textContent = !ok ? t("wg.unsupported")
+    : webgpuReady() ? t("wg.ready")
+    : webgpuLoading() ? t("wg.loading")
+    : webgpuEnabled() ? t("wg.needLoad")
+    : t("wg.off");
+  st.classList.toggle("err", !ok);
+  const btn = $("#wgLoad");
+  if(btn) btn.disabled = !ok || webgpuLoading() || webgpuReady();
+  if(sel) sel.disabled = !ok || webgpuLoading();
+  if(chk) chk.disabled = !ok;
+}
+
+function setupWebgpu(){
+  if(!$("#wgLoad")) return;
+  // 先探測一次再畫：探測是非同步的（requestAdapter），不等它的話第一眼會
+  // 顯示成「不支援」然後才跳掉，或反過來對跑不動的裝置說可以用。
+  probeWebgpu().then(renderWebgpu).catch(()=>renderWebgpu());
+  onWebgpuProgress(({ progress, text }) => {
+    const el = $("#wgProgress");
+    if(el) el.textContent = `${Math.round((progress || 0) * 100)}%　${text || ""}`.trim();
+  });
+  $("#s_wgEnabled")?.addEventListener("change", e => { setWebgpuEnabled(e.target.checked); renderWebgpu(); });
+  $("#s_wgModel")?.addEventListener("change", e => { setWebgpuModel(e.target.value); renderWebgpu(); });
+  $("#wgLoad").addEventListener("click", async () => {
+    // 按下去才下載——這是幾百 MB，不能自動發生
+    setWebgpuEnabled(true);
+    renderWebgpu();
+    try{
+      await loadWebgpu();
+      $("#wgProgress").textContent = "";
+      toast(t("wg.done"));
+    }catch(e){
+      $("#wgProgress").textContent = "";
+      toast(t("wg.failed") + ((e && e.message) || e));
+    }
+    renderWebgpu();
+  });
+  renderWebgpu();
 }
 
 /** 嗓音下拉：Gemini 內建那幾個。名稱是 API 的字面值，不翻譯。 */
@@ -1425,7 +1487,7 @@ async function renderVoices(){
           >${esc(t("set.voicesReauth"))}</button></p>`);
     }
     try{
-      const drive = await import("./drive.js?v=1.5.64");
+      const drive = await import("./drive.js?v=1.5.65");
       const d = await drive.diagnoseVoiceModels();
       // 同名根要先講。有兩個 VoiceWeaver 時，底下那些「沒有 Models」之類的
       // 描述全部都是在講錯的那一個資料夾，先看到它才不會被帶去修錯的地方。
