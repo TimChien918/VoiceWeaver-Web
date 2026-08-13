@@ -1,8 +1,8 @@
 // 重組 / 組句：走多供應商輪詢（providers.js）。
-import { runLlm, hasLlm } from "./providers.js?v=1.5.64";
-import { t as tr } from "./i18n.js?v=1.5.64";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
-import { DEFENSIVE_SYSTEM_PROMPT } from "./safety.js?v=1.5.64";
-import { toTraditionalSync } from "./zhconv.js?v=1.5.64";
+import { runLlm, hasLlm, usingSharedKey } from "./providers.js?v=1.5.65";
+import { t as tr } from "./i18n.js?v=1.5.65";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
+import { DEFENSIVE_SYSTEM_PROMPT } from "./safety.js?v=1.5.65";
+import { toTraditionalSync } from "./zhconv.js?v=1.5.65";
 
 // 第一層防禦：黏在所有 system prompt 最前面，先要求模型別生成自傷／絕望字眼。
 // 這只是「請求」不是保證——真正擋住的是 app.js 的分級閘門與 speech.js 的輸出消毒。
@@ -155,7 +155,10 @@ function scriptMatches(text, lang){
 export async function reconstruct(fragments, context){
   const u = `碎詞：${fragments}\n${context?("情境："+context):""}`.trim();
   const results = await Promise.all(
-    Array.from({length: RECONSTRUCT_SAMPLES}, () =>
+    // 借站方金鑰時只取樣一次：使用者說的是「每天生成 50 次」，一次生成就該算
+    // 一次，而不是因為自我一致性取樣就吃掉三次。副作用是省站方的額度——
+    // 借來的東西該省著用。品質會略降，但這是「有得用」與「額度很快用完」的取捨。
+    Array.from({length: usingSharedKey() ? 1 : RECONSTRUCT_SAMPLES}, () =>
       runLlm(sysReconstruct(), u, { temperature: RECONSTRUCT_TEMP })
         .then(parseCoT).catch(()=>null))
   );

@@ -1,8 +1,9 @@
 // 供應商目錄 + 呼叫器（同供應商可多把金鑰、可多選供應商，自動輪詢+備援）。
-import { state } from "./store.js?v=1.5.64";
-import { localHas, localText, localImage } from "./localtts.js?v=1.5.64";
-import { sharedEntry, countSharedUse } from "./shared.js?v=1.5.64";
-import { t } from "./i18n.js?v=1.5.64";
+import { state } from "./store.js?v=1.5.65";
+import { localHas, localText, localImage } from "./localtts.js?v=1.5.65";
+import { sharedEntry, countSharedUse } from "./shared.js?v=1.5.65";
+import { webgpuUsable, webgpuGenerate } from "./webgpu.js?v=1.5.65";
+import { t } from "./i18n.js?v=1.5.65";
 
 // 文字 LLM 供應商（標 cors 者較可能可在瀏覽器直接呼叫）
 //
@@ -192,8 +193,13 @@ function llmEntries(){
   if(!list.some(e => e.provider === "pollinations")) list.push({ provider:"pollinations", key:"", model:"" });
   return list;
 }
+/** 現在這一輪會不會用到借來的金鑰（使用者自己一把都沒有時才會）。 */
+export function usingSharedKey(){
+  return llmEntries().some(e => e.__shared);
+}
+
 // 有金鑰，或「電腦幫跑文字」可用 → 都算有文字能力
-export function hasLlm(){ return llmEntries().length>0 || localHas("text"); }
+export function hasLlm(){ return llmEntries().length>0 || localHas("text") || webgpuUsable(); }
 // opts.temperature：取樣溫度（評分類任務用低溫求穩定）；
 // opts.stable：true＝不做負載輪替、永遠依固定順序嘗試 —— 復健評分必用，
 //   否則連續兩次跟讀會輪到「不同模型」評分（各家標準不同），分數看起來像被上一次帶著跑。
@@ -229,12 +235,19 @@ export async function runLlm(sys, user, opts={}){
       }catch(x){ err=x; console.warn(e.provider, x); }
     }
   }
-  // ② 電腦幫忙跑：沒網路、沒金鑰、或雲端全掛時的退路（慢，但至少能用）
+  // ② 本機 WebGPU：跟「電腦幫忙跑」同一層的退路，但不需要另一台電腦。
+  // 排在雲端之後的理由與那一層相同——本機的價值在離線與隱私，不在速度。
+  // 沒開、不支援、沒載好都會是 false，完全不影響其他人。
+  if(webgpuUsable()){
+    try{ const out = await webgpuGenerate(sys, user, temp); if(out) return out.replace(/^[「"']|[」"']$/g,"").trim(); }
+    catch(x){ err=x; console.warn("webgpu", x); }
+  }
+  // ③ 電腦幫忙跑：沒網路、沒金鑰、或雲端全掛時的退路（慢，但至少能用）
   if(localHas("text")){
     try{ const out = await localText(sys, user, temp); if(out) return out.replace(/^[「"']|[」"']$/g,"").trim(); }
     catch(x){ err=x; console.warn("local text", x); }
   }
-  if(!list.length && !localHas("text")) throw new Error(t("err.noProviders"));
+  if(!list.length && !localHas("text") && !webgpuUsable()) throw new Error(t("err.noProviders"));
   throw err || new Error(t("err.allProvidersFailed"));
 }
 

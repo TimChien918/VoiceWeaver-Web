@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 <title>VoiceWeaver 網頁版</title>
-<link rel="stylesheet" href="style.css?v=1.5.64" />
+<link rel="stylesheet" href="style.css?v=1.5.65" />
 </head>
 <body>
   <!-- 登入閘 -->
@@ -306,6 +306,17 @@
           <label class="lbl" data-i18n="set.ttsVoice">嗓音</label>
           <select id="s_ttsVoice"></select>
         </div>
+        <div class="card complex" data-setkey="webgpu">
+          <h3 data-i18n="set.wgTitle">🧠 在這台裝置上跑 AI（WebGPU）</h3>
+          <p class="tiny muted" data-i18n="set.wgDesc">句子完全不會離開這台裝置，下載過一次之後沒有網路也能用。模型有好幾百 MB，**只在你按下按鈕時才會下載**，建議接 Wi-Fi。跑起來比雲端慢，所以它排在雲端之後當備援。</p>
+          <p id="wgStatus" class="tiny"></p>
+          <label class="lbl" data-i18n="set.wgModel">模型</label>
+          <select id="s_wgModel"></select>
+          <label class="row" style="margin-top:8px"><input id="s_wgEnabled" type="checkbox" />
+            <span data-i18n="set.wgEnable">啟用本機模型</span></label>
+          <button id="wgLoad" class="btn ghost" style="margin-top:8px" data-i18n="set.wgLoad">下載並載入模型</button>
+          <p id="wgProgress" class="tiny muted" style="margin:6px 0 0"></p>
+        </div>
         <div class="card complex">
           <h3 data-i18n="set.imgTitle">🖼 生圖供應商</h3>
           <p class="tiny muted" data-i18n="set.imgDesc">Pollinations 免金鑰、永遠保底；可再加 Gemini／HuggingFace／OpenAI。</p>
@@ -516,7 +527,7 @@
 
   <!-- 你的 Firebase 設定（複製 config.example.js 為 config.js 並填入）。沒有 config.js 時為純本機模式。 -->
   <script>window.__FIREBASE_CONFIG__ = null;</script>
-  <script src="config.js?v=1.5.64" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
-  <script type="module" src="js/app.js?v=1.5.64"></script>
+  <script src="config.js?v=1.5.65" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
+  <script type="module" src="js/app.js?v=1.5.65"></script>
 </body>
 </html>
