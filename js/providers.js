@@ -1,16 +1,10 @@
 // 供應商目錄 + 呼叫器（同供應商可多把金鑰、可多選供應商，自動輪詢+備援）。
-import { state } from "./store.js?v=1.5.61";
-import { localHas, localText, localImage } from "./localtts.js?v=1.5.61";
-import { googleApiError, accountQuotaReady, accountApiKey } from "./gauth.js?v=1.5.61";
-import { t } from "./i18n.js?v=1.5.61";
+import { state } from "./store.js?v=1.5.62";
+import { localHas, localText, localImage } from "./localtts.js?v=1.5.62";
+import { t } from "./i18n.js?v=1.5.62";
 
 // 文字 LLM 供應商（標 cors 者較可能可在瀏覽器直接呼叫）
-//
-// oauth:true 的那一個不用金鑰——它拿「使用者登入的那個 Google 帳號」的授權去打，
-// 額度算在使用者自己的 Google Cloud 專案上（見 gauth.js）。對照顧者來說，
-// 這是唯一一條不必先去申請一把 API 金鑰的路。
 export const LLM_PROVIDERS = {
-  googleQuota:{ label:"Google Gemini OAuth 2.0", needsKey:false, oauth:true, model:"gemini-3.5-flash" },
   gemini:     { label:"Google Gemini", labelKey:"prov.geminiKey", needsKey:true, model:"gemini-3.5-flash" },
   groq:       { label:"Groq",           needsKey:true,  model:"qwen/qwen3.6-27b" },
   openrouter: { label:"OpenRouter",     needsKey:true,  model:"qwen/qwen3-14b" },
@@ -29,7 +23,6 @@ const OPENAI_BASE = {
 // 生圖供應商
 export const IMAGE_PROVIDERS = {
   pollinations:{ label:"Pollinations", needsKey:false },
-  googleQuota: { label:"Google Gemini OAuth 2.0", needsKey:false, oauth:true },
   gemini:      { label:"Gemini Imagen", labelKey:"prov.geminiImgKey", needsKey:true },
   huggingface: { label:"HuggingFace",            needsKey:true, model:"black-forest-labs/FLUX.1-schnell" },
   openai:      { label:"OpenAI (gpt-image-1)",   needsKey:true },
@@ -40,12 +33,11 @@ export const IMAGE_PROVIDERS = {
 // 這一層擺在「專屬聲音（GPT-SoVITS）」與「瀏覽器內建語音」之間：
 //   專屬聲音   —— 是使用者本人／家人的音色，有的話永遠優先，那是整個功能的意義所在，
 //                 但要電腦或 Colab 開著。
-//   雲端 TTS   —— 這一層。電腦沒開時的「好聽的聲音」，而且與文字、生圖走同一份帳號額度。
+//   雲端 TTS   —— 這一層。電腦沒開時的「好聽的聲音」。
 //   瀏覽器語音 —— 永遠的保底，免金鑰、零延遲，出得了聲最重要。
 //
 // 沒有 pollinations 那種免金鑰保底項：瀏覽器內建語音本來就是保底，不必在清單裡再放一個。
 export const TTS_PROVIDERS = {
-  googleQuota: { label:"Google Gemini OAuth 2.0", needsKey:false, oauth:true, model:TTS_MODEL_DEFAULT() },
   gemini:      { label:"Gemini TTS", labelKey:"prov.geminiTtsKey", needsKey:true, model:TTS_MODEL_DEFAULT() },
 };
 // 函式而不是常數：TTS_PROVIDERS 是模組載入時就求值的，寫在它上面才看得到。
@@ -64,34 +56,19 @@ function rotate(list){ if(list.length<=1) return list; const o=_rot++%list.lengt
 // ── LLM 文字 ────────────────────────────────────────
 
 /**
- * 這一筆該用哪一把金鑰。
+ * 打一次 Gemini generateContent。文字、視覺、TTS 共用同一支。
  *
- * googleQuota 那幾筆的金鑰不存在項目本身，而是「開通時在使用者專案裡開出來的
- * 那一把」（見 gauth.js）——三份清單共用同一把，所以不必各存一份，
- * 使用者換專案時也只有一個地方要改。
- *
- * 認 provider 這個字，不是去查某一本目錄：geminiCall 同時服務文字、視覺、TTS
- * 三份清單，只查 LLM_PROVIDERS 的話 TTS 那筆會查不到。
- */
-function keyOf(entry){ return entry.provider === "googleQuota" ? accountApiKey() : entry.key; }
-
-/**
- * 打一次 Gemini generateContent，兩種身分共用。
- *
- * 兩種來源（使用者自己貼的金鑰／開通時自動開出來的金鑰）只差在金鑰哪裡來，
- * 請求本身完全一樣，所以原生音訊、視覺、TTS 那些呼叫不必各寫一份。
+ * **一律走 `?key=`。** generativelanguage.googleapis.com 不收使用者的 OAuth
+ * 權杖——拿 Bearer 打會回 403「insufficient authentication scopes」，而且沒有
+ * 任何範圍解得開。那個端點就是設計成收 API 金鑰的。
  */
 export async function geminiCall(entry, body){
   const model = entry.model || LLM_PROVIDERS[entry.provider]?.model || LLM_PROVIDERS.gemini.model;
   const base = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
   const init = { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) };
-  const key = keyOf(entry);
-  if(!key) throw new Error("Gemini: no key");
-  // **一律走 ?key=。** 這個端點不收使用者的 OAuth 權杖（拿 Bearer 打會回 403
-  // 「insufficient authentication scopes」，而且沒有任何範圍解得開）。
-  // 帳號額度那幾筆用的是開通時自動開出來的金鑰，所以兩種來源在這裡完全一樣。
-  const r = await fetch(`${base}?key=${encodeURIComponent(key)}`, init);
-  if(!r.ok) throw await googleApiError(r);
+  if(!entry.key) throw new Error("Gemini: no key");
+  const r = await fetch(`${base}?key=${encodeURIComponent(entry.key)}`, init);
+  if(!r.ok) throw new Error("Gemini "+r.status);
   return r.json();
 }
 function geminiTextOf(j){ return (j.candidates?.[0]?.content?.parts?.[0]?.text||"").trim(); }
@@ -112,9 +89,9 @@ async function geminiText(entry, sys, user, temp=0.5){
  * 目前只有 Gemini 風格的供應商吃 inline audio；沒有這種金鑰時由呼叫端退回
  * 原本的「瀏覽器 STT → 文字重組」流程。
  */
-/** 吃得下原生音訊的那幾筆（金鑰版與帳號額度版都是 Gemini，兩個都算）。 */
+/** 吃得下原生音訊的那幾筆（目前只有 Gemini 風格的供應商）。 */
 export function geminiEntries(){
-  return llmEntries().filter(e => e.provider === "gemini" || e.provider === "googleQuota");
+  return llmEntries().filter(e => e.provider === "gemini");
 }
 export function hasNativeAudio(){ return geminiEntries().length > 0; }
 
@@ -151,10 +128,6 @@ function llmEntries(){
   return (state.llmApis||[]).filter(e=>{
     const p = e.provider && LLM_PROVIDERS[e.provider];
     if(!p) return false;
-    // 帳號額度：沒授權或沒選專案時就當作「這一筆還不能用」，直接跳過去試下一家。
-    // 不擋在這裡的話，每一次重組都會先打一個一定失敗的請求（還會跳授權彈窗），
-    // 使用者只是想講一句話。
-    if(p.oauth) return accountQuotaReady();
     return !!e.key || !p.needsKey;
   });
 }
@@ -177,7 +150,7 @@ export async function runLlm(sys, user, opts={}){
   if(online){
     for(const e of list){
       try{
-        const fn = (e.provider==="gemini"||e.provider==="googleQuota")?geminiText
+        const fn = e.provider==="gemini"?geminiText
                  : e.provider==="cohere"?cohereText : openaiText;
         const out = await fn(e, sys, user, temp);
         if(out) return out.replace(/^[「"']|[」"']$/g,"").trim();
@@ -198,7 +171,6 @@ function imageEntries(){
   const list = (state.imageApis||[]).filter(e=>{
     const p = e.provider && IMAGE_PROVIDERS[e.provider];
     if(!p) return false;
-    if(p.oauth) return accountQuotaReady();     // 沒授權就跳過（同 llmEntries 的理由）
     return !!e.key || !p.needsKey;
   });
   // 永遠保底有 Pollinations（免金鑰）
@@ -215,11 +187,11 @@ export async function runImage(prompt){
     try{
       if(e.provider==="pollinations")
         return `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=512&height=512&nologo=true`;
-      if(e.provider==="gemini" || e.provider==="googleQuota"){
+      if(e.provider==="gemini"){
         const base="https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict";
         const init={method:"POST",headers:{"Content-Type":"application/json"},
           body:JSON.stringify({ instances:[{prompt}], parameters:{sampleCount:1} })};
-        const r = await fetch(`${base}?key=${encodeURIComponent(keyOf(e))}`, init);
+        const r = await fetch(`${base}?key=${encodeURIComponent(e.key)}`, init);
         if(!r.ok) throw 0; const j=await r.json(); const b64=j.predictions?.[0]?.bytesBase64Encoded;
         if(b64) return "data:image/png;base64,"+b64;
       }
@@ -247,7 +219,6 @@ function ttsEntries(){
   return (state.ttsApis||[]).filter(e=>{
     const p = e.provider && TTS_PROVIDERS[e.provider];
     if(!p) return false;
-    if(p.oauth) return accountQuotaReady();     // 沒授權就跳過（同 llmEntries 的理由）
     return !!e.key || !p.needsKey;
   });
 }
