@@ -1,9 +1,10 @@
 // TTS / STT：預設用瀏覽器原生 Web Speech API（免金鑰）；
 // 若開啟「本地語音引擎」且連得上語音中心，則改用 GPT-SoVITS 角色語音。
-import { state } from "./store.js?v=1.5.55";
-import { localTtsEnabled, localSpeak, stopLocalSpeak } from "./localtts.js?v=1.5.55";
-import { t } from "./i18n.js?v=1.5.55";
-import { sanitizeForSpeech } from "./safety.js?v=1.5.55";
+import { state } from "./store.js?v=1.5.58";
+import { localTtsEnabled, localSpeak, stopLocalSpeak } from "./localtts.js?v=1.5.58";
+import { runTts, stopCloudTts, hasCloudTts } from "./providers.js?v=1.5.58";
+import { t } from "./i18n.js?v=1.5.58";
+import { sanitizeForSpeech } from "./safety.js?v=1.5.58";
 
 // 讓上層（app.js）注入 toast，好把「本地語音失敗、已退回瀏覽器語音」的原因顯示出來，
 // 不再靜默吞錯——否則使用者只覺得「連上了卻無法合成」，看不到真正原因。
@@ -52,16 +53,37 @@ export function speak(text, { safetyChecked = false } = {}){
   // **每一個對外發聲的函式都要自己做這一步**（speak / speakUpbeat / speakIn）——
   // 曾經只有這裡做，另外兩條就這樣成了繞過整層防護的後門。
   if(!safetyChecked) text = sanitizeForSpeech(text);
-  // 本地 GPT-SoVITS 角色語音優先；失敗則自動退回瀏覽器原生語音。
+  // 本地 GPT-SoVITS 角色語音優先；失敗則自動退回（雲端 TTS →）瀏覽器原生語音。
   if(localTtsEnabled()){
     localSpeak(text).catch(e=>{
-      console.warn("本地語音失敗，改用瀏覽器語音", e);
+      console.warn("本地語音失敗，改用雲端／瀏覽器語音", e);
       _onErr?.(t("err.localSpeakFell").replace("{err}", (e && e.message) || e));
-      _webSpeak(text);
+      _cloudOrWebSpeak(text);
     });
     return;
   }
-  _webSpeak(text);
+  _cloudOrWebSpeak(text);
+}
+
+/**
+ * 雲端 TTS → 瀏覽器語音。
+ *
+ * 為什麼雲端排在瀏覽器前面、卻排在專屬聲音後面：專屬聲音是使用者本人或家人的
+ * 音色，那是「我在說話」而不是「機器代唸」，有就一定要用。少了它之後，
+ * 好聽的雲端嗓音比機械音容易被旁人聽懂，值得多等一兩秒。
+ *
+ * 但**永遠有保底**：沒設定雲端、離線、或呼叫失敗，一律落回瀏覽器語音。
+ * 這條路上任何一種失敗都不可以變成「按了朗讀卻沒有聲音」。
+ */
+function _cloudOrWebSpeak(text){
+  if(!hasCloudTts()){ _webSpeak(text); return; }
+  // 先停掉還在講的那一句，兩種都要停。
+  // 雲端那句一定要**現在**停：它要等 API 回來才會換成新的音檔，中間那一兩秒
+  // 舊句子還在講——使用者按了新的一句，卻聽著上一句講完。
+  stopCloudTts();
+  try{ if(window.speechSynthesis?.speaking) speechSynthesis.cancel(); }catch{}
+  runTts(text).then(ok => { if(!ok) _webSpeak(text); })
+              .catch(e => { console.warn("雲端語音失敗，改用瀏覽器語音", e); _webSpeak(text); });
 }
 
 /**
@@ -99,6 +121,7 @@ function _webSpeak(text, opts = {}){
   if(!text) return;
   if(!("speechSynthesis" in window)) return;   // 老瀏覽器沒有 Web Speech → 靜默略過而非 ReferenceError
   stopLocalSpeak();                            // 停掉可能還在播的本地 GPT-SoVITS 音檔，避免疊音
+  stopCloudTts();                              // 雲端 TTS 的音檔同理（例如上一句還在唸就又按了朗讀）
   const doSpeak = () => {
     try{
       // 只有真的在講才 cancel —— iOS/部分 Android「每次都 cancel」會把新句子一起吃掉而不發聲
@@ -126,7 +149,11 @@ export function speakIn(text, lang){
   // 卻是三個發聲函式裡唯一完全沒消毒的。一鍵切語言就繞過整層防護。
   text = sanitizeForSpeech(text);
   if(!("speechSynthesis" in window)) return;
-  stopLocalSpeak();                            // 多語朗讀走瀏覽器聲音，先停本地音避免疊音
+  // 多語朗讀刻意留在瀏覽器語音：這四顆鈕要的是「換一個語言的嗓音」，
+  // 而雲端 TTS 沒有「指定語言」這個參數，它是照著文字本身的語言唸的——
+  // 拿它來服務這四顆鈕，等於按了 🇯🇵 卻還是聽到原本那個語言。
+  stopLocalSpeak();                            // 先停本地音避免疊音
+  stopCloudTts();
   try{
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
