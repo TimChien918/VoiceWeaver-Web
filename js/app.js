@@ -1,30 +1,31 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade, cloudScopeBlocked, markCloudScopeBlocked } from "./store.js?v=1.5.58";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES } from "./providers.js?v=1.5.58";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade, cloudScopeBlocked, markCloudScopeBlocked } from "./store.js?v=1.5.59";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES } from "./providers.js?v=1.5.59";
 import { authorize as gqAuthorize, accountQuotaReady, needsReauth as gqNeedsReauth, quotaProject,
          setQuotaProject, listProjects, enableGenerativeLanguage, testAccountQuota,
          forgetToken as gqForget, hasGisClient, authorized as gqAuthorized,
-         adoptToken as gqAdopt, autoSetup as gqAutoSetup } from "./gauth.js?v=1.5.58";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.58";
-import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.58";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.58";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.58";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.58";
-import { bindTap } from "./interaction.js?v=1.5.58";
-import { orderCards } from "./predict.js?v=1.5.58";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.58";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.58";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.58";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.58";
-import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.58";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.58";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.58";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.58";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.58";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.58";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.58";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.58";
-import { applyI18n, t } from "./i18n.js?v=1.5.58";
-import { setupDemo } from "./demo.js?v=1.5.58";
+         adoptToken as gqAdopt, autoSetup as gqAutoSetup,
+         silentToken as gqSilentToken } from "./gauth.js?v=1.5.59";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.59";
+import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.59";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.59";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.59";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.59";
+import { bindTap } from "./interaction.js?v=1.5.59";
+import { orderCards } from "./predict.js?v=1.5.59";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.59";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.59";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.59";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.59";
+import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.59";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.59";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.59";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.59";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.59";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.59";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.59";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.59";
+import { applyI18n, t } from "./i18n.js?v=1.5.59";
+import { setupDemo } from "./demo.js?v=1.5.59";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -421,10 +422,13 @@ function renderProviderList(containerId, listKey, catalog){
     // 免金鑰有兩種，講的話不一樣：Pollinations 是真的什麼都不用設；
     // 帳號額度則是「要先授權」，沒授權時這一筆會被跳過——不講的話使用者
     // 只會看到重組一直走到別家供應商，卻不知道為什麼。
+    // 三種狀態要分開講。以前「沒授權」跟「沒選專案」共用同一句，而登入完
+    // 自動補進來的那一筆最常見的處境正是後者——畫面叫他去授權，他去按了
+    // 卻發現早就授權過了，然後就不知道還能做什麼。
     const freeNote = p.oauth
-      ? (accountQuotaReady()
-          ? t("providers.oauthReady").replace("{project}", quotaProject())
-          : t("providers.oauthNeedAuth"))
+      ? (accountQuotaReady() ? t("providers.oauthReady").replace("{project}", quotaProject())
+         : gqAuthorized()    ? t("providers.oauthNoProject")
+                             : t("providers.oauthNeedAuth"))
       : t("providers.keyFree");
     return `<div class="prow" data-i="${i}" style="border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px">
       <div class="row" style="margin:0;gap:6px">
@@ -486,13 +490,15 @@ function ensureQuotaProviders(){
     added = true;
   };
   add("llmApis"); add("imageApis"); add("ttsApis");
-  if(added){
-    save();
-    renderProviderList("#llmList", "llmApis", LLM_PROVIDERS);
-    renderProviderList("#imgList", "imageApis", IMAGE_PROVIDERS);
-    renderProviderList("#ttsList", "ttsApis", TTS_PROVIDERS);
-  }
+  if(added){ save(); renderAllProviderLists(); }
   return added;
+}
+
+/** 三份供應商清單一起重畫（每一行的狀態句都取決於授權／專案，會一起變）。 */
+function renderAllProviderLists(){
+  renderProviderList("#llmList", "llmApis", LLM_PROVIDERS);
+  renderProviderList("#imgList", "imageApis", IMAGE_PROVIDERS);
+  renderProviderList("#ttsList", "ttsApis", TTS_PROVIDERS);
 }
 
 // 這次工作階段有沒有鋪設過。使用者把某一筆刪掉是他的決定，重新整理一次
@@ -505,13 +511,47 @@ let _quotaProvisioned = false;
  * 完全不擋畫面、失敗完全不吵人。使用者登入只是想開始講話，不該在第一個畫面
  * 看到一串 Google Cloud 的錯誤；走不通就退回原本的瀏覽器語音＋自己貼金鑰。
  */
+// 正在跑的那一次。showApp 與登入按鈕都會叫 autoSetupQuota，兩邊都可能是
+// 「第一個拿到權杖」的那一個——沒有這道閂，兩次會並行跑完整個流程，而流程裡
+// 包含「沒有專案就建一個」：使用者的 Google Cloud 帳號下會憑空多出兩個專案。
+let _quotaSetupRunning = null;
+
 async function autoSetupQuota(){
   if(_quotaProvisioned) return;
+  if(_quotaSetupRunning) return _quotaSetupRunning;
+  _quotaSetupRunning = _autoSetupQuota();
+  try{ return await _quotaSetupRunning; }
+  finally{ _quotaSetupRunning = null; }
+}
+
+async function _autoSetupQuota(){
+  // 已經用 Google 登入、但這個分頁手上沒有權杖——重開瀏覽器就是這個狀態
+  // （Firebase 的登入記在 IndexedDB 會留著，權杖記在 sessionStorage 會消失）。
+  // 這種人不會再按一次登入鈕，所以不在這裡補一次的話，他永遠等不到自動設定。
+  // 只做安靜的那種續期；要跳同意畫面的就算了，那必須由使用者的點擊發動。
+  if(!gqAuthorized() && accountEmail()){
+    try{ await gqSilentToken(); }catch{ /* 沒有就沒有，下面會自己判斷 */ }
+  }
   if(!gqAuthorized()) return;            // 匿名登入、或使用者沒同意那個範圍
-  _quotaProvisioned = true;
-  try{
-    if(await gqAutoSetup() === "ready") ensureQuotaProviders();
-  }catch(e){ console.warn("autoSetupQuota", e); }
+
+  // **先把三筆供應商補進清單，再去挑專案。**
+  //
+  // 原本是「挑到專案才補」，於是只要 listProjects 失敗（最常見的原因是這個
+  // OAuth 用戶端所屬專案沒開 Cloud Resource Manager API），整件事就靜靜地
+  // 什麼都沒發生——使用者登入完看不到任何新東西，也不知道要去哪裡看。
+  // 補進去的那幾筆在沒選專案前本來就會被輪詢跳過，不會打壞任何現有流程，
+  // 而清單上那一行字會告訴他還差哪一步。
+  ensureQuotaProviders();
+
+  let ok = false;
+  try{ ok = (await gqAutoSetup()) === "ready"; }
+  catch(e){ console.warn("autoSetupQuota", e); }
+  // 成功才鎖起來。失敗就讓下一次（重新整理、或按了設定卡的授權）能再試一次——
+  // 擋住的多半是「某個 API 還沒啟用」這種隨時會被修好的東西。
+  if(ok) _quotaProvisioned = true;
+  // 清單是在挑專案**之前**畫的，那時每一行都還寫著「還差一步：選一個專案」。
+  // 挑完不重畫的話，畫面會停在那句話上——而專案其實已經選好、東西已經能用了。
+  renderAllProviderLists();
   renderAccountQuota();
 }
 
@@ -578,6 +618,7 @@ function setupAccountQuota(){
     // 選好專案才算真的可以用了，這時候才把供應商補進清單——
     // 提早補的話清單上會出現一筆永遠失敗的供應商。
     if(quotaProject() && ensureQuotaProviders()) gqMsg(t("gq.added"));
+    renderAllProviderLists();     // 每一行的狀態句都跟著專案變
     renderAccountQuota();
   });
   $("#gqEnable").addEventListener("click", async ()=>{
@@ -592,6 +633,7 @@ function setupAccountQuota(){
       ensureQuotaProviders();
       gqMsg(t("gq.testOk"));
     }catch(e){ gqMsg(e.message || String(e), true); }
+    renderAllProviderLists();
     renderAccountQuota();
   });
   renderAccountQuota();
@@ -1593,7 +1635,7 @@ async function renderVoices(){
           >${esc(t("set.voicesReauth"))}</button></p>`);
     }
     try{
-      const drive = await import("./drive.js?v=1.5.58");
+      const drive = await import("./drive.js?v=1.5.59");
       const d = await drive.diagnoseVoiceModels();
       // 同名根要先講。有兩個 VoiceWeaver 時，底下那些「沒有 Models」之類的
       // 描述全部都是在講錯的那一個資料夾，先看到它才不會被帶去修錯的地方。

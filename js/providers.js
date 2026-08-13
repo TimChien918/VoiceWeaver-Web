@@ -1,8 +1,8 @@
 // 供應商目錄 + 呼叫器（同供應商可多把金鑰、可多選供應商，自動輪詢+備援）。
-import { state } from "./store.js?v=1.5.58";
-import { localHas, localText, localImage } from "./localtts.js?v=1.5.58";
-import { googleApiFetch, googleApiError, accountQuotaReady } from "./gauth.js?v=1.5.58";
-import { t } from "./i18n.js?v=1.5.58";
+import { state } from "./store.js?v=1.5.59";
+import { localHas, localText, localImage } from "./localtts.js?v=1.5.59";
+import { googleApiFetch, googleApiError, accountQuotaReady } from "./gauth.js?v=1.5.59";
+import { t } from "./i18n.js?v=1.5.59";
 
 // 文字 LLM 供應商（標 cors 者較可能可在瀏覽器直接呼叫）
 //
@@ -11,7 +11,7 @@ import { t } from "./i18n.js?v=1.5.58";
 // 這是唯一一條不必先去申請一把 API 金鑰的路。
 export const LLM_PROVIDERS = {
   googleQuota:{ label:"Google Gemini", labelKey:"prov.googleQuota", needsKey:false, oauth:true, model:"gemini-3.5-flash" },
-  gemini:     { label:"Google Gemini",  needsKey:true,  model:"gemini-3.5-flash" },
+  gemini:     { label:"Google Gemini", labelKey:"prov.geminiKey", needsKey:true, model:"gemini-3.5-flash" },
   groq:       { label:"Groq",           needsKey:true,  model:"qwen/qwen3.6-27b" },
   openrouter: { label:"OpenRouter",     needsKey:true,  model:"qwen/qwen3-14b" },
   deepseek:   { label:"DeepSeek",       needsKey:true,  model:"deepseek-chat" },
@@ -29,8 +29,8 @@ const OPENAI_BASE = {
 // 生圖供應商
 export const IMAGE_PROVIDERS = {
   pollinations:{ label:"Pollinations", needsKey:false },
-  googleQuota: { label:"Gemini Imagen", labelKey:"prov.googleQuotaImg", needsKey:false, oauth:true },
-  gemini:      { label:"Gemini Imagen",          needsKey:true },
+  googleQuota: { label:"Gemini Imagen", labelKey:"prov.googleQuota", needsKey:false, oauth:true },
+  gemini:      { label:"Gemini Imagen", labelKey:"prov.geminiImgKey", needsKey:true },
   huggingface: { label:"HuggingFace",            needsKey:true, model:"black-forest-labs/FLUX.1-schnell" },
   openai:      { label:"OpenAI (gpt-image-1)",   needsKey:true },
 };
@@ -45,8 +45,8 @@ export const IMAGE_PROVIDERS = {
 //
 // 沒有 pollinations 那種免金鑰保底項：瀏覽器內建語音本來就是保底，不必在清單裡再放一個。
 export const TTS_PROVIDERS = {
-  googleQuota: { label:"Gemini TTS", labelKey:"prov.googleQuotaTts", needsKey:false, oauth:true, model:TTS_MODEL_DEFAULT() },
-  gemini:      { label:"Gemini TTS", needsKey:true, model:TTS_MODEL_DEFAULT() },
+  googleQuota: { label:"Gemini TTS", labelKey:"prov.googleQuota", needsKey:false, oauth:true, model:TTS_MODEL_DEFAULT() },
+  gemini:      { label:"Gemini TTS", labelKey:"prov.geminiTtsKey", needsKey:true, model:TTS_MODEL_DEFAULT() },
 };
 // 函式而不是常數：TTS_PROVIDERS 是模組載入時就求值的，寫在它上面才看得到。
 function TTS_MODEL_DEFAULT(){ return "gemini-2.5-flash-preview-tts"; }
