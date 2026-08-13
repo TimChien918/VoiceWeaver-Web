@@ -30,8 +30,8 @@
 // 拿到權杖之後 autoSetup() 會在背景把剩下的鋪完（挑專案、啟用 API），
 // 所以正常情況下使用者從頭到尾不用選任何東西；設定卡是給要改的人用的。
 
-import { state, save, loginGoogle, CLOUD_SCOPE, clearCloudScopeBlock } from "./store.js?v=1.5.58";
-import { t } from "./i18n.js?v=1.5.58";
+import { state, save, loginGoogle, CLOUD_SCOPE, clearCloudScopeBlock } from "./store.js?v=1.5.59";
+import { t } from "./i18n.js?v=1.5.59";
 
 export { CLOUD_SCOPE };
 
@@ -194,6 +194,17 @@ function authNeeded(){
   const e = new Error(t("gq.errExpired"));
   e.code = "needsAuth";
   return e;
+}
+
+/**
+ * 安靜地試著拿一把權杖，拿不到就算了。
+ *
+ * 給「已經登入、但這個分頁沒有權杖」用（重開瀏覽器）。絕不跳同意畫面：
+ * 那必須由使用者的點擊發動，否則彈窗會被瀏覽器擋掉，而且他只是開個網頁，
+ * 不該無緣無故被 Google 的畫面打斷。
+ */
+export async function silentToken(){
+  return googleToken({ interactive: false });
 }
 
 /** 使用者按下「授權」：一定跳同意畫面，回傳有沒有拿到權杖。 */
