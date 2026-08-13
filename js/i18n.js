@@ -443,8 +443,10 @@ export const STRINGS = {
   "crisis.q5": { "zh-TW":"請打給我", "en":"Please call me", "ja":"電話してください", "ko":"전화해 주세요" },
   "crisis.inhale":  { "zh-TW":"吸氣…", "en":"Breathe in…", "ja":"吸って…", "ko":"들이쉬고…" },
   "crisis.exhale":  { "zh-TW":"吐氣…", "en":"Breathe out…", "ja":"吐いて…", "ko":"내쉬고…" },
-  "crisis.hotline1925": { "zh-TW":"1925 安心專線", "en":"1925 helpline", "ja":"1925 相談ダイヤル", "ko":"1925 상담 전화" },
-  "crisis.hotline119":  { "zh-TW":"119 緊急", "en":"119 emergency", "ja":"119 緊急", "ko":"119 긴급" },
+  // 撥號鍵的用途標籤。號碼不寫在這裡——按鈕文字是「號碼 空格 用途」，
+  // 號碼由 hotlines.js 依所在國家決定（988/911、1925/119…）。
+  "crisis.purposeCrisis":    { "zh-TW":"安心專線", "en":"Crisis line", "ja":"相談ダイヤル", "ko":"상담 전화" },
+  "crisis.purposeEmergency": { "zh-TW":"緊急", "en":"Emergency", "ja":"緊急", "ko":"긴급" },
   "crisis.privacy": { "zh-TW":"畫面與聲音僅安全傳給家人，不會公開。", "en":"Screen and audio are sent privately to family only.", "ja":"画面と音声は家族にのみ安全に送信されます。", "ko":"화면과 소리는 가족에게만 안전하게 전송됩니다." },
   // 沒有關閉鈕了（結束由家人 /end 決定），保留字串以防其他地方引用
   "crisis.close":   { "zh-TW":"關閉", "en":"Close", "ja":"閉じる", "ko":"닫기" },

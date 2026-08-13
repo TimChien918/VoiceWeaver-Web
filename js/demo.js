@@ -10,10 +10,10 @@
 //    只改記憶體裡的 state，結束時還原。
 // ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.5.53";
-import { speak } from "./speech.js?v=1.5.53";
-import { applyI18n, t } from "./i18n.js?v=1.5.53";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.53";
+import { state } from "./store.js?v=1.5.55";
+import { speak } from "./speech.js?v=1.5.55";
+import { applyI18n, t } from "./i18n.js?v=1.5.55";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.55";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
@@ -757,20 +757,44 @@ async function prepareNarration(units, onProgress) {
   for (let i = 0; i < todo.length; i++) {
     if (_abort) break;
     onProgress(i, todo.length);
-    const j = todo[i];
+    if (await synthJob(todo[i])) ok++;
+  }
+  // 補漏輪：整批跑完再收一次還缺的。走 Tailscale／ngrok(Colab) 時，最容易掉的
+  // 是隧道剛拉起來的頭幾句；跑到這裡連線通常已經穩了，這一輪常常就補回來。
+  const missed = todo.filter((j) => !j.store.has(j.text));
+  for (let i = 0; i < missed.length && !_abort; i++) {
+    onProgress(i, missed.length);
+    if (await synthJob(missed[i])) ok++;
+  }
+  onProgress(todo.length, todo.length);
+  return ok;
+}
+
+// 一句話合成幾次都不成才放棄。**不重試的代價不是「少一句」**——那一句會退回
+// 瀏覽器機器音，於是簡報影片播到一半突然換了個聲音，而且錄完才會發現。
+// 掉包的原因多半是暫時的（隧道冷啟動、換 DERP 中繼），值得再試。
+const PREWARM_ATTEMPTS = 3;
+const PREWARM_BACKOFF_MS = 1500;
+
+async function synthJob(j) {
+  for (let attempt = 0; attempt < PREWARM_ATTEMPTS; attempt++) {
+    if (_abort) return false;
     try {
       const blob = await localSynth(j.text, { name: j.voice.name, lang: "EN", emotion: "中立" });
       if (blob) {
         j.store.set(j.text, blob);
         await dbPut(clipKey(j.text, j.voice.name), blob);   // 存起來，下次開頁面直接用
-        ok++;
+        return true;
       }
     } catch {
-      // 這一句合不出來就留給瀏覽器語音，不要為了一句放棄整段旁白
+      // 落到下面的退避重試
+    }
+    // 剛掉包的下一秒通常還是掉包，立刻重打只是把三次機會一次用完。
+    if (attempt < PREWARM_ATTEMPTS - 1) {
+      await sleep(PREWARM_BACKOFF_MS * (attempt + 1));
     }
   }
-  onProgress(todo.length, todo.length);
-  return ok;
+  return false;
 }
 
 /**

@@ -9,18 +9,19 @@
 //   3. 給一個免登入免輸名字的視訊房連結（Jitsi），家人點了就能面對面
 //   4. 輪詢家人回覆並顯示；家人可下指令 /call（強制視訊）/camera（再拍）/end（結束）
 //   5. 幾句「想對家人說」的快捷語 + 一段語音訊息，打不出字也能表達
-//   6. 1925 安心專線與 119 直撥
+//   6. 自殺防治專線與緊急號碼直撥（號碼依所在國家，見 hotlines.js）
 //
 // 結束由家人控制：使用者自己關不掉，家人在 Telegram 打 /end 才會關。
 // 這是刻意的——會走到這個畫面的人，正是最不該讓他一個人把求救關掉的時候。
 //
 // 呼吸引導不是裝飾：等待家人回應的那幾分鐘最難熬，給一個節奏可以跟著做。
-import { t } from "./i18n.js?v=1.5.53";
-import { state, save } from "./store.js?v=1.5.53";
+import { t } from "./i18n.js?v=1.5.55";
+import { state, save } from "./store.js?v=1.5.55";
 import {
   telegramSend, locationLine,
   telegramSendPhoto, telegramSendVoice, telegramPollReplies
-} from "./extras.js?v=1.5.53";
+} from "./extras.js?v=1.5.55";
+import { currentHotlines, hotlinesFor, detectCountry } from "./hotlines.js?v=1.5.55";
 
 const $ = s => document.querySelector(s);
 
@@ -289,6 +290,27 @@ export function setupCrisis() {
     if (num) location.href = "tel:" + num;
     else $("#crisisStatus").textContent = t("crisis.noPhone");
   });
-  $("#crisisHotline1925")?.addEventListener("click", () => { location.href = "tel:1925"; });
-  $("#crisisHotline119")?.addEventListener("click", () => { location.href = "tel:119"; });
+  // 求救號碼依所在國家（見 hotlines.js）。**先畫再更新**：視窗一開就得有
+  // 可以按的按鈕，不能卡在等瀏覽器定位——那正是最不能等的時刻。
+  // 先用退路（介面語言）畫出來，定位回來若判到別的國家再換掉。
+  paintHotlines(currentHotlines());
+  detectCountry().then(cc => { if (cc) paintHotlines(hotlinesFor(cc)); });
+}
+
+/** 把號碼與標籤寫進兩顆撥號鍵。號碼一定顯示在文字上，判錯時才看得出來。 */
+function paintHotlines(h) {
+  const bind = (id, entry) => {
+    const el = $(id);
+    if (!el) return;
+    el.textContent = entry.label;
+    el.dataset.number = entry.number;
+    // 用 dataset 帶號碼、監聽器只綁一次，避免每次重畫都疊一層 listener
+    // （疊上去的舊 listener 會撥舊號碼——正是這次要修掉的那種錯）。
+    if (!el.dataset.bound) {
+      el.dataset.bound = "1";
+      el.addEventListener("click", () => { location.href = "tel:" + el.dataset.number; });
+    }
+  };
+  bind("#crisisHotlineCrisis", h.crisis);
+  bind("#crisisHotlineEmergency", h.emergency);
 }
