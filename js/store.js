@@ -6,7 +6,7 @@ import {
 import {
   getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, getDocs, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { t } from "./i18n.js?v=1.5.61";
+import { t } from "./i18n.js?v=1.5.62";
 
 const DEFAULTS = {
   settings: { theme: "auto", lang: "en", rate: 0.95, font: 1.0,
@@ -32,9 +32,6 @@ const DEFAULTS = {
               acousticMatch: false,
               // 本地 GPT-SoVITS 語音引擎（透過語音中心橋接）
               localTtsEnabled: false, localTtsUrl: "", localComputeServers: [], localVoiceName: "", localVoiceLang: "", voiceEmotion: "",
-              // 用登入帳號自己的額度打 Gemini（OAuth 2.0，免金鑰）時，額度算在哪個
-              // Google Cloud 專案。空的代表還沒設定；詳見 gauth.js 開頭。
-              accountQuota: { project: "" },
               ttsVoice: "" },      // 雲端 TTS 嗓音（空＝用 TTS_VOICES 第一個）
   // 單一欄位的金鑰（通報用）
   apiKeys:  { tgtoken: "", tgchat: "", ngrokToken: "", ngrokDomain: "", ngrokPairCode: "" },
@@ -109,6 +106,12 @@ function migrate(d){
     if(seed.length) d.llmApis = seed;
   }
   if((!d.imageApis || !d.imageApis.length)) d.imageApis = [{ id:newId(), provider:"pollinations", key:"", model:"" }];
+  // 拿掉已經移除的 googleQuota 供應商。留著的話清單上會有一筆下拉選不到的項目
+  // （選單裡已經沒有這個選項），使用者改不動也刪不掉的錯覺。
+  for(const k of ["llmApis","imageApis","ttsApis"]){
+    if(Array.isArray(d[k])) d[k] = d[k].filter(e => e && e.provider !== "googleQuota");
+  }
+  if(d.settings) delete d.settings.accountQuota;
   // 舊「輕重症雙軌」uiMode → 新三段 severityMode（severe 保留、其餘視為輕度）
   if(d.settings && d.settings.uiMode && !d.settings.severityMode){
     d.settings.severityMode = d.settings.uiMode === "severe" ? "severe" : "mild";
@@ -165,46 +168,6 @@ export function initAuth({ onUser, onSaved }){
 
 // 登入合一：同一次 Google 登入既是 Firebase 身分，也拿到 Drive 權限（drive.file）。
 export const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
-
-/**
- * 用登入帳號自己的額度呼叫 Gemini 要的範圍（gauth.js 也匯出同一個常數）。
- *
- * **登入時就一起要。** 這是刻意的取捨：不在登入時拿的話，使用者登入完會看到
- * 一個「還不能講話」的 App，要自己到設定裡找一張卡、按授權、選專案，
- * 而這個 App 的使用者本來就不擅長在設定裡定位——等於預設是壞的。
- *
- * 代價是同意畫面上會多一項「查看及管理你的 Google Cloud 資料」，而且它很大。
- * 換來的是「登入完就能用」。使用者不同意也不會卡住：拿不到這個範圍時，
- * 帳號額度那幾筆供應商會被自動跳過，其餘功能（瀏覽器語音、貼金鑰的供應商、
- * 電腦端運算）完全照舊。
- */
-export const CLOUD_SCOPE = "https://www.googleapis.com/auth/cloud-platform";
-
-/**
- * 「這個環境要 cloud-platform 會登不進來」的記號。
- *
- * 為什麼一定要有這個開關：cloud-platform 是敏感範圍。如果這個 Google Cloud
- * 專案的同意畫面還沒通過驗證、或還停在「測試中」而使用者不在測試名單裡，
- * Google 會**直接擋掉整個登入**——不是「這個功能不能用」，是連登入都失敗。
- * 那等於為了一個加值功能，把整個 App 弄壞給所有既有使用者。
- *
- * 所以失敗一次就記下來，之後的登入自動改回原本的範圍（Drive 那兩個），
- * App 回到這個功能出現以前的樣子，照常可用。
- *
- * 記在 localStorage 而不是記憶體：這件事是「這台裝置／這個專案設定」的性質，
- * 重新整理之後還是成立，每次開頁都再撞一次牆沒有意義。
- * 使用者在設定卡按下「授權」時會清掉它（那是他明確要求要試），所以不是死路。
- */
-const NO_CLOUD_LS = "vw_no_cloud_scope";
-export function cloudScopeBlocked(){
-  try{ return localStorage.getItem(NO_CLOUD_LS) === "1"; }catch{ return false; }
-}
-export function markCloudScopeBlocked(){
-  try{ localStorage.setItem(NO_CLOUD_LS, "1"); }catch{}
-}
-export function clearCloudScopeBlock(){
-  try{ localStorage.removeItem(NO_CLOUD_LS); }catch{}
-}
 
 /**
  * 只讀「檔案清單」的權限。**列出專屬聲音一定要有這個。**
@@ -272,10 +235,6 @@ export async function loginGoogle(opts = {}){
     const provider = new GoogleAuthProvider();
     provider.addScope(DRIVE_SCOPE);                       // 同一個同意畫面順便要 Drive 權限
     provider.addScope(DRIVE_METADATA_SCOPE);              // 看得到別的程式建立的語音模型
-    // 用這個帳號自己的額度打 Gemini（見 gauth.js）。上次因為它登不進來就不要再加，
-    // 否則使用者會被同一道牆一直擋在門外。
-    const wantCloud = opts.forceCloudScope || !cloudScopeBlocked();
-    if(wantCloud) provider.addScope(CLOUD_SCOPE);
     // 呼叫端還可以再加（目前沒有人用，留著給日後的功能）
     for(const s of (opts.extraScopes || [])) provider.addScope(s);
     // 換帳號時一定要強迫出現選擇畫面：Google 預設會直接用上次那個帳號登回去，
@@ -294,15 +253,7 @@ export async function loginGoogle(opts = {}){
         sessionStorage.setItem(DRIVE_SCOPE_MARK, SCOPE_GEN);
       }
     }catch{}
-    // 登進來了 → 這個環境要得到 cloud-platform，把上次的黑名單記號清掉
-    // （例如管理員後來把同意畫面設好了，不該讓使用者永遠停在退化模式）。
-    if(wantCloud) clearCloudScopeBlock();
-    // token 也回傳出去：gauth.js 沒設 OAuth 用戶端 ID 時，就是靠這一把
-    // （多要了 cloud-platform 範圍的）權杖去打 Gemini。
-    // cloud 標記讓呼叫端知道這把權杖有沒有含 cloud-platform——沒有的話
-    // 拿去打 Gemini 只會換來一個看不懂的 403。
-    return { uid: res.user?.uid, email: res.user?.email, drive: !!_driveToken,
-             token: _driveToken, cloud: wantCloud };
+    return { uid: res.user?.uid, email: res.user?.email, drive: !!_driveToken };
   })();
   try { return await _popupPending; }
   finally { _popupPending = null; }
@@ -344,10 +295,6 @@ export async function logout(){
   _email = "";
   try{
     sessionStorage.removeItem("vw_drive_token"); sessionStorage.removeItem(DRIVE_SCOPE_MARK);
-    // 帳號額度的 OAuth 權杖也要一起丟。留著的話下一個登入的人（同一台共用電腦的
-    // 另一位照顧者）會用到前一個帳號的額度。gauth.js 記憶體裡那一份由呼叫端
-    // forgetToken() 清掉；這裡負責的是重新整理之後不要又被撿回來。
-    sessionStorage.removeItem("vw_gq_token"); sessionStorage.removeItem("vw_gq_exp");
   }catch{}
   if(_auth) await signOut(_auth);
   else { location.reload(); }
@@ -477,7 +424,7 @@ function saveLocalShortcuts(list){
 
 // Drive 用動態 import：drive.js 反過來要 store.js 的 driveToken，
 // 靜態互相 import 會踩到模組初始化順序。順便也讓沒用到 Drive 的人不必載這段。
-async function _drive(){ return import("./drive.js?v=1.5.61"); }
+async function _drive(){ return import("./drive.js?v=1.5.62"); }
 
 /**
  * 兩個雲端來源都讀：Firestore（即時、免 Drive 授權）與使用者自己 Drive 的

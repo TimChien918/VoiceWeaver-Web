@@ -9,7 +9,7 @@
 // 詞性色碼＝費茲傑羅（Fitzgerald Key）："n"名詞→黃、"v"動詞→綠、"a"形容詞→藍，
 // 省略＝中性（時間詞、問句、社交詞不上色）。App 的資料沒有這一欄，依分類給預設值
 // ——同一類的詞性絕大多數一致，少數例外也比整片不上色好。
-import { AAC_CATEGORIES, AAC_ITEMS, CURRENCIES, labelIn } from "./aacdata.js?v=1.5.61";
+import { AAC_CATEGORIES, AAC_ITEMS, CURRENCIES, labelIn } from "./aacdata.js?v=1.5.62";
 
 export { AAC_CATEGORIES, AAC_ITEMS, CURRENCIES, labelIn };
 

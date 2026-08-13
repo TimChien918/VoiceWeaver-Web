@@ -29,7 +29,7 @@ VoiceWeaver 有兩個版本，用同一個 Google 帳號登入即可雙向同步
 
 | 分類 | 重點功能 |
 | --- | --- |
-| **語句重組** | 碎詞 → 自然句，多供應商自動輪詢備援（Gemini / Groq / OpenRouter / DeepSeek / Mistral / Together / Cohere / OpenAI）、自我一致性排序（同一句話取樣多次，選共識最高的重組結果）、語音輸入（辨識語言跟著介面語言走）、地點／相機情境、直接把錄音餵給支援原生音訊的模型（跳過語音轉文字，避免辨識先出錯） |
+| **語句重組** | 碎詞 → 自然句，**免金鑰保底供應商（Pollinations）讓它打開就能用**，多供應商自動輪詢備援（Gemini / Groq / OpenRouter / DeepSeek / Mistral / Together / Cohere / OpenAI）、自我一致性排序（同一句話取樣多次，選共識最高的重組結果）、語音輸入（辨識語言跟著介面語言走）、地點／相機情境、直接把錄音餵給支援原生音訊的模型（跳過語音轉文字，避免辨識先出錯） |
 | **結果操作** | TTS 朗讀、多語朗讀（🇹🇼中 / 🇺🇸EN / 🇯🇵日 / 🇰🇷한）、一鍵複製、原生分享、加入最愛 |
 | **我的最愛** | 常用句快捷卡，點一下即朗讀 |
 | **AAC 圖卡** | 216 張卡、12 類別（商品／飲食／金額／動作／需求／人物／地點／醫療／時間／問句／情緒／緊急）、費茲傑羅詞性色碼（黃名詞／綠動詞／藍形容詞）、依使用頻率／時段／地點與詞語共現自動排序（「常用」快捷列＋類別內重排，類別順序本身固定不動）、整句緩衝（點卡進句、按朗讀一次連貫唸）、字級 A~A＋＋＋（特大 2 欄／巨大 1 欄自動降級）、📷 相機拍照自訂圖卡、自訂金額（NTD/USD/JPY/KRW/CNY/EUR） |
@@ -41,8 +41,7 @@ VoiceWeaver 有兩個版本，用同一個 Google 帳號登入即可雙向同步
 | **生圖** | Pollinations 意圖圖卡（免金鑰）／電腦或 Colab 的 SD-Turbo／Gemini／HuggingFace／OpenAI |
 | **角色語音** | 讓電腦或 Colab 幫忙跑 GPT-SoVITS，依句子自動偵測情緒切換語氣；雲端曲庫瀏覽＋隨選下載 |
 | **🆘 危機介入（雙向）** | 關鍵字攔截 → AI 判斷是本人求助還是代替他人求助（避免誤鎖住求救訊息）→ 立即通報家人（Telegram）＋前後鏡頭現場快照＋免登入視訊通話房；**家人可在 Telegram 回覆指令**：`/call` 強制加入視訊、`/camera` 要求再拍現場、`/end` 結束對話；使用者可傳安撫快捷語或錄約 6 秒語音訊息給家人；呼吸引導動畫陪伴等待；1925 安心專線／119／家人電話一鍵直撥；**對話視窗使用者無法自行關閉**，需家人 `/end` 才會結束 |
-| **免金鑰開通** | OAuth 2.0：用登入的那個 Google 帳號直接呼叫 Gemini，用量算在使用者自己的 Google Cloud 專案上。**登入完自動鋪好**（挑專案／必要時建專案、啟用 API、加進文字＋語音＋生圖三份清單），照顧者不必申請金鑰、也不必自己選 |
-| **雲端語音** | Gemini TTS 走同一份帳號額度：比瀏覽器機械音自然得多，電腦沒開也有好聲音；專屬聲音（GPT-SoVITS）永遠優先，兩者都不可用時退回瀏覽器語音 |
+| **雲端語音** | Gemini TTS（自備金鑰）：比瀏覽器機械音自然得多，電腦沒開也有好聲音；專屬聲音（GPT-SoVITS）永遠優先，兩者都不可用時退回瀏覽器語音 |
 | **雲端同步** | Firebase Firestore：API 金鑰、設定、最愛、復健日誌（與 Android App 同結構）自動同步 |
 | **離線備援** | 無 Firebase 時退回 localStorage，功能完整可用；LLM 全部失敗時句子重組退回規則模板、復健評分退回字元／詞語重疊率計算 |
 | **簡轉繁校正** | 部分雲端模型即使提示詞要求繁體，偶爾仍會吐出簡體字；用 OpenCC 字元＋詞組雙層對照校正（round-trip 驗證過，不會誤改本來就正確的繁體字） |
@@ -125,49 +124,23 @@ GitHub repo → **Settings → Pages → Source: main / (root) → Save**。
 
 > **Google 登入授權網域**：回 Firebase → Authentication → Settings → Authorized domains，加入 `你的帳號.github.io`。
 
-### 3. 讓它有 AI 可用
+### 3. AI 能力（打開就有，要更好再自己加金鑰）
 
-**A. Google Gemini OAuth 2.0：用登入帳號自己的額度，免申請金鑰 — 什麼都不用做**
+**打開就能用**：文字重組與生圖都有一個**免金鑰的保底供應商**（Pollinations），
+不必登入、不必設定任何東西就會動。朗讀則永遠有瀏覽器內建語音保底。
 
-用 Google 登入之後就已經好了。登入時的同意畫面會一併要求 Gemini 需要的權限，
-接著網頁會在背景自動：挑一個你的 Google Cloud 專案（一個都沒有就幫你建一個叫
-VoiceWeaver 的）→ 啟用 Gemini API → **在你的專案裡開一把限定只打得動 Gemini 的金鑰**
-→ 把它加進**文字、語音、生圖**
-三份供應商清單（三處都叫 **Google Gemini OAuth 2.0**）。登入完直接就能重組、朗讀、生圖。
+**想要更好的品質**：到「**設定 → 💬 文字供應商**」新增 Gemini / Groq / OpenRouter 任一金鑰。
+自己的金鑰永遠排在保底之前，保底只在你沒設、或你設的那幾家全部失敗時才會用到。
+語音（Gemini TTS）與生圖各有自己的清單，同樣是填一把金鑰。
 
-不必去申請、保管、貼上任何 API 金鑰；網頁是以「你」的身分呼叫 Gemini，
-用量與帳單都在你自己的專案底下，看得到也停得掉。
-
-要改用哪個專案、換嗓音、或整個關掉，到「**設定 → 🔑 Google Gemini OAuth 2.0**」
-與「**🔊 語音供應商**」。自動流程走不通時（例如你按了不同意），那張卡也會告訴你
-卡在哪一步、下一步該做什麼。
-
-> **OAuth 是用來「開通」，不是用來「呼叫」的**
->
+> **為什麼不能「登入就自動用你帳號的額度」**：試過了，走不通。
 > `generativelanguage.googleapis.com`（Gemini API）**不收使用者的 OAuth 權杖**——拿
-> Bearer token 去打 `generateContent` 一律回 403「Request had insufficient authentication
-> scopes」，而且沒有任何範圍解得開，`cloud-platform` 也不行。那個端點就是設計成收 API 金鑰的。
-> Google 自己的 Gemini CLI 走的是 `cloudcode-pa.googleapis.com/v1internal`，一個沒有文件、
-> request 格式不同的內部端點。**Google AI Studio 做得到「登入就直接用你帳號的額度」，
-> 是因為它是 Google 第一方應用程式；第三方網頁沒有這條路。**
->
-> 所以這裡的做法是：用 OAuth 在**你自己的專案裡開一把 Gemini 金鑰**（限定只打得動
-> Gemini），之後就拿那把金鑰呼叫。對你來說結果一樣——沒有去申請、沒有複製貼上任何東西，
-> 用量算在你自己的專案上——但走的是 Google 真正支援的路。
->
-> 副作用是好的：**API 金鑰不會過期**，所以日常使用不再受 access token「一小時到期」的影響；
-> OAuth 只在第一次開通時用得到。
->
-> **關於授權範圍**：同意畫面會要求 `cloud-platform`（「查看及管理你的 Google Cloud 資料」），
-> 而且**它很大**。網頁只用它做四件事：列出（必要時建立）你的專案、啟用 Gemini API、
-> 啟用 API Keys API、在你的專案裡開那把金鑰。不同意也不會卡住，只是那幾筆供應商會被
-> 自動跳過，其餘功能照舊。授權隨時可以到 Google 帳號的「第三方應用程式」收回，
-> 金鑰也隨時可以在 Cloud Console 的「憑證」裡刪掉（名稱是 `VoiceWeaver`）。
-
-**B. 自己貼 API 金鑰**
-
-到「**設定 → 💬 文字供應商**」新增供應商，填入 Gemini / Groq / OpenRouter 任一金鑰。
-兩條路可以並存——A 的免費額度用完時會自動換下一家。
+> Bearer token 打 `generateContent` 一律回 403「Request had insufficient authentication
+> scopes」，而且沒有任何範圍解得開，`cloud-platform` 也不行。那個端點就是設計成收 API
+> 金鑰的。Google 自己的 Gemini CLI 走的是 `cloudcode-pa.googleapis.com/v1internal`，
+> 一個沒有文件、request 格式不同的內部端點。
+> **Google AI Studio 做得到「登入就直接用你帳號的額度」，是因為它是 Google 第一方
+> 應用程式；第三方網頁沒有這條路。**
 
 ### 4.（選用）緊急通報
 
@@ -180,7 +153,7 @@ VoiceWeaver 的）→ 啟用 Gemini API → **在你的專案裡開一把限定�
 ## 技術說明
 
 - **語言**：純 ES6 模組（無打包工具），可直接用 GitHub Pages 靜態托管。
-- **TTS 三層**：專屬聲音（GPT-SoVITS，要電腦／Colab 開著）→ 雲端 TTS（Gemini，走帳號額度）→ 瀏覽器原生 Web Speech API。上面兩層任何一種失敗都自動落到下一層，最底層免金鑰、零延遲，所以「按了朗讀卻沒聲音」不會發生。快速求救那三顆與重症防呆模式刻意直接走瀏覽器語音——那些場合出得了聲比音色重要。Gemini TTS 回的是裸 PCM，`js/providers.js` 補 RIFF 檔頭後才播。
+- **TTS 三層**：專屬聲音（GPT-SoVITS，要電腦／Colab 開著）→ 雲端 TTS（Gemini）→ 瀏覽器原生 Web Speech API。上面兩層任何一種失敗都自動落到下一層，最底層免金鑰、零延遲，所以「按了朗讀卻沒聲音」不會發生。快速求救那三顆與重症防呆模式刻意直接走瀏覽器語音——那些場合出得了聲比音色重要。Gemini TTS 回的是裸 PCM，`js/providers.js` 補 RIFF 檔頭後才播。
 - **STT**：瀏覽器原生 Web Speech API（免金鑰），辨識語言跟著介面語言走。
 - **LLM**：多供應商自動輪詢＋失敗換下一家（`js/providers.js`），復健評分會改用固定順序而非輪替，避免同一句話因為換了模型而分數飄動。
 - **句子重組**：`js/llm.js` 對同一組碎詞平行取樣多次，每次回傳多個候選句，攤平後依「相同文意出現次數、再看平均信心」排序取前三；JSON 解析容忍截斷與格式錯誤，絕不把解析失敗的原始 JSON 當作一句話唸出來。
@@ -204,10 +177,6 @@ VoiceWeaver 的）→ 啟用 Gemini API → **在你的專案裡開一把限定�
 
 - LLM 金鑰儲存於使用者自己的瀏覽器（localStorage）與 Firestore，受 Firebase 安全規則保護，不存在程式碼中。
 - 請使用**可隨時撤銷的個人金鑰**，並定期到各供應商後台確認用量。
-- 「用我的 Google 帳號額度」拿到的 OAuth access token **只存在 sessionStorage**（關掉分頁就沒了、
-  一小時也會自動失效），不寫進 localStorage、不上雲、不與任何人同步——跨工作階段留存 access token
-  會擴大 XSS 的曝險面，而它換不到什麼。登出時連同記憶體那一份一起清掉，共用電腦上的下一個人
-  不會接手到前一個帳號的額度。
 - 部分供應商不允許瀏覽器直接呼叫（CORS）；本版預設使用可跨域的 Gemini / Groq / OpenRouter / Pollinations。
 - Telegram Bot Token／Chat ID 同樣只存在使用者自己的瀏覽器與 Firestore。
 - ngrok 授權碼透過配對碼從你的帳號雲端取用，不會出現在 Colab notebook 或程式碼裡。
@@ -222,7 +191,6 @@ s2t_map.txt / s2t_phrases.txt   簡轉繁字元／詞組對照表（zhconv.js �
 js/
 ├── app.js              主邏輯（分頁、重組、AAC、最愛、多語朗讀、雲端曲庫清單渲染、防呆模式切換）
 ├── store.js            Firebase 登入 + Firestore 同步（無 Firebase 退 localStorage）
-├── gauth.js             Google OAuth 2.0：用登入帳號自己的額度打 Gemini（免金鑰、計費走使用者專案）
 ├── safety.js            關鍵字攔截、風險分級（normal/confirm/lock）、輸出消毒
 ├── crisis.js            危機介入視窗（現場快照、家人指令、語音訊息、呼吸引導、專線）
 ├── llm.js               多供應商 LLM 重組（自我一致性排序）+ 危機意圖分類 + 復健 AI 評分 + AI 建議
