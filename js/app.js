@@ -1,30 +1,30 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.57";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES } from "./providers.js?v=1.5.57";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade, cloudScopeBlocked, markCloudScopeBlocked } from "./store.js?v=1.5.58";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES } from "./providers.js?v=1.5.58";
 import { authorize as gqAuthorize, accountQuotaReady, needsReauth as gqNeedsReauth, quotaProject,
          setQuotaProject, listProjects, enableGenerativeLanguage, testAccountQuota,
          forgetToken as gqForget, hasGisClient, authorized as gqAuthorized,
-         adoptToken as gqAdopt, autoSetup as gqAutoSetup } from "./gauth.js?v=1.5.57";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.57";
-import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.57";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.57";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.57";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.57";
-import { bindTap } from "./interaction.js?v=1.5.57";
-import { orderCards } from "./predict.js?v=1.5.57";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.57";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.57";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.57";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.57";
-import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.57";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.57";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.57";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.57";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.57";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.57";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.57";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.57";
-import { applyI18n, t } from "./i18n.js?v=1.5.57";
-import { setupDemo } from "./demo.js?v=1.5.57";
+         adoptToken as gqAdopt, autoSetup as gqAutoSetup } from "./gauth.js?v=1.5.58";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.58";
+import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.58";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.58";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.58";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.58";
+import { bindTap } from "./interaction.js?v=1.5.58";
+import { orderCards } from "./predict.js?v=1.5.58";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.58";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.58";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.58";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.58";
+import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.58";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.58";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.58";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.58";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.58";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.58";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.58";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.58";
+import { applyI18n, t } from "./i18n.js?v=1.5.58";
+import { setupDemo } from "./demo.js?v=1.5.58";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -351,7 +351,7 @@ function bindSettings(){
   // 新增一筆預設是「要貼金鑰」的那種。免金鑰的帳號額度有自己那張卡（要授權、
   // 要選專案），從這顆按鈕生出來的話會是一筆立刻就在報錯的供應商。
   $("#addLlm").addEventListener("click", ()=>{ state.llmApis.push({id:newId(),provider:"gemini",key:"",model:""}); save(); renderProviderList("#llmList","llmApis",LLM_PROVIDERS); });
-  $("#addTts").addEventListener("click", ()=>{ state.ttsApis.push({id:newId(),provider:"gemini",key:"",model:""}); save(); renderProviderList("#ttsList","ttsApis",TTS_PROVIDERS); });
+  $("#addTts")?.addEventListener("click", ()=>{ state.ttsApis.push({id:newId(),provider:"gemini",key:"",model:""}); save(); renderProviderList("#ttsList","ttsApis",TTS_PROVIDERS); });
   $("#s_ttsVoice")?.addEventListener("change", e=>{ state.settings.ttsVoice = e.target.value; save(); });
   $("#addImg").addEventListener("click", ()=>{ state.imageApis.push({id:newId(),provider:"pollinations",key:"",model:""}); save(); renderProviderList("#imgList","imageApis",IMAGE_PROVIDERS); });
   // 本地語音引擎
@@ -407,6 +407,9 @@ function bindSettings(){
 // 多供應商/多金鑰清單：供應商下拉 + 金鑰欄 + 刪除
 function renderProviderList(containerId, listKey, catalog){
   const box = $(containerId); const list = state[listKey] || [];
+  // 容器不在畫面上就安靜跳過。這裡如果炸掉，整個 fillSettings 會中斷，
+  // 使用者看到的是一個載到一半的 App——而原因只是某張卡還沒存在。
+  if(!box) return;
   if(!list.length){ box.innerHTML = `<p class="tiny muted">${t("providers.none")}</p>`; return; }
   // 供應商名稱多半是品牌名（各語言都一樣），但「用我的帳號額度」那一筆講的是
   // 做法而不是牌子，要跟著介面語言翻，所以有 labelKey 的優先用譯文。
@@ -1392,8 +1395,25 @@ function main(){
   // 會直接跳過。少了這一行，第一次登入的人永遠等不到自動設定，
   // 得重新整理一次才會生效。
   bindLogin("#btnGoogle", async ()=>{
-    const r = await loginGoogle();
-    gqAdopt(r?.token);
+    let r;
+    try{
+      r = await loginGoogle();
+    }catch(e){
+      // 登入失敗而且不是「使用者自己關掉彈窗」→ 很可能是 cloud-platform 這個
+      // 敏感範圍被擋下來（同意畫面還沒通過驗證、或還停在測試中而這個人不在
+      // 測試名單裡）。那會讓**整個 App 登不進來**，為了一個加值功能不值得。
+      //
+      // 記下來並立刻用原本的範圍再登一次：使用者按了一次登入就該登進去，
+      // 不該還要看懂一段錯誤訊息再按第二次。第二次只在真的失敗時才會浮出錯誤。
+      if(!isBenignAuthError(e) && !cloudScopeBlocked()){
+        console.warn("帶 cloud-platform 登入失敗，改用基本範圍重試", e);
+        markCloudScopeBlocked();
+        r = await loginGoogle();
+      } else throw e;
+    }
+    // 沒拿到 cloud-platform 的權杖不要交給 gauth——拿去打 Gemini 只會換來 403，
+    // 而畫面會顯示成「授權過期」，把人指向一個修不好的方向。
+    if(r?.cloud) gqAdopt(r.token);
     autoSetupQuota();
   });
   bindLogin("#btnAnon", loginAnon);
@@ -1573,7 +1593,7 @@ async function renderVoices(){
           >${esc(t("set.voicesReauth"))}</button></p>`);
     }
     try{
-      const drive = await import("./drive.js?v=1.5.57");
+      const drive = await import("./drive.js?v=1.5.58");
       const d = await drive.diagnoseVoiceModels();
       // 同名根要先講。有兩個 VoiceWeaver 時，底下那些「沒有 Models」之類的
       // 描述全部都是在講錯的那一個資料夾，先看到它才不會被帶去修錯的地方。

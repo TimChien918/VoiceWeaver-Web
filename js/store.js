@@ -6,7 +6,7 @@ import {
 import {
   getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, getDocs, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { t } from "./i18n.js?v=1.5.57";
+import { t } from "./i18n.js?v=1.5.58";
 
 const DEFAULTS = {
   settings: { theme: "auto", lang: "en", rate: 0.95, font: 1.0,
@@ -181,6 +181,32 @@ export const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 export const CLOUD_SCOPE = "https://www.googleapis.com/auth/cloud-platform";
 
 /**
+ * 「這個環境要 cloud-platform 會登不進來」的記號。
+ *
+ * 為什麼一定要有這個開關：cloud-platform 是敏感範圍。如果這個 Google Cloud
+ * 專案的同意畫面還沒通過驗證、或還停在「測試中」而使用者不在測試名單裡，
+ * Google 會**直接擋掉整個登入**——不是「這個功能不能用」，是連登入都失敗。
+ * 那等於為了一個加值功能，把整個 App 弄壞給所有既有使用者。
+ *
+ * 所以失敗一次就記下來，之後的登入自動改回原本的範圍（Drive 那兩個），
+ * App 回到這個功能出現以前的樣子，照常可用。
+ *
+ * 記在 localStorage 而不是記憶體：這件事是「這台裝置／這個專案設定」的性質，
+ * 重新整理之後還是成立，每次開頁都再撞一次牆沒有意義。
+ * 使用者在設定卡按下「授權」時會清掉它（那是他明確要求要試），所以不是死路。
+ */
+const NO_CLOUD_LS = "vw_no_cloud_scope";
+export function cloudScopeBlocked(){
+  try{ return localStorage.getItem(NO_CLOUD_LS) === "1"; }catch{ return false; }
+}
+export function markCloudScopeBlocked(){
+  try{ localStorage.setItem(NO_CLOUD_LS, "1"); }catch{}
+}
+export function clearCloudScopeBlock(){
+  try{ localStorage.removeItem(NO_CLOUD_LS); }catch{}
+}
+
+/**
  * 只讀「檔案清單」的權限。**列出專屬聲音一定要有這個。**
  *
  * drive.file 是逐檔授權：只看得到「本 App 自己建立的檔案」。專屬發音是網頁
@@ -246,7 +272,10 @@ export async function loginGoogle(opts = {}){
     const provider = new GoogleAuthProvider();
     provider.addScope(DRIVE_SCOPE);                       // 同一個同意畫面順便要 Drive 權限
     provider.addScope(DRIVE_METADATA_SCOPE);              // 看得到別的程式建立的語音模型
-    provider.addScope(CLOUD_SCOPE);                       // 用這個帳號自己的額度打 Gemini（見 gauth.js）
+    // 用這個帳號自己的額度打 Gemini（見 gauth.js）。上次因為它登不進來就不要再加，
+    // 否則使用者會被同一道牆一直擋在門外。
+    const wantCloud = opts.forceCloudScope || !cloudScopeBlocked();
+    if(wantCloud) provider.addScope(CLOUD_SCOPE);
     // 呼叫端還可以再加（目前沒有人用，留著給日後的功能）
     for(const s of (opts.extraScopes || [])) provider.addScope(s);
     // 換帳號時一定要強迫出現選擇畫面：Google 預設會直接用上次那個帳號登回去，
@@ -265,9 +294,15 @@ export async function loginGoogle(opts = {}){
         sessionStorage.setItem(DRIVE_SCOPE_MARK, SCOPE_GEN);
       }
     }catch{}
+    // 登進來了 → 這個環境要得到 cloud-platform，把上次的黑名單記號清掉
+    // （例如管理員後來把同意畫面設好了，不該讓使用者永遠停在退化模式）。
+    if(wantCloud) clearCloudScopeBlock();
     // token 也回傳出去：gauth.js 沒設 OAuth 用戶端 ID 時，就是靠這一把
     // （多要了 cloud-platform 範圍的）權杖去打 Gemini。
-    return { uid: res.user?.uid, email: res.user?.email, drive: !!_driveToken, token: _driveToken };
+    // cloud 標記讓呼叫端知道這把權杖有沒有含 cloud-platform——沒有的話
+    // 拿去打 Gemini 只會換來一個看不懂的 403。
+    return { uid: res.user?.uid, email: res.user?.email, drive: !!_driveToken,
+             token: _driveToken, cloud: wantCloud };
   })();
   try { return await _popupPending; }
   finally { _popupPending = null; }
@@ -442,7 +477,7 @@ function saveLocalShortcuts(list){
 
 // Drive 用動態 import：drive.js 反過來要 store.js 的 driveToken，
 // 靜態互相 import 會踩到模組初始化順序。順便也讓沒用到 Drive 的人不必載這段。
-async function _drive(){ return import("./drive.js?v=1.5.57"); }
+async function _drive(){ return import("./drive.js?v=1.5.58"); }
 
 /**
  * 兩個雲端來源都讀：Firestore（即時、免 Drive 授權）與使用者自己 Drive 的

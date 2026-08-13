@@ -30,8 +30,8 @@
 // 拿到權杖之後 autoSetup() 會在背景把剩下的鋪完（挑專案、啟用 API），
 // 所以正常情況下使用者從頭到尾不用選任何東西；設定卡是給要改的人用的。
 
-import { state, save, loginGoogle, CLOUD_SCOPE } from "./store.js?v=1.5.57";
-import { t } from "./i18n.js?v=1.5.57";
+import { state, save, loginGoogle, CLOUD_SCOPE, clearCloudScopeBlock } from "./store.js?v=1.5.58";
+import { t } from "./i18n.js?v=1.5.58";
 
 export { CLOUD_SCOPE };
 
@@ -150,7 +150,9 @@ async function gisToken(interactive){
 // ── ② Firebase 彈窗（沒設 clientId 時的退路）─────────────
 
 async function firebaseToken(){
-  const res = await loginGoogle({ extraScopes: [CLOUD_SCOPE] });
+  // forceCloudScope：使用者是為了這件事才按下授權的，就算上次被擋過也要再試一次
+  // ——擋人的多半是專案設定，而那是管理員隨時可能修好的東西。
+  const res = await loginGoogle({ forceCloudScope: true });
   if(!res?.token) throw new Error("noToken");
   // Firebase 不會告訴我們這個權杖能活多久；Google 的 access token 一律是一小時。
   remember(res.token, 3600);
@@ -197,6 +199,7 @@ function authNeeded(){
 /** 使用者按下「授權」：一定跳同意畫面，回傳有沒有拿到權杖。 */
 export async function authorize(){
   forgetToken();                       // 舊的可能是別的帳號或別的範圍拿的
+  clearCloudScopeBlock();              // 他明確要求要試，把上次的黑名單記號清掉
   const tok = await googleToken({ interactive: true });
   return !!tok;
 }

@@ -1,10 +1,10 @@
 // TTS / STT：預設用瀏覽器原生 Web Speech API（免金鑰）；
 // 若開啟「本地語音引擎」且連得上語音中心，則改用 GPT-SoVITS 角色語音。
-import { state } from "./store.js?v=1.5.57";
-import { localTtsEnabled, localSpeak, stopLocalSpeak } from "./localtts.js?v=1.5.57";
-import { runTts, stopCloudTts, hasCloudTts } from "./providers.js?v=1.5.57";
-import { t } from "./i18n.js?v=1.5.57";
-import { sanitizeForSpeech } from "./safety.js?v=1.5.57";
+import { state } from "./store.js?v=1.5.58";
+import { localTtsEnabled, localSpeak, stopLocalSpeak } from "./localtts.js?v=1.5.58";
+import { runTts, stopCloudTts, hasCloudTts } from "./providers.js?v=1.5.58";
+import { t } from "./i18n.js?v=1.5.58";
+import { sanitizeForSpeech } from "./safety.js?v=1.5.58";
 
 // 讓上層（app.js）注入 toast，好把「本地語音失敗、已退回瀏覽器語音」的原因顯示出來，
 // 不再靜默吞錯——否則使用者只覺得「連上了卻無法合成」，看不到真正原因。
@@ -77,7 +77,10 @@ export function speak(text, { safetyChecked = false } = {}){
  */
 function _cloudOrWebSpeak(text){
   if(!hasCloudTts()){ _webSpeak(text); return; }
-  // 先停掉可能還在講的瀏覽器語音，不然雲端音檔回來時兩個會疊在一起
+  // 先停掉還在講的那一句，兩種都要停。
+  // 雲端那句一定要**現在**停：它要等 API 回來才會換成新的音檔，中間那一兩秒
+  // 舊句子還在講——使用者按了新的一句，卻聽著上一句講完。
+  stopCloudTts();
   try{ if(window.speechSynthesis?.speaking) speechSynthesis.cancel(); }catch{}
   runTts(text).then(ok => { if(!ok) _webSpeak(text); })
               .catch(e => { console.warn("雲端語音失敗，改用瀏覽器語音", e); _webSpeak(text); });

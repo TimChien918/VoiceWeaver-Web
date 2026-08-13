@@ -6,11 +6,11 @@
 // 計分沿用 App：期望關鍵字的命中比例。刻意不交給 LLM 打分數——同一段話讓模型
 // 打兩次會給不同分，患者看到分數跳動會失去信心。分數用規則算（穩定可複現），
 // 只有講評文字交給 AI；沒有金鑰時退回依分數的固定鼓勵語，離線也能練。
-import { t } from "./i18n.js?v=1.5.57";
-import { STORY_PROMPTS, pickLang } from "./storydata.js?v=1.5.57";
-import { reviewStory } from "./llm.js?v=1.5.57";
-import { speak, listen, sttSupported } from "./speech.js?v=1.5.57";
-import { addRehabLog } from "./store.js?v=1.5.57";
+import { t } from "./i18n.js?v=1.5.58";
+import { STORY_PROMPTS, pickLang } from "./storydata.js?v=1.5.58";
+import { reviewStory } from "./llm.js?v=1.5.58";
+import { speak, listen, sttSupported } from "./speech.js?v=1.5.58";
+import { addRehabLog } from "./store.js?v=1.5.58";
 
 const $ = s => document.querySelector(s);
 const esc = x => String(x ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
