@@ -257,6 +257,7 @@ export const STRINGS = {
   "providers.keyPh": { "zh-TW":"API 金鑰", "en":"API key", "ja":"API キー", "ko":"API 키" },
   "providers.del": { "zh-TW":"刪除", "en":"Delete", "ja":"削除", "ko":"삭제" },
   // ── 用登入帳號自己的額度（OAuth 2.0，免金鑰）──
+  "prov.pollinationsFree": { "zh-TW":"Pollinations（免金鑰・預設保底）", "en":"Pollinations (no key — always-on fallback)", "ja":"Pollinations（キー不要・常時フォールバック）", "ko":"Pollinations (키 불필요 · 상시 대비)" },
   "prov.geminiKey": { "zh-TW":"Google Gemini（自備 API 金鑰）", "en":"Google Gemini (your own API key)", "ja":"Google Gemini（自分の API キー）", "ko":"Google Gemini (직접 준비한 API 키)" },
   "prov.geminiImgKey": { "zh-TW":"Gemini Imagen（自備 API 金鑰）", "en":"Gemini Imagen (your own API key)", "ja":"Gemini Imagen（自分の API キー）", "ko":"Gemini Imagen (직접 준비한 API 키)" },
   "prov.geminiTtsKey": { "zh-TW":"Gemini TTS（自備 API 金鑰）", "en":"Gemini TTS (your own API key)", "ja":"Gemini TTS（自分の API キー）", "ko":"Gemini TTS (직접 준비한 API 키)" },

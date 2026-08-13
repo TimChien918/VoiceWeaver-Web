@@ -4,7 +4,13 @@ import { localHas, localText, localImage } from "./localtts.js?v=1.5.62";
 import { t } from "./i18n.js?v=1.5.62";
 
 // 文字 LLM 供應商（標 cors 者較可能可在瀏覽器直接呼叫）
+//
+// pollinations 免金鑰，而且**永遠排在最後當保底**（見 llmEntries）：
+// 沒有它的話，一個還沒貼金鑰的人按下重組只會看到「沒有可用的供應商」——
+// 對照顧者而言那等於 App 是壞的。有它，打開就能講話；品質不如 Gemini，
+// 但「有一句可以用的話」跟「什麼都沒有」是兩回事。
 export const LLM_PROVIDERS = {
+  pollinations:{ label:"Pollinations", labelKey:"prov.pollinationsFree", needsKey:false, model:"openai" },
   gemini:     { label:"Google Gemini", labelKey:"prov.geminiKey", needsKey:true, model:"gemini-3.5-flash" },
   groq:       { label:"Groq",           needsKey:true,  model:"qwen/qwen3.6-27b" },
   openrouter: { label:"OpenRouter",     needsKey:true,  model:"qwen/qwen3-14b" },
@@ -106,6 +112,32 @@ export async function runAudioLlm(sys, audioBase64, mime){
   return geminiTextOf(j).replace(/^[「"']|[」"']$/g,"");
 }
 
+/**
+ * 免金鑰的文字生成。兩條路都試：
+ *   ① OpenAI 相容的 POST 端點（有 system/temperature，品質比較可控）
+ *   ② 純文字 GET（回的是內文本身，不是 JSON）——①掛掉時的退路
+ * 免費服務本來就比較不穩，多一條路換來的是「今天還能不能講話」。
+ */
+async function pollinationsText(entry, sys, user, temp=0.5){
+  const model = entry.model || LLM_PROVIDERS.pollinations.model;
+  try{
+    const r = await fetch("https://text.pollinations.ai/openai", {
+      method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ model, temperature:temp, max_tokens:300,
+        messages:[{role:"system",content:sys},{role:"user",content:user}] }) });
+    if(r.ok){
+      const j = await r.json();
+      const out = (j.choices?.[0]?.message?.content || "").trim();
+      if(out) return out;
+    }
+  }catch(e){ console.warn("pollinations openai", e); }
+
+  const r2 = await fetch(`https://text.pollinations.ai/${encodeURIComponent(user)}`
+    + `?system=${encodeURIComponent(sys)}&model=${encodeURIComponent(model)}`);
+  if(!r2.ok) throw new Error("Pollinations "+r2.status);
+  return (await r2.text()).trim();
+}
+
 async function openaiText(entry, sys, user, temp=0.5){
   const base = OPENAI_BASE[entry.provider]; const model = entry.model || LLM_PROVIDERS[entry.provider].model;
   const r = await fetch(base+"/chat/completions",{ method:"POST",
@@ -125,11 +157,15 @@ async function cohereText(entry, sys, user, temp=0.5){
 }
 function llmEntries(){
   // 只留 web 支援的供應商（手機可能同步來 web 沒有的，如 cerebras → 跳過不報錯）
-  return (state.llmApis||[]).filter(e=>{
+  const list = (state.llmApis||[]).filter(e=>{
     const p = e.provider && LLM_PROVIDERS[e.provider];
     if(!p) return false;
     return !!e.key || !p.needsKey;
   });
+  // 永遠保底有一個免金鑰的（同 imageEntries 的做法）。**放在最後**：
+  // 使用者自己貼的金鑰品質比較好，該先用；這一筆是「什麼都沒設也能講話」。
+  if(!list.some(e => e.provider === "pollinations")) list.push({ provider:"pollinations", key:"", model:"" });
+  return list;
 }
 // 有金鑰，或「電腦幫跑文字」可用 → 都算有文字能力
 export function hasLlm(){ return llmEntries().length>0 || localHas("text"); }
@@ -145,13 +181,19 @@ export async function runLlm(sys, user, opts={}){
   // 模型，比雲端 API 慢一個量級——而重組一次會**同時打三個**（self-consistency
   // 取樣），使用者等的是最慢的那一個。「按下重組要等很久」就是這樣來的。
   // 本機的價值在離線可用，不在速度，所以它該是退路而不是首選。
-  const list = opts.stable ? llmEntries() : rotate(llmEntries());
+  // 保底那一筆不參與輪替——輪替是為了分攤額度，而它沒有額度可分；
+  // 讓它固定留在最後，使用者自己的金鑰才會被優先用到。
+  const all = llmEntries();
+  const paid = all.filter(e => e.provider !== "pollinations");
+  const free = all.filter(e => e.provider === "pollinations");
+  const list = (opts.stable ? paid : rotate(paid)).concat(free);
   const online = navigator.onLine !== false;
   if(online){
     for(const e of list){
       try{
         const fn = e.provider==="gemini"?geminiText
-                 : e.provider==="cohere"?cohereText : openaiText;
+                 : e.provider==="cohere"?cohereText
+                 : e.provider==="pollinations"?pollinationsText : openaiText;
         const out = await fn(e, sys, user, temp);
         if(out) return out.replace(/^[「"']|[」"']$/g,"").trim();
       }catch(x){ err=x; console.warn(e.provider, x); }
