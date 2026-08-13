@@ -6,7 +6,7 @@ import {
 import {
   getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, getDocs, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { t } from "./i18n.js?v=1.5.62";
+import { t } from "./i18n.js?v=1.5.63";
 
 const DEFAULTS = {
   settings: { theme: "auto", lang: "en", rate: 0.95, font: 1.0,
@@ -56,6 +56,54 @@ export function ensurePairCode(){
     save();   // 沒存檔的話下次載入又產一組新的，Colab 那端就再也對不上
   }
   return state.apiKeys.ngrokPairCode;
+}
+
+// ── 活動期間的共用金鑰（讀取端）────────────────────────
+//
+// 站方（也就是本專案作者）把自己的金鑰放進 Firestore 的 shared/apiKeys，
+// 讓還沒有自己金鑰的人在活動期間直接用。**到期由 Firestore 規則強制**
+// （見 README 的規則段：request.time < 期限才讀得到），不是靠前端判斷——
+// 前端那種判斷改一行就繞過去了，資料庫這一層改不動。
+//
+// 要老實說的限制：金鑰一旦送進瀏覽器就等於交出去了，使用者可以從 devtools
+// 複製走再直接打 Google，繞過每日次數。這個機制擋得住一般使用者，
+// 擋不住刻意的人；所以它只適合「限時活動」，而且結束後金鑰要換掉。
+export async function readSharedKeys(){
+  if(!_db || !state.uid) return null;
+  try{
+    const snap = await getDoc(doc(_db, "shared", "apiKeys"));
+    return snap.exists() ? snap.data() : null;
+  }catch(e){
+    // 期限過了規則就會拒絕讀取，這裡會走到——那是預期行為，不是錯誤。
+    console.info("shared keys unavailable", e?.code || e);
+    return null;
+  }
+}
+
+/**
+ * 今天用掉幾次（讀 + 加一）。回傳加完之後的次數；沒有 Firebase 時回 null。
+ *
+ * 計數放在使用者自己的文件底下（users/{uid}/usage/{日期}），沿用既有的
+ * 「只有本人讀得到自己資料」規則，不必再加新規則。
+ */
+export async function bumpSharedUsage(day){
+  if(!_db || !state.uid || state.uid === "local") return null;
+  const ref = doc(_db, "users", state.uid, "usage", day);
+  try{
+    const snap = await getDoc(ref);
+    const n = (snap.exists() ? (snap.data().count || 0) : 0) + 1;
+    await setDoc(ref, { count: n, updatedAt: Date.now() });
+    return n;
+  }catch(e){ console.warn("bumpSharedUsage", e); return null; }
+}
+
+/** 今天已經用掉幾次（不加一，給畫面顯示用）。 */
+export async function readSharedUsage(day){
+  if(!_db || !state.uid || state.uid === "local") return 0;
+  try{
+    const snap = await getDoc(doc(_db, "users", state.uid, "usage", day));
+    return snap.exists() ? (snap.data().count || 0) : 0;
+  }catch{ return 0; }
 }
 
 // 把 ngrok 授權碼／固定網域鏡射到 cloudbridge/{配對碼}，讓 Colab 用配對碼從雲端取用。
@@ -424,7 +472,7 @@ function saveLocalShortcuts(list){
 
 // Drive 用動態 import：drive.js 反過來要 store.js 的 driveToken，
 // 靜態互相 import 會踩到模組初始化順序。順便也讓沒用到 Drive 的人不必載這段。
-async function _drive(){ return import("./drive.js?v=1.5.62"); }
+async function _drive(){ return import("./drive.js?v=1.5.63"); }
 
 /**
  * 兩個雲端來源都讀：Firestore（即時、免 Drive 授權）與使用者自己 Drive 的
