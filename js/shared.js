@@ -12,28 +12,35 @@
 //     匿名使用者更是清掉瀏覽器資料就換一個身分。
 // 因此這個機制只適合限時活動，而且活動結束後那幾把金鑰應該換掉。
 
-import { readSharedKeys, bumpSharedUsage, readSharedUsage } from "./store.js?v=1.5.66";
+import { readSharedKeys, bumpSharedUsage, readSharedUsage } from "./store.js?v=1.5.67";
 
 /**
- * 活動結束的時間點（之後就借不到了）。
+ * 活動期間與開關，**存在 shared/apiKeys 那份文件裡**（enabled / activeFrom / activeUntil）。
  *
- * 使用者說的是「美國時間 8/13 到 8/21」，取美國太平洋時間（8 月是 PDT，UTC-7），
- * 涵蓋到 8/21 那一整天結束 → 8/22 00:00 PDT ＝ 8/22 07:00 UTC。
+ * 為什麼不寫死：寫死的話每次要調整期間都得重新發布 Firestore 規則，
+ * 那是站方才做得到、而且容易改錯的事。改成資料驅動之後，規則固定不動、
+ * 只比對文件自己的欄位（resource.data.activeUntil），管理工具改資料就等於
+ * 改期間——而把關仍然在規則那一層，前端改不動。
  *
- * 這個常數只用來把畫面上的字講對（還剩幾天、過期了）。**真正的把關在
- * Firestore 規則**，兩邊要一起改；只改這裡的話規則還是會擋，只改規則的話
- * 畫面會說得不準。
+ * 讀不到就當作沒有活動（保守），畫面照常走免金鑰的保底供應商。
  */
-export const CAMPAIGN_END = Date.parse("2026-08-22T07:00:00Z");
+let _window = null;   // { enabled, from, until }（毫秒）
 
 /** 每人每天可以用幾次站方的金鑰。 */
 export const DAILY_LIMIT = 50;
+
+/** 活動結束的時間點（毫秒）；沒有活動時回 0。 */
+export function campaignEnd(){ return _window?.until || 0; }
 
 /** 今天是哪一天（用 UTC 切日，跟計數文件的 id 一致，不會因時區跳來跳去）。 */
 function today(){ return new Date().toISOString().slice(0, 10); }
 
 /** 活動還在進行中嗎（畫面用；真正的把關在 Firestore 規則）。 */
-export function campaignActive(){ return Date.now() < CAMPAIGN_END; }
+export function campaignActive(){
+  if(!_window || !_window.enabled) return false;
+  const now = Date.now();
+  return now >= _window.from && now < _window.until;
+}
 
 // 這次工作階段抽到的那一把。抽一次就固定：每次呼叫都重抽的話，
 // 同一個人的連續請求會打到不同金鑰，配額看起來像隨機時好時壞。
@@ -41,6 +48,18 @@ let _picked = null;      // { llm:{provider,key,model}, image:…, tts:… }
 let _loaded = false;
 let _usedToday = 0;
 let _usageDay = "";
+
+/**
+ * Firestore 的時間欄位可能是 ISO 字串或 {seconds} 形式，兩種都收。
+ * 拿不到就回 0，由呼叫端當作「沒有設定」。
+ */
+function toMs(v){
+  if(!v) return 0;
+  if(typeof v === "number") return v;
+  if(typeof v === "string") return Date.parse(v) || 0;
+  if(typeof v === "object" && v.seconds != null) return Number(v.seconds) * 1000;
+  return 0;
+}
 
 /** 從一份清單裡隨機挑一筆（站方可能放了好幾把，分散負載）。 */
 function pickOne(list){
@@ -57,9 +76,16 @@ function pickOne(list){
 export async function initShared(){
   if(_loaded) return;
   _loaded = true;
-  if(!campaignActive()) return;
+  // 先讀文件才知道有沒有活動——期間現在是文件裡的欄位，不是寫死的常數。
+  // 期間過了的話規則會直接拒絕，這裡拿到 null，等同沒有活動。
   const d = await readSharedKeys();
   if(!d) return;
+  _window = {
+    enabled: d.enabled !== false,        // 沒有這個欄位時視為開著（舊資料相容）
+    from:  toMs(d.activeFrom)  || 0,
+    until: toMs(d.activeUntil) || 0,
+  };
+  if(!campaignActive()) return;
   _picked = {
     llm:   pickOne(d.llmApis),
     image: pickOne(d.imageApis),

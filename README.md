@@ -148,56 +148,44 @@ GitHub repo → **Settings → Pages → Source: main / (root) → Save**。
 活動期間讓**任何人**（含匿名「直接開始」）不必自備金鑰就能用完整 AI。
 自己已經填了金鑰的人不受影響——永遠優先用他自己的。
 
-**① 把金鑰放進 Firestore**：建一份文件 `shared/apiKeys`，內容是三份清單
-（可各放多把，使用者會隨機抽一把，分散負載）。
-
-有服務帳戶金鑰的話可以一行指令搞定（不必在主控台一個欄位一個欄位點）：
-
-```bash
-node tools/publish-shared-keys.mjs <服務帳戶.json> --key AIza你的活動專用金鑰
-node tools/publish-shared-keys.mjs <服務帳戶.json> --key AIza… --dry-run   # 先看會寫什麼
-node tools/publish-shared-keys.mjs <服務帳戶.json> --delete                 # 活動結束後清掉
-```
-
-> 這支刻意做成在**你自己電腦上**跑的腳本，而不是網頁的功能：網頁端要能做這件事，
-> 就得把服務帳戶私鑰交給瀏覽器，那等於公開它——而那把私鑰繞過所有安全規則，
-> 是整個專案（含所有使用者資料）的最高權限。
-
-手動建的話，文件內容長這樣：
-
-```json
-{
-  "llmApis":   [{ "provider": "gemini", "key": "AIza…", "model": "" }],
-  "imageApis": [{ "provider": "gemini", "key": "AIza…" }],
-  "ttsApis":   [{ "provider": "gemini", "key": "AIza…", "model": "" }]
-}
-```
-
-**② 規則加上這一段**（到期由資料庫強制，改前端沒有用）：
+**規則只設定一次**，之後開啟／關閉／改期間都用管理工具改資料，不必再碰規則：
 
 ```
 match /shared/apiKeys {
-  // 登入者（含匿名）才讀得到，而且只在活動期間內。
-  // 2026-08-22 07:00 UTC ＝ 美國太平洋時間 8/22 00:00，涵蓋到 8/21 整天結束。
+  // 登入者（含匿名）才讀得到，而且要文件自己說「現在是活動期間」。
+  // 期間寫在文件的欄位裡，所以調整期間＝改資料，規則不用重發。
   allow read: if request.auth != null
-              && request.time < timestamp.date(2026, 8, 22) + duration.value(7, 'h');
-  allow write: if false;   // 只從 Firebase 主控台改，網頁端永遠不寫
+              && resource.data.enabled == true
+              && request.time >= resource.data.activeFrom
+              && request.time <  resource.data.activeUntil;
+  allow write: if false;   // 只有管理工具（服務帳戶）寫得動，網頁端永遠不寫
 }
 ```
 
-每人每天 50 次，計數存在 `users/{uid}/usage/{YYYY-MM-DD}`（沿用既有的
+文件 `shared/apiKeys` 的欄位：
+
+| 欄位 | 型別 | 說明 |
+| --- | --- | --- |
+| `enabled` | boolean | 總開關，關掉就立刻結束 |
+| `activeFrom` / `activeUntil` | timestamp | 活動起訖（`activeUntil` 存的是最後一天的隔天 00:00） |
+| `llmApis` / `imageApis` / `ttsApis` | array of map | 要借出的金鑰，每筆 `{provider, key, model}`，可多把（使用者隨機抽一把分散負載） |
+
+每人每天 50 次生成，計數存在 `users/{uid}/usage/{YYYY-MM-DD}`（沿用既有的
 「只有本人讀寫自己資料」規則，不必另外加）。用完會自動退回免金鑰的保底供應商，
 不會變成不能用。
+
+**管理工具（`vw_admin.py`）不在這個 repo 裡**——它要用 Firebase 服務帳戶私鑰，
+而那把私鑰繞過所有安全規則、等於整個專案與全部使用者資料的最高權限。
+它只能待在你自己的電腦上，所以已列入 `.gitignore`。
 
 > **這個機制擋得住什麼、擋不住什麼——請務必看懂再開：**
 >
 > **金鑰一旦送進瀏覽器就等於交出去了。** 使用者可以打開 devtools 複製走，
 > 然後直接呼叫 Google，完全繞過每日次數。所以：
-> - ✅ **到期日是真的擋得住的**：由 Firestore 規則強制，改前端沒用，
->   期限一到資料庫直接拒絕讀取。
+> - ✅ **期間與開關是真的擋得住的**：由 Firestore 規則比對文件欄位，改前端沒用。
 > - ⚠️ **每日 50 次是防呆，不是防護**：擋得住一般使用者，擋不住刻意的人；
 >   匿名使用者清掉瀏覽器資料就換一個身分重新計數。
-> - ⚠️ **活動結束後請把那幾把金鑰換掉**。期限到了雖然沒有人再借得到，
+> - ⚠️ **活動結束後請把那幾把金鑰換掉**。關掉之後雖然沒有人再借得到，
 >   但活動期間流出去的金鑰仍然有效。
 >
 > 建議另開一把「活動專用」的金鑰（只給 Gemini 用、在 Google Cloud 上設好每日
