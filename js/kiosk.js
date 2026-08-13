@@ -5,10 +5,10 @@
 //   • 怎麼按都不會跳走：唯一出口是照護者「右上角隱形區連點 5 下 → 輸入 PIN」。
 //   • 點卡片＝立即朗讀＋放大微動畫（建立因果關係與信任）。
 //   • 所有觸發都綁 pointerup + 防連點（顫抖誤觸只算一次），全面禁止長按。
-import { state, save } from "./store.js?v=1.5.63";
-import { speakUpbeat } from "./speech.js?v=1.5.63";
-import { severeCore } from "./aac.js?v=1.5.63";
-import { bindTap } from "./interaction.js?v=1.5.63";   // 共用觸控防呆（pointerup + 防連點 + 禁長按）
+import { state, save } from "./store.js?v=1.5.64";
+import { speakUpbeat } from "./speech.js?v=1.5.64";
+import { severeCore } from "./aac.js?v=1.5.64";
+import { bindTap } from "./interaction.js?v=1.5.64";   // 共用觸控防呆（pointerup + 防連點 + 禁長按）
 
 const $ = (s)=>document.querySelector(s);
 const esc = (s)=>String(s??"").replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));

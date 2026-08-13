@@ -12,7 +12,7 @@
 //     匿名使用者更是清掉瀏覽器資料就換一個身分。
 // 因此這個機制只適合限時活動，而且活動結束後那幾把金鑰應該換掉。
 
-import { readSharedKeys, bumpSharedUsage, readSharedUsage } from "./store.js?v=1.5.63";
+import { readSharedKeys, bumpSharedUsage, readSharedUsage } from "./store.js?v=1.5.64";
 
 /**
  * 活動結束的時間點（之後就借不到了）。
