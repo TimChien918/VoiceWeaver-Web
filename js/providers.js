@@ -1,9 +1,9 @@
 // 供應商目錄 + 呼叫器（同供應商可多把金鑰、可多選供應商，自動輪詢+備援）。
-import { state } from "./store.js?v=1.5.67";
-import { localHas, localText, localImage } from "./localtts.js?v=1.5.67";
-import { sharedEntry, countSharedUse } from "./shared.js?v=1.5.67";
-import { webgpuUsable, webgpuGenerate } from "./webgpu.js?v=1.5.67";
-import { t } from "./i18n.js?v=1.5.67";
+import { state } from "./store.js?v=1.5.68";
+import { localHas, localText, localImage } from "./localtts.js?v=1.5.68";
+import { sharedEntries, countSharedUse } from "./shared.js?v=1.5.68";
+import { webgpuUsable, webgpuGenerate } from "./webgpu.js?v=1.5.68";
+import { t } from "./i18n.js?v=1.5.68";
 
 // 文字 LLM 供應商（標 cors 者較可能可在瀏覽器直接呼叫）
 //
@@ -202,10 +202,9 @@ function llmEntries(){
   // 活動期間借站方的金鑰。**只在使用者自己一把都沒有時才借**——
   // 他自己設了就用他自己的，額度算他的，不該去消耗別人的。
   // 插在最前面：借來的是正規金鑰，品質比免金鑰保底好。
-  if(!list.length){
-    const sh = sharedEntry("llm");
-    if(sh) list.unshift(sh);
-  }
+  // 整份接進來（他分到的那把在最前面）。只接一把的話，那把額度用完或
+  // 暫時故障時他就直接掉到免金鑰保底——但站方明明還有別把可以用。
+  if(!list.length) list.unshift(...sharedEntries("llm"));
   // 永遠保底有一個免金鑰的（同 imageEntries 的做法）。**放在最後**：
   // 使用者自己貼的金鑰品質比較好，該先用；這一筆是「什麼都沒設也能講話」。
   if(!list.some(e => e.provider === "pollinations")) list.push({ provider:"pollinations", key:"", model:"" });
@@ -232,10 +231,15 @@ export async function runLlm(sys, user, opts={}){
   // 本機的價值在離線可用，不在速度，所以它該是退路而不是首選。
   // 保底那一筆不參與輪替——輪替是為了分攤額度，而它沒有額度可分；
   // 讓它固定留在最後，使用者自己的金鑰才會被優先用到。
+  // 三段：自己的金鑰（輪替分攤額度）→ 借來的（照分配好的順序，不打亂）
+  //       → 免金鑰保底（最後）。
+  // 借來的那幾筆刻意不進輪替：輪替會把「這個人分到哪一把」洗掉，
+  // 一人一把就不成立，各把的用量也會變回碰運氣。
   const all = llmEntries();
-  const paid = all.filter(e => e.provider !== "pollinations");
-  const free = all.filter(e => e.provider === "pollinations");
-  const list = (opts.stable ? paid : rotate(paid)).concat(free);
+  const own    = all.filter(e => !e.__shared && e.provider !== "pollinations");
+  const shared = all.filter(e => e.__shared);
+  const free   = all.filter(e => e.provider === "pollinations");
+  const list = (opts.stable ? own : rotate(own)).concat(shared, free);
   const online = navigator.onLine !== false;
   if(online){
     for(const e of list){
@@ -312,10 +316,7 @@ function imageEntries(){
     return !!e.key || !p.needsKey;
   });
   // 活動期間借站方的金鑰（同 llmEntries 的理由：只在自己沒有時借）
-  if(!list.some(e => e.key)){
-    const sh = sharedEntry("image");
-    if(sh) list.unshift(sh);
-  }
+  if(!list.some(e => e.key)) list.unshift(...sharedEntries("image"));
   // 永遠保底有 Pollinations（免金鑰）
   if(!list.some(e=>e.provider==="pollinations")) list.push({ provider:"pollinations", key:"" });
   return list;
@@ -345,10 +346,7 @@ function ttsEntries(){
     return !!e.key || !p.needsKey;
   });
   // 活動期間借站方的金鑰（同上：只在自己沒有時借）
-  if(!list.length){
-    const sh = sharedEntry("tts");
-    if(sh) list.unshift(sh);
-  }
+  if(!list.length) list.unshift(...sharedEntries("tts"));
   return list;
 }
 
