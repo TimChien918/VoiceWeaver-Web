@@ -3,3 +3,11 @@
 node_modules/
 # 註：config.js 需要 commit 才能部署到 GitHub Pages（Firebase web 設定是公開可見的）。
 # 若你不想公開 config.js，改用私有 repo。
+
+# 管理工具與憑證：這些碰得到服務帳戶私鑰（繞過所有安全規則、
+# 等於整個專案與全部使用者資料的最高權限），不進版控、不上 GitHub。
+tools/vw_admin.py
+tools/publish-shared-keys.mjs
+*serviceaccount*.json
+*firebase-adminsdk*.json
+.voiceweaver_admin.json
