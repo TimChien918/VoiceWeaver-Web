@@ -1,27 +1,27 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.63";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES } from "./providers.js?v=1.5.63";
-import { initShared, sharedAvailable, sharedUsage, campaignActive } from "./shared.js?v=1.5.63";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.63";
-import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.63";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.63";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.63";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.63";
-import { bindTap } from "./interaction.js?v=1.5.63";
-import { orderCards } from "./predict.js?v=1.5.63";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.63";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.63";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.63";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.63";
-import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.63";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.63";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.63";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.63";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.63";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.63";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.63";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.63";
-import { applyI18n, t } from "./i18n.js?v=1.5.63";
-import { setupDemo } from "./demo.js?v=1.5.63";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.64";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES } from "./providers.js?v=1.5.64";
+import { initShared, sharedAvailable, sharedUsage, campaignActive } from "./shared.js?v=1.5.64";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.64";
+import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.64";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.64";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.64";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.64";
+import { bindTap } from "./interaction.js?v=1.5.64";
+import { orderCards } from "./predict.js?v=1.5.64";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.64";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.64";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.64";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.64";
+import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.64";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.64";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.64";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.64";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.64";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.64";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.64";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.64";
+import { applyI18n, t } from "./i18n.js?v=1.5.64";
+import { setupDemo } from "./demo.js?v=1.5.64";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -417,13 +417,15 @@ function renderProviderList(containerId, listKey, catalog){
         <select class="p-prov" style="flex:1">${opts(e.provider)}</select>
         <span class="chip p-del" title="${t("providers.del")}">🗑</span>
       </div>
+      ${p.needsAccount?`<input class="p-acct" type="text" placeholder="${t("providers.accountPh")}" value="${escapeHtml(e.account||"")}" autocomplete="off" style="margin-top:6px"/>`:""}
       ${needsKey?`<input class="p-key" type="password" placeholder="${t("providers.keyPh")}" value="${escapeHtml(e.key||"")}" autocomplete="off" style="margin-top:6px"/>`:`<p class="tiny muted" style="margin:6px 0 0">${escapeHtml(freeNote)}</p>`}
     </div>`;
   }).join("");
   box.querySelectorAll(".prow").forEach(row=>{
     const i = +row.dataset.i;
-    row.querySelector(".p-prov").addEventListener("change", e=>{ state[listKey][i].provider=e.target.value; state[listKey][i].key=""; save(); renderProviderList(containerId,listKey,catalog); });
+    row.querySelector(".p-prov").addEventListener("change", e=>{ state[listKey][i].provider=e.target.value; state[listKey][i].key=""; state[listKey][i].account=""; save(); renderProviderList(containerId,listKey,catalog); });
     row.querySelector(".p-key")?.addEventListener("input", e=>{ state[listKey][i].key=e.target.value.trim(); save(); });
+    row.querySelector(".p-acct")?.addEventListener("input", e=>{ state[listKey][i].account=e.target.value.trim(); save(); });
     row.querySelector(".p-del").addEventListener("click", ()=>{ state[listKey].splice(i,1); save(); renderProviderList(containerId,listKey,catalog); });
   });
 }
@@ -1423,7 +1425,7 @@ async function renderVoices(){
           >${esc(t("set.voicesReauth"))}</button></p>`);
     }
     try{
-      const drive = await import("./drive.js?v=1.5.63");
+      const drive = await import("./drive.js?v=1.5.64");
       const d = await drive.diagnoseVoiceModels();
       // 同名根要先講。有兩個 VoiceWeaver 時，底下那些「沒有 Models」之類的
       // 描述全部都是在講錯的那一個資料夾，先看到它才不會被帶去修錯的地方。

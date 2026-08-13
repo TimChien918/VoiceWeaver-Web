@@ -1,8 +1,8 @@
 // 供應商目錄 + 呼叫器（同供應商可多把金鑰、可多選供應商，自動輪詢+備援）。
-import { state } from "./store.js?v=1.5.63";
-import { localHas, localText, localImage } from "./localtts.js?v=1.5.63";
-import { sharedEntry, countSharedUse } from "./shared.js?v=1.5.63";
-import { t } from "./i18n.js?v=1.5.63";
+import { state } from "./store.js?v=1.5.64";
+import { localHas, localText, localImage } from "./localtts.js?v=1.5.64";
+import { sharedEntry, countSharedUse } from "./shared.js?v=1.5.64";
+import { t } from "./i18n.js?v=1.5.64";
 
 // 文字 LLM 供應商（標 cors 者較可能可在瀏覽器直接呼叫）
 //
@@ -20,6 +20,10 @@ export const LLM_PROVIDERS = {
   together:   { label:"Together",       needsKey:true,  model:"meta-llama/Llama-3.3-70B-Instruct-Turbo-Free" },
   cohere:     { label:"Cohere",         needsKey:true,  model:"command-r-08-2024" },
   openai:     { label:"OpenAI",         needsKey:true,  model:"gpt-4o-mini" },
+  // Cloudflare Workers AI。走它的 OpenAI 相容端點，所以沿用 openaiText 那一支。
+  // needsAccount：它的網址裡有帳戶 ID，光有權杖打不到——設定頁會多一格給它填。
+  cloudflare: { label:"Cloudflare Workers AI", needsKey:true, needsAccount:true,
+                model:"@cf/meta/llama-3.3-70b-instruct-fp8-fast" },
 };
 const OPENAI_BASE = {
   groq:"https://api.groq.com/openai/v1", openrouter:"https://openrouter.ai/api/v1",
@@ -139,8 +143,18 @@ async function pollinationsText(entry, sys, user, temp=0.5){
   return (await r2.text()).trim();
 }
 
+/** OpenAI 相容端點的網址。Cloudflare 的網址帶帳戶 ID，所以要現算。 */
+function openaiBase(entry){
+  if(entry.provider === "cloudflare"){
+    const acct = (entry.account || "").trim();
+    if(!acct) throw new Error(t("err.needCfAccount"));
+    return `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(acct)}/ai/v1`;
+  }
+  return OPENAI_BASE[entry.provider];
+}
+
 async function openaiText(entry, sys, user, temp=0.5){
-  const base = OPENAI_BASE[entry.provider]; const model = entry.model || LLM_PROVIDERS[entry.provider].model;
+  const base = openaiBase(entry); const model = entry.model || LLM_PROVIDERS[entry.provider].model;
   const r = await fetch(base+"/chat/completions",{ method:"POST",
     headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+entry.key },
     body: JSON.stringify({ model, temperature:temp, max_tokens:160,
@@ -161,6 +175,9 @@ function llmEntries(){
   const list = (state.llmApis||[]).filter(e=>{
     const p = e.provider && LLM_PROVIDERS[e.provider];
     if(!p) return false;
+    // 需要帳戶 ID 的（Cloudflare）少了它就打不到，當作還沒設定好直接跳過，
+    // 不要每次都送一個註定失敗的請求。
+    if(p.needsAccount && !(e.account||"").trim()) return false;
     return !!e.key || !p.needsKey;
   });
   // 活動期間借站方的金鑰。**只在使用者自己一把都沒有時才借**——

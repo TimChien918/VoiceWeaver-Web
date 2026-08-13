@@ -254,7 +254,9 @@ export const STRINGS = {
   "lt.voiceSvcDown": { "zh-TW":"（語音服務未啟動）", "en":"(Voice service not running)", "ja":"（音声サービス未起動）", "ko":"(음성 서비스 미실행)" },
   "providers.none": { "zh-TW":"尚未新增，點下方按鈕加入。", "en":"None yet — tap the button below to add.", "ja":"未追加。下のボタンで追加。", "ko":"아직 없음 — 아래 버튼으로 추가." },
   "providers.keyFree": { "zh-TW":"免金鑰", "en":"No key needed", "ja":"キー不要", "ko":"키 불필요" },
+  "providers.accountPh": { "zh-TW":"Cloudflare 帳戶 ID", "en":"Cloudflare Account ID", "ja":"Cloudflare アカウント ID", "ko":"Cloudflare 계정 ID" },
   "providers.keyPh": { "zh-TW":"API 金鑰", "en":"API key", "ja":"API キー", "ko":"API 키" },
+  "err.needCfAccount": { "zh-TW":"Cloudflare 這一筆還缺帳戶 ID", "en":"This Cloudflare entry still needs an Account ID", "ja":"この Cloudflare の項目にはアカウント ID が必要です", "ko":"이 Cloudflare 항목에는 계정 ID가 필요합니다" },
   "providers.del": { "zh-TW":"刪除", "en":"Delete", "ja":"削除", "ko":"삭제" },
   // ── 用登入帳號自己的額度（OAuth 2.0，免金鑰）──
   "shared.note": { "zh-TW":"🎁 活動期間：你正在借用站方的 API 金鑰，今天還可以用 {left} / {limit} 次。想不受限就在下面加上自己的金鑰。", "en":"🎁 Event period: you're borrowing the site's API key — {left} of {limit} uses left today. Add your own key below to remove the limit.", "ja":"🎁 イベント期間中：サイト提供の API キーを借用中です。本日あと {left} / {limit} 回。制限をなくすには下で自分のキーを追加してください。", "ko":"🎁 이벤트 기간: 사이트의 API 키를 빌려 쓰는 중입니다. 오늘 {left}/{limit}회 남았습니다. 제한을 없애려면 아래에서 본인 키를 추가하세요." },
