@@ -1,10 +1,9 @@
 // 供應商目錄 + 呼叫器（同供應商可多把金鑰、可多選供應商，自動輪詢+備援）。
-import { state } from "./store.js?v=1.5.77";
-import { localHas, localText, localImage } from "./localtts.js?v=1.5.77";
-import { sharedEntries, countSharedUse } from "./shared.js?v=1.5.77";
-import { stripThinking } from "./textparse.js?v=1.5.77";
-import { webgpuUsable, webgpuGenerate } from "./webgpu.js?v=1.5.77";
-import { t } from "./i18n.js?v=1.5.77";
+import { state } from "./store.js?v=1.5.76";
+import { localHas, localText, localImage } from "./localtts.js?v=1.5.76";
+import { sharedEntries, countSharedUse } from "./shared.js?v=1.5.76";
+import { webgpuUsable, webgpuGenerate } from "./webgpu.js?v=1.5.76";
+import { t } from "./i18n.js?v=1.5.76";
 
 // 文字 LLM 供應商（標 cors 者較可能可在瀏覽器直接呼叫）
 //
@@ -95,28 +94,6 @@ async function httpError(label, res){
  */
 const MAX_OUT = 1200;
 
-/**
- * 思考型模型把額度用光時的第二次機會。
- *
- * 1200 對不思考的模型綽綽有餘，但思考型模型（Qwen3、DeepSeek-R1 這一類）
- * 偶爾會在 <think> 裡繞很久，繞完就沒額度寫答案了。與其直接判這一家死刑、
- * 掉到品質較差的保底，不如**用同一家再打一次、給它四倍額度**——這種任務
- * （把碎詞拼成一句話）再怎麼繞也不會用掉 4800。
- *
- * 只在「整段回應都是思考」時才會走到，所以不思考的模型完全不受影響。
- */
-const MAX_OUT_RETRY = MAX_OUT * 4;
-
-/**
- * 這段回應「除了思考以外」有沒有東西。
- *
- * 為什麼要在這一層判：思考標籤沒被剝掉之前，回應是**非空字串**，
- * 底下的備援鏈會把它當成「這一家成功了」而停下來——於是後面那些
- * 能用的供應商（包含免金鑰保底）一個都不會試，使用者拿到的是硬失敗。
- * 對只能靠這個 App 說話的人來說，「換一家講出一句話」永遠好過「講不出來」。
- */
-function hasAnswer(out){ return !!stripThinking(String(out || "")).trim(); }
-
 let _rot = 0;
 function rotate(list){ if(list.length<=1) return list; const o=_rot++%list.length; return list.slice(o).concat(list.slice(0,o)); }
 
@@ -140,10 +117,10 @@ export async function geminiCall(entry, body){
 }
 function geminiTextOf(j){ return (j.candidates?.[0]?.content?.parts?.[0]?.text||"").trim(); }
 
-async function geminiText(entry, sys, user, temp=0.5, maxOut=MAX_OUT){
+async function geminiText(entry, sys, user, temp=0.5){
   const j = await geminiCall(entry, {
     system_instruction:{parts:[{text:sys}]}, contents:[{parts:[{text:user}]}],
-    generationConfig:{ temperature:temp, maxOutputTokens:maxOut } });
+    generationConfig:{ temperature:temp, maxOutputTokens:MAX_OUT } });
   return geminiTextOf(j);
 }
 /**
@@ -179,12 +156,12 @@ export async function runAudioLlm(sys, audioBase64, mime){
  *   ② 純文字 GET（回的是內文本身，不是 JSON）——①掛掉時的退路
  * 免費服務本來就比較不穩，多一條路換來的是「今天還能不能講話」。
  */
-async function pollinationsText(entry, sys, user, temp=0.5, maxOut=MAX_OUT){
+async function pollinationsText(entry, sys, user, temp=0.5){
   const model = entry.model || LLM_PROVIDERS.pollinations.model;
   try{
     const r = await fetch("https://text.pollinations.ai/openai", {
       method:"POST", headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ model, temperature:temp, max_tokens:maxOut,
+      body: JSON.stringify({ model, temperature:temp, max_tokens:MAX_OUT,
         messages:[{role:"system",content:sys},{role:"user",content:user}] }) });
     if(r.ok){
       const j = await r.json();
@@ -209,16 +186,16 @@ function openaiBase(entry){
   return OPENAI_BASE[entry.provider];
 }
 
-async function openaiText(entry, sys, user, temp=0.5, maxOut=MAX_OUT){
+async function openaiText(entry, sys, user, temp=0.5){
   const base = openaiBase(entry); const model = entry.model || LLM_PROVIDERS[entry.provider].model;
   const r = await fetch(base+"/chat/completions",{ method:"POST",
     headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+entry.key },
-    body: JSON.stringify({ model, temperature:temp, max_tokens:maxOut,
+    body: JSON.stringify({ model, temperature:temp, max_tokens:MAX_OUT,
       messages:[{role:"system",content:sys},{role:"user",content:user}] }) });
   if(!r.ok) throw await httpError(entry.provider, r);
   const j = await r.json(); return (j.choices?.[0]?.message?.content||"").trim();
 }
-async function cohereText(entry, sys, user, temp=0.5, _maxOut=MAX_OUT){
+async function cohereText(entry, sys, user, temp=0.5){
   const r = await fetch("https://api.cohere.com/v2/chat",{ method:"POST",
     headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+entry.key },
     body: JSON.stringify({ model: entry.model||LLM_PROVIDERS.cohere.model,
@@ -260,9 +237,6 @@ export function hasLlm(){ return llmEntries().length>0 || localHas("text") || we
 export async function runLlm(sys, user, opts={}){
   const temp = opts.temperature ?? 0.5;
   let err;
-  // 有沒有任何一家是「只會思考」倒下的。全部都失敗時，這決定要跟使用者
-  // 講哪一句——「請再試一次」對思考型模型是叫他重複同一件註定失敗的事。
-  let thinkingOnly = false;
   // ① 雲端供應商優先（stable＝固定順序；否則輪替分攤額度）
   //
   // 順序是反過來的：以前本機（Qwen, 9882）排第一，但那是跑在使用者自己電腦上的
@@ -287,27 +261,12 @@ export async function runLlm(sys, user, opts={}){
         const fn = e.provider==="gemini"?geminiText
                  : e.provider==="cohere"?cohereText
                  : e.provider==="pollinations"?pollinationsText : openaiText;
-        let out = await fn(e, sys, user, temp, MAX_OUT);
-        // 整段都是思考、一個字答案都沒有 → 額度被 <think> 吃光了。
-        // 同一家再給一次機會、額度放大四倍；還是沒有答案就當這一家失敗，
-        // 換下一家。**不能 return**——回傳只有思考的字串會讓呼叫端解析失敗，
-        // 而備援鏈已經停了，後面那些能用的供應商一個都沒試到。
-        if(out && !hasAnswer(out)){
-          console.warn(e.provider, "整段回應都是思考，加大額度重試");
-          thinkingOnly = true;
-          out = await fn(e, sys, user, temp, MAX_OUT_RETRY);
-          if(out && !hasAnswer(out)){
-            console.warn(e.provider, "加大額度後仍然只有思考，換下一家");
-            continue;
-          }
-        }
+        const out = await fn(e, sys, user, temp);
         if(out){
           // 借來的金鑰才計數，而且**成功才算**——失敗不該吃掉使用者的額度。
           // 不 await：計數是記帳，不該讓使用者多等一趟 Firestore。
           if(e.__shared) countSharedUse();
-          // 思考標籤在這裡就剝掉：每一個呼叫端要的都是答案，沒有人要看推理過程，
-          // 而漏掉一處剝除就等於把 <think> 唸給患者的家人聽。
-          return stripThinking(out).replace(/^[「"']|[」"']$/g,"").trim();
+          return out.replace(/^[「"']|[」"']$/g,"").trim();
         }
       }catch(x){ err=x; console.warn(e.provider, x); }
     }
@@ -325,12 +284,6 @@ export async function runLlm(sys, user, opts={}){
     catch(x){ err=x; console.warn("local text", x); }
   }
   if(!list.length && !localHas("text") && !webgpuUsable()) throw new Error(t("err.noProviders"));
-  // 每一家都倒了，而且至少有一家是被思考吃光的 → 呼叫端要換一句話講。
-  if(thinkingOnly){
-    const e = new Error(t("toast.reasoningOnly"));
-    e.code = "reasoning-only";
-    throw e;
-  }
   throw err || new Error(t("err.allProvidersFailed"));
 }
 

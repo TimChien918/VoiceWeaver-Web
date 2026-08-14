@@ -1,10 +1,10 @@
 // 重組 / 組句：走多供應商輪詢（providers.js）。
-import { runLlm, hasLlm, usingSharedKey } from "./providers.js?v=1.5.77";
+import { runLlm, hasLlm, usingSharedKey } from "./providers.js?v=1.5.76";
 // 從模型回應撈句子的那幾支：獨立模組、不依賴任何東西，所以測得到。
-import { stripThinking, extractJson, looksLikeSentence } from "./textparse.js?v=1.5.77";
-import { t as tr } from "./i18n.js?v=1.5.77";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
-import { DEFENSIVE_SYSTEM_PROMPT } from "./safety.js?v=1.5.77";
-import { toTraditionalSync } from "./zhconv.js?v=1.5.77";
+import { stripThinking, extractJson, looksLikeSentence } from "./textparse.js?v=1.5.76";
+import { t as tr } from "./i18n.js?v=1.5.76";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
+import { DEFENSIVE_SYSTEM_PROMPT } from "./safety.js?v=1.5.76";
+import { toTraditionalSync } from "./zhconv.js?v=1.5.76";
 
 // 第一層防禦：黏在所有 system prompt 最前面，先要求模型別生成自傷／絕望字眼。
 // 這只是「請求」不是保證——真正擋住的是 app.js 的分級閘門與 speech.js 的輸出消毒。
@@ -168,20 +168,16 @@ export async function reconstruct(fragments, context){
     // 那決定要跟使用者說什麼。
     Array.from({length: usingSharedKey() ? 1 : RECONSTRUCT_SAMPLES}, () =>
       runLlm(sysReconstruct(), u, { temperature: RECONSTRUCT_TEMP })
-        .then(raw => ({ raw, parsed: parseCoT(raw) })).catch(err => ({ err })))
+        .then(raw => ({ raw, parsed: parseCoT(raw) })).catch(()=>null))
   );
   const samples = results.filter(r => r?.parsed).map(r => r.parsed);
   // 這個 message 會被 app.js toast 出來給使用者看，所以不能寫死中文——
   // 英文介面的人重組失敗時會收到一句他看不懂的中文。
   if(!samples.length){
-    // 一個字都解析不出來，而供應商那一層說「每一家都把額度用在思考上」
-    // → 講原因與出路，不要說「請再試一次」（那是叫他重複同一件註定失敗的事）。
-    //
-    // 判斷交給 runLlm 而不是在這裡掃 <think>：它現在會在回傳前就把思考剝掉，
-    // 這裡看到的字串裡本來就不會有標籤了。
-    const thinking = results.some(r => r?.err?.code === "reasoning-only");
-    throw new Error(thinking ? results.find(r => r?.err?.code === "reasoning-only").err.message
-                             : tr("toast.reconstructFail"));
+    // 一個字都解析不出來、而回應裡有推理標籤 → 是模型把額度用在思考上了。
+    // 這時說「請再試一次」等於叫他重複同一件註定失敗的事；要講出原因與出路。
+    const thinking = results.some(r => r && /<\/?(think|thinking|reasoning)\b/i.test(String(r.raw)));
+    throw new Error(tr(thinking ? "toast.reasoningOnly" : "toast.reconstructFail"));
   }
   let ranked = rankBySelfConsistency(samples);
 
