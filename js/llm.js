@@ -1,8 +1,10 @@
 // 重組 / 組句：走多供應商輪詢（providers.js）。
-import { runLlm, hasLlm, usingSharedKey } from "./providers.js?v=1.5.74";
-import { t as tr } from "./i18n.js?v=1.5.74";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
-import { DEFENSIVE_SYSTEM_PROMPT } from "./safety.js?v=1.5.74";
-import { toTraditionalSync } from "./zhconv.js?v=1.5.74";
+import { runLlm, hasLlm, usingSharedKey } from "./providers.js?v=1.5.75";
+// 從模型回應撈句子的那幾支：獨立模組、不依賴任何東西，所以測得到。
+import { stripThinking, extractJson, looksLikeSentence } from "./textparse.js?v=1.5.75";
+import { t as tr } from "./i18n.js?v=1.5.75";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
+import { DEFENSIVE_SYSTEM_PROMPT } from "./safety.js?v=1.5.75";
+import { toTraditionalSync } from "./zhconv.js?v=1.5.75";
 
 // 第一層防禦：黏在所有 system prompt 最前面，先要求模型別生成自傷／絕望字眼。
 // 這只是「請求」不是保證——真正擋住的是 app.js 的分級閘門與 speech.js 的輸出消毒。
@@ -87,11 +89,15 @@ function parseCoT(raw){
   }
   // JSON 壞掉或被截斷。先從殘缺文字裡撈句子；撈不到寧可回 null，
   // 不要把整包 JSON 當成句子——病人畫面會出現 {"reasoning":… 還被當成可以唸的話。
-  const m = String(raw??"").match(/"(?:text|reconstructed)"\s*:\s*"((?:[^"\\]|\\.)*)/);
+  const m = stripThinking(raw).match(/"(?:text|reconstructed)"\s*:\s*"((?:[^"\\]|\\.)*)/);
   const salvaged = m && m[1].replace(/\\"/g,'"').replace(/\\n/g,"\n").trim();
   if(salvaged) return { text: zh(salvaged), confidence: 0.6, alternatives: [] };
-  const t = String(raw??"").trim().replace(/\s*\n\s*/g," ");
-  if(!t || t.startsWith("{") || t.includes('"candidates"') || t.includes('"reasoning"')) return null;
+  // **這裡曾經放行過模型的思考過程。** 原本是比對 '"candidates"' 這種特定字串，
+  // 而推理模型寫的是 `the "candidates[].text" value MUST be…`——差一個字就比對不到，
+  // 整段 <think> 就被當成「組好的句子」顯示出來，按下朗讀會把模型的內心話唸給旁人聽。
+  // 改成判斷「它像不像一句話」：不像就什麼都不給，讓上層顯示重組失敗。
+  const t = stripThinking(raw).replace(/\s*\n\s*/g," ").trim();
+  if(!looksLikeSentence(t)) return null;
   return { text: zh(t), confidence: 0.6, alternatives: [] };
 }
 
@@ -246,11 +252,6 @@ function sysRehabEval(){
   `只回傳 JSON：{"score":整數0到100,"feedback":"一句${outLang()}鼓勵或指引（20字以內）","wrongChars":["說得不準或漏掉的字或詞"]}`;
 }
 
-function extractJson(raw){
-  const c = raw.replace(/```json/g,"").replace(/```/g,"").trim();
-  const s = c.indexOf("{"), e = c.lastIndexOf("}");
-  return s>=0 && e>s ? c.slice(s,e+1) : null;
-}
 
 // AI 評分：回 { score, feedback, wrongChars }。失敗時退回字元相似度估算（不擲例外）。
 export async function scoreRehab(target, recognized){

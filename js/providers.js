@@ -1,9 +1,9 @@
 // 供應商目錄 + 呼叫器（同供應商可多把金鑰、可多選供應商，自動輪詢+備援）。
-import { state } from "./store.js?v=1.5.74";
-import { localHas, localText, localImage } from "./localtts.js?v=1.5.74";
-import { sharedEntries, countSharedUse } from "./shared.js?v=1.5.74";
-import { webgpuUsable, webgpuGenerate } from "./webgpu.js?v=1.5.74";
-import { t } from "./i18n.js?v=1.5.74";
+import { state } from "./store.js?v=1.5.75";
+import { localHas, localText, localImage } from "./localtts.js?v=1.5.75";
+import { sharedEntries, countSharedUse } from "./shared.js?v=1.5.75";
+import { webgpuUsable, webgpuGenerate } from "./webgpu.js?v=1.5.75";
+import { t } from "./i18n.js?v=1.5.75";
 
 // 文字 LLM 供應商（標 cors 者較可能可在瀏覽器直接呼叫）
 //
