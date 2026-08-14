@@ -4,7 +4,11 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 <title>VoiceWeaver 網頁版</title>
-<link rel="stylesheet" href="style.css?v=1.5.77" />
+<!-- 這一版是哪一版。由 tools/stamp-version.py 跟著 ?v= 一起更新。
+     沒有這個東西的話，「網頁到底有沒有更新」誰都答不出來——只能猜快取、猜部署，
+     而每猜一次就是使用者再白試一次。畫面右下角會顯示它，錯誤訊息也會帶著它。 -->
+<meta name="app-version" content="1.5.78" />
+<link rel="stylesheet" href="style.css?v=1.5.78" />
 </head>
 <body>
   <!-- 登入閘 -->
@@ -303,6 +307,9 @@
              而這個 App 的使用者本來就不擅長在長頁面裡定位。索引由 settingsCards 底下
              每張卡的 h3 自動產生（見 app.js buildSettingsIndex），新增卡片不用改這裡。 -->
         <div id="settingsIndex" class="card"></div>
+        <!-- 版本號。放在索引底下、進子頁前就看得到，回報問題時不必先弄壞什麼
+             才知道自己跑的是哪一版。內容由 app.js 依 <meta app-version> 填。 -->
+        <p id="appVersion" class="tiny muted" style="text-align:center;margin:6px 0 0"></p>
         <button id="btnSettingsBack" class="setback hidden">
           <span class="setback-chev">‹</span><span id="settingsBackLabel"></span>
         </button>
@@ -547,7 +554,7 @@
 
   <!-- 你的 Firebase 設定（複製 config.example.js 為 config.js 並填入）。沒有 config.js 時為純本機模式。 -->
   <script>window.__FIREBASE_CONFIG__ = null;</script>
-  <script src="config.js?v=1.5.77" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
-  <script type="module" src="js/app.js?v=1.5.77"></script>
+  <script src="config.js?v=1.5.78" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
+  <script type="module" src="js/app.js?v=1.5.78"></script>
 </body>
 </html>
