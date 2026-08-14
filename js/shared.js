@@ -19,8 +19,8 @@
 //     匿名使用者更是清掉瀏覽器資料就換一個身分。
 // 因此這個機制只適合限時活動，而且活動結束後那幾把金鑰應該換掉。
 
-import { state } from "./store.js?v=1.5.77";
-import { readSharedKeys, readGrant, bumpSharedUsage, readSharedUsage } from "./store.js?v=1.5.77";
+import { state } from "./store.js?v=1.5.78";
+import { readSharedKeys, readGrant, bumpSharedUsage, readSharedUsage } from "./store.js?v=1.5.78";
 
 /** 每人每天可以用幾次站方的金鑰（個人活動可以自己指定，見 dailyLimit）。 */
 export const DAILY_LIMIT = 50;
