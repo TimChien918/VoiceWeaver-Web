@@ -1,9 +1,9 @@
 // 供應商目錄 + 呼叫器（同供應商可多把金鑰、可多選供應商，自動輪詢+備援）。
-import { state } from "./store.js?v=1.5.75";
-import { localHas, localText, localImage } from "./localtts.js?v=1.5.75";
-import { sharedEntries, countSharedUse } from "./shared.js?v=1.5.75";
-import { webgpuUsable, webgpuGenerate } from "./webgpu.js?v=1.5.75";
-import { t } from "./i18n.js?v=1.5.75";
+import { state } from "./store.js?v=1.5.76";
+import { localHas, localText, localImage } from "./localtts.js?v=1.5.76";
+import { sharedEntries, countSharedUse } from "./shared.js?v=1.5.76";
+import { webgpuUsable, webgpuGenerate } from "./webgpu.js?v=1.5.76";
+import { t } from "./i18n.js?v=1.5.76";
 
 // 文字 LLM 供應商（標 cors 者較可能可在瀏覽器直接呼叫）
 //
@@ -80,6 +80,20 @@ async function httpError(label, res){
   return new Error(`${label} ${res.status}${detail ? "：" + detail : ""}`);
 }
 
+/**
+ * 每次呼叫最多產生幾個 token。
+ *
+ * **原本是 160，而那就是推理模型完全用不了的原因**：Qwen3、DeepSeek-R1 這類
+ * 模型會先吐一大段 <think>，160 個 token 光思考就用完了，真正的 JSON 永遠
+ * 沒機會出現——使用者看到的是「重組失敗」，或（修掉之前）整段思考被當成句子。
+ * Gemini 的 thinking 模型也一樣，額度不夠時會直接回一個 finishReason=MAX_TOKENS
+ * 的空回應。
+ *
+ * **調大對不思考的模型是免費的**：max_tokens 是上限不是目標，它們講完就停，
+ * 不會因為上限變大就多寫。所以這裡放寬到足以容納「思考 + 三個候選」。
+ */
+const MAX_OUT = 1200;
+
 let _rot = 0;
 function rotate(list){ if(list.length<=1) return list; const o=_rot++%list.length; return list.slice(o).concat(list.slice(0,o)); }
 
@@ -106,7 +120,7 @@ function geminiTextOf(j){ return (j.candidates?.[0]?.content?.parts?.[0]?.text||
 async function geminiText(entry, sys, user, temp=0.5){
   const j = await geminiCall(entry, {
     system_instruction:{parts:[{text:sys}]}, contents:[{parts:[{text:user}]}],
-    generationConfig:{ temperature:temp, maxOutputTokens:160 } });
+    generationConfig:{ temperature:temp, maxOutputTokens:MAX_OUT } });
   return geminiTextOf(j);
 }
 /**
@@ -131,7 +145,7 @@ export async function runAudioLlm(sys, audioBase64, mime){
   const j = await geminiCall(entry, {
     system_instruction:{ parts:[{ text: sys }] },
     contents:[{ parts:[{ inline_data:{ mime_type: mime, data: audioBase64 } }] }],
-    generationConfig:{ temperature:0.4, maxOutputTokens:160 }
+    generationConfig:{ temperature:0.4, maxOutputTokens:MAX_OUT }
   });
   return geminiTextOf(j).replace(/^[「"']|[」"']$/g,"");
 }
@@ -147,7 +161,7 @@ async function pollinationsText(entry, sys, user, temp=0.5){
   try{
     const r = await fetch("https://text.pollinations.ai/openai", {
       method:"POST", headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ model, temperature:temp, max_tokens:300,
+      body: JSON.stringify({ model, temperature:temp, max_tokens:MAX_OUT,
         messages:[{role:"system",content:sys},{role:"user",content:user}] }) });
     if(r.ok){
       const j = await r.json();
@@ -176,7 +190,7 @@ async function openaiText(entry, sys, user, temp=0.5){
   const base = openaiBase(entry); const model = entry.model || LLM_PROVIDERS[entry.provider].model;
   const r = await fetch(base+"/chat/completions",{ method:"POST",
     headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+entry.key },
-    body: JSON.stringify({ model, temperature:temp, max_tokens:160,
+    body: JSON.stringify({ model, temperature:temp, max_tokens:MAX_OUT,
       messages:[{role:"system",content:sys},{role:"user",content:user}] }) });
   if(!r.ok) throw await httpError(entry.provider, r);
   const j = await r.json(); return (j.choices?.[0]?.message?.content||"").trim();

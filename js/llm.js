@@ -1,10 +1,10 @@
 // 重組 / 組句：走多供應商輪詢（providers.js）。
-import { runLlm, hasLlm, usingSharedKey } from "./providers.js?v=1.5.75";
+import { runLlm, hasLlm, usingSharedKey } from "./providers.js?v=1.5.76";
 // 從模型回應撈句子的那幾支：獨立模組、不依賴任何東西，所以測得到。
-import { stripThinking, extractJson, looksLikeSentence } from "./textparse.js?v=1.5.75";
-import { t as tr } from "./i18n.js?v=1.5.75";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
-import { DEFENSIVE_SYSTEM_PROMPT } from "./safety.js?v=1.5.75";
-import { toTraditionalSync } from "./zhconv.js?v=1.5.75";
+import { stripThinking, extractJson, looksLikeSentence } from "./textparse.js?v=1.5.76";
+import { t as tr } from "./i18n.js?v=1.5.76";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
+import { DEFENSIVE_SYSTEM_PROMPT } from "./safety.js?v=1.5.76";
+import { toTraditionalSync } from "./zhconv.js?v=1.5.76";
 
 // 第一層防禦：黏在所有 system prompt 最前面，先要求模型別生成自傷／絕望字眼。
 // 這只是「請求」不是保證——真正擋住的是 app.js 的分級閘門與 speech.js 的輸出消毒。
@@ -164,14 +164,21 @@ export async function reconstruct(fragments, context){
     // 借站方金鑰時只取樣一次：使用者說的是「每天生成 50 次」，一次生成就該算
     // 一次，而不是因為自我一致性取樣就吃掉三次。副作用是省站方的額度——
     // 借來的東西該省著用。品質會略降，但這是「有得用」與「額度很快用完」的取捨。
+    // 原始回應也留著：全部解析失敗時要判斷「是不是被思考吃光了」，
+    // 那決定要跟使用者說什麼。
     Array.from({length: usingSharedKey() ? 1 : RECONSTRUCT_SAMPLES}, () =>
       runLlm(sysReconstruct(), u, { temperature: RECONSTRUCT_TEMP })
-        .then(parseCoT).catch(()=>null))
+        .then(raw => ({ raw, parsed: parseCoT(raw) })).catch(()=>null))
   );
-  const samples = results.filter(Boolean);
+  const samples = results.filter(r => r?.parsed).map(r => r.parsed);
   // 這個 message 會被 app.js toast 出來給使用者看，所以不能寫死中文——
   // 英文介面的人重組失敗時會收到一句他看不懂的中文。
-  if(!samples.length) throw new Error(tr("toast.reconstructFail"));
+  if(!samples.length){
+    // 一個字都解析不出來、而回應裡有推理標籤 → 是模型把額度用在思考上了。
+    // 這時說「請再試一次」等於叫他重複同一件註定失敗的事；要講出原因與出路。
+    const thinking = results.some(r => r && /<\/?(think|thinking|reasoning)\b/i.test(String(r.raw)));
+    throw new Error(tr(thinking ? "toast.reasoningOnly" : "toast.reconstructFail"));
+  }
   let ranked = rankBySelfConsistency(samples);
 
   // 出口把關：語言不對的丟掉。全部都不對時寧可留著也不要空白——
