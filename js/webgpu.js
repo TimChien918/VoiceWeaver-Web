@@ -13,7 +13,7 @@
 // 這一層排在雲端之後（跟「電腦幫忙跑」同一個位置，理由也一樣：
 // 本機的價值在離線與隱私，不在速度）。
 
-import { state, save } from "./store.js?v=1.5.78";
+import { state, save } from "./store.js?v=1.5.77";
 
 // WebLLM：把 MLC 編譯好的模型跑在 WebGPU 上。用 ESM CDN 動態載入，
 // 不進 repo、也不影響沒開這個功能的人（完全不會被下載到）。

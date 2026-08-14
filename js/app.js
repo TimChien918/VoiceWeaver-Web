@@ -1,29 +1,29 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.78";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES, testEntry, hasCloudTts } from "./providers.js?v=1.5.78";
-import { initShared, sharedAvailable, sharedUsage, campaignActive, campaignStart, campaignEnd, campaignPersonal, campaignBoth } from "./shared.js?v=1.5.78";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.77";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES, testEntry, hasCloudTts } from "./providers.js?v=1.5.77";
+import { initShared, sharedAvailable, sharedUsage, campaignActive, campaignStart, campaignEnd, campaignPersonal, campaignBoth } from "./shared.js?v=1.5.77";
 import { WEBGPU_MODELS, webgpuSupported, probeWebgpu, webgpuEnabled, setWebgpuEnabled, webgpuModel,
-         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.5.78";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.78";
-import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.78";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.78";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.78";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.78";
-import { bindTap } from "./interaction.js?v=1.5.78";
-import { orderCards } from "./predict.js?v=1.5.78";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.78";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.78";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.78";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.78";
-import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.78";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.78";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.78";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.78";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.78";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.78";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.78";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled, localHas } from "./localtts.js?v=1.5.78";
-import { applyI18n, t } from "./i18n.js?v=1.5.78";
-import { setupDemo } from "./demo.js?v=1.5.78";
+         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.5.77";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.77";
+import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.77";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.77";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.77";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.77";
+import { bindTap } from "./interaction.js?v=1.5.77";
+import { orderCards } from "./predict.js?v=1.5.77";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.77";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.77";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.77";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.77";
+import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.77";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.77";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.77";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.77";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.77";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.77";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.77";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled, localHas } from "./localtts.js?v=1.5.77";
+import { applyI18n, t } from "./i18n.js?v=1.5.77";
+import { setupDemo } from "./demo.js?v=1.5.77";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -33,27 +33,8 @@ let lastResult = "";
 // 用來讓後續發聲跳過關鍵字消毒——求救句被消毒掉就求不了救。
 let crisisCleared = false;
 
-/**
- * 這一版是哪一版。寫在 index.html 的 <meta>，由 tools/stamp-version.py 跟 ?v= 一起更新。
- *
- * 為什麼要有：純靜態站沒有版本號時，「網頁到底有沒有更新」是問不出答案的——
- * 部署好了但瀏覽器吃舊快取，跟根本沒部署，畫面上長得一模一樣。只能靠猜，
- * 而每猜錯一次就是使用者再白試一次。
- */
-export const APP_VERSION =
-  document.querySelector('meta[name="app-version"]')?.content || "?";
-
 function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.remove("hidden");
   clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.add("hidden"),2200); }
-
-/**
- * 出錯時的 toast：把版本號帶上。
- *
- * 使用者回報問題時給的是一張截圖，而截圖裡看不出他跑的是哪一版。帶上之後，
- * 「還是一樣」就能一眼分辨是「修正沒生效」還是「修正生效了但沒修好」——
- * 這兩件事的下一步完全相反。
- */
-function toastErr(msg){ toast(`${msg}　[v${APP_VERSION}]`); }
 
 // ── 主題 / 字體 ──
 function applyTheme(){
@@ -679,9 +660,6 @@ function settingsCards(){
 }
 
 function buildSettingsIndex(){
-  // 版本號不隨語言變，但這支是每次切語言都會重跑的，順手填掉最省事。
-  const ver = $("#appVersion");
-  if(ver) ver.textContent = "VoiceWeaver " + APP_VERSION;
   const idx = $("#settingsIndex");
   if(!idx) return;
   idx.innerHTML = settingsCards().map((c, i) => {
@@ -859,7 +837,7 @@ async function doCompose(){
     // 而且這條路繞過了 passesSpeechGate：醫療／疼痛類不會跳確認卡、
     // 也不會記錄他實際採納了哪一個候選（那是候選排序學習的唯一來源）。
     // 要發聲請按「🔊 朗讀」，那顆鈕該做的事都做了。
-  }catch(e){ toastErr(t("toast.composeFail") + (e.message||e)); }
+  }catch(e){ toast(t("toast.composeFail") + (e.message||e)); }
   finally{ $("#btnCompose").disabled=false; $("#btnCompose").textContent=t("btn.compose"); }
 }
 
@@ -920,7 +898,7 @@ function setupCamera(){
       const b64 = await fileToJpegBase64(f, 768);
       const items = await recognizePhoto(b64);
       if(items){ ctxText = (t("ctx.saw")+items); $("#ctx").textContent = "📷 "+items; toast(t("toast.recognized")); }
-    }catch(e){ toastErr(t("toast.recognizeFail")+(e.message||e)); }
+    }catch(e){ toast(t("toast.recognizeFail")+(e.message||e)); }
     inp.value="";
   });
 }
@@ -1131,7 +1109,7 @@ function setupAac(){
       $("#fragments").value = s;          // 想潤飾的人切過去就已經帶好了
       toast(t("toast.composed"));
       addHistory({ original:"AAC: "+combo.map(c=>c.word).join("+"), reconstructed:s });
-    }catch(e){ toastErr(t("toast.aacFail")+(e.message||e)); }
+    }catch(e){ toast(t("toast.aacFail")+(e.message||e)); }
   });
 
   bindTap($("#aacResultSpeak"), ()=>{ if(aacSentence) confirmThenSpeak(aacSentence); });
@@ -1661,7 +1639,7 @@ async function renderVoices(){
           >${esc(t("set.voicesReauth"))}</button></p>`);
     }
     try{
-      const drive = await import("./drive.js?v=1.5.78");
+      const drive = await import("./drive.js?v=1.5.77");
       const d = await drive.diagnoseVoiceModels();
       // 同名根要先講。有兩個 VoiceWeaver 時，底下那些「沒有 Models」之類的
       // 描述全部都是在講錯的那一個資料夾，先看到它才不會被帶去修錯的地方。
