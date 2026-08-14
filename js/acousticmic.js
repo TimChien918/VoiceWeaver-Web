@@ -11,7 +11,7 @@
 // 而這裡要比的正是頻譜的細節。自動增益尤其糟——它會把每次錄音的音量拉到一樣，
 // 但登錄時的門檻是從「使用者實際的發音變異」算出來的，被它抹平之後就失準。
 
-import { SAMPLE_RATE_HZ, extractMfcc, calibrateThreshold, enrollmentSpread } from "./acoustic.js?v=1.5.78";
+import { SAMPLE_RATE_HZ, extractMfcc, calibrateThreshold, enrollmentSpread } from "./acoustic.js?v=1.5.77";
 
 /** 一次錄音最長幾秒。比這長多半是忘了放開，白算一大堆幀。 */
 const MAX_SECONDS = 8;

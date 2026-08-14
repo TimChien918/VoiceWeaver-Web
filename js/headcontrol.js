@@ -20,10 +20,10 @@
 //
 // 上面 2~4 都寫成純函式（不碰 DOM、不碰相機），下面 tools 的測試直接餵合成
 // 座標驗證——鏡頭相關的部分沒辦法在 CI 裡驗，這幾段至少要能算得出來。
-import { t } from "./i18n.js?v=1.5.78";
-import { state, save } from "./store.js?v=1.5.78";
+import { t } from "./i18n.js?v=1.5.77";
+import { state, save } from "./store.js?v=1.5.77";
 // 座標數學獨立一支：它不該依賴 i18n 或 store，抽開之後也才測得到。
-import { noseOffset, driftNeutral, toCursor, clamp01 } from "./headmath.js?v=1.5.78";
+import { noseOffset, driftNeutral, toCursor, clamp01 } from "./headmath.js?v=1.5.77";
 
 const TASKS_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
 const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/" +

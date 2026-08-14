@@ -62,13 +62,6 @@ def main() -> int:
         lambda m: m.group(1) + stamp(m.group(2), ver) + m.group(3),
         new_html,
     )
-    # 3. 看得見的版本號。跟 ?v= 同一次更新，才不會出現「畫面說 1.5.7x、
-    #    載進去的模組卻是另一版」——那比沒有版本號更會誤導人。
-    new_html = re.sub(
-        r'(<meta name="app-version" content=")([^"]*)(")',
-        lambda m: m.group(1) + ver + m.group(3),
-        new_html,
-    )
     if new_html != html:
         idx.write_text(new_html, encoding="utf-8")
         changed.append("index.html")
