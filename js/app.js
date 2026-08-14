@@ -1,29 +1,29 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.68";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES, testEntry } from "./providers.js?v=1.5.68";
-import { initShared, sharedAvailable, sharedUsage, campaignActive } from "./shared.js?v=1.5.68";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.74";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES, testEntry, hasCloudTts } from "./providers.js?v=1.5.74";
+import { initShared, sharedAvailable, sharedUsage, campaignActive, campaignStart, campaignEnd, campaignPersonal, campaignBoth } from "./shared.js?v=1.5.74";
 import { WEBGPU_MODELS, webgpuSupported, probeWebgpu, webgpuEnabled, setWebgpuEnabled, webgpuModel,
-         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.5.68";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.68";
-import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.68";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.68";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.68";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.68";
-import { bindTap } from "./interaction.js?v=1.5.68";
-import { orderCards } from "./predict.js?v=1.5.68";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.68";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.68";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.68";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.68";
-import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.68";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.68";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.68";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.68";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.68";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.68";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.68";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.68";
-import { applyI18n, t } from "./i18n.js?v=1.5.68";
-import { setupDemo } from "./demo.js?v=1.5.68";
+         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.5.74";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.74";
+import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.74";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.74";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.74";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.74";
+import { bindTap } from "./interaction.js?v=1.5.74";
+import { orderCards } from "./predict.js?v=1.5.74";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.74";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.74";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.74";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.74";
+import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.74";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.74";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.74";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.74";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.74";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.74";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.74";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled, localHas } from "./localtts.js?v=1.5.74";
+import { applyI18n, t } from "./i18n.js?v=1.5.74";
+import { setupDemo } from "./demo.js?v=1.5.74";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -110,6 +110,7 @@ function fillSettings(){
   renderProviderList("#llmList", "llmApis", LLM_PROVIDERS);
   renderProviderList("#imgList", "imageApis", IMAGE_PROVIDERS);
   renderProviderList("#ttsList", "ttsApis", TTS_PROVIDERS);
+  renderTtsLayers();
   renderSharedNote();
   renderWebgpu();
   renderTtsVoices();
@@ -310,6 +311,7 @@ function bindSettings(){
     renderWho();                              // 頂端使用者名（匿名／本機）也要跟著新語言
     applyTheme();                             // 風格說明文字（blurb）也是動態產生
     renderQuickSos();                         // 快速求救三顆鈕的字
+    renderCampaignChip();                     // 活動標記帶日期，是動態文字，applyI18n 掃不到
     { const b=$("#btnAudioDirect"); if(b && !isRecording()){ b.textContent=t("btn.audioDirect"); b.classList.toggle("hidden", !hasNativeAudio()); } }
     renderStory();                            // 故事題目與提示字
     renderCcList();                           // 自訂圖卡的空狀態文字
@@ -465,6 +467,42 @@ function renderProviderList(containerId, listKey, catalog){
  * 要講出剩幾次，不是只說「有在借」：使用者會突然發現重組不動了，
  * 而唯一的原因是額度用完——不先讓他看得到，那就是一個無法理解的故障。
  */
+/**
+ * 語音供應商那張卡底下的「實際朗讀順序」。
+ *
+ * 上面那份清單只有**需要金鑰的雲端語音**，而目前只有 Gemini 一家——所以卡片
+ * 看起來像「這個 App 只支援一種聲音」。其實朗讀會依序試三層，另外兩層是在
+ * 別的地方設定的（專屬聲音在「電腦幫忙跑」，瀏覽器語音根本不用設定）。
+ * 把三層都列出來，順序與狀態一眼看得到，才不會有人以為只有 Gemini。
+ */
+function renderTtsLayers(){
+  const box = $("#ttsLayers");
+  if(!box) return;
+  const webOk = "speechSynthesis" in window;
+  const rows = [
+    { key:"tts.layerLocal",   ok: localHas("tts"),
+      st: localHas("tts") ? "tts.stOn" : "tts.stOff" },
+    { key:"tts.layerCloud",   ok: hasCloudTts(),
+      st: hasCloudTts() ? "tts.stOn" : "tts.stNone" },
+    { key:"tts.layerBrowser", ok: webOk,
+      st: webOk ? "tts.always" : "tts.stNo" },
+  ];
+  box.innerHTML = "";
+  rows.forEach((r, i) => {
+    const d = document.createElement("div");
+    d.style.cssText = "display:flex;gap:8px;align-items:baseline;padding:3px 0";
+    const n = document.createElement("span");
+    n.className = "muted"; n.textContent = (i + 1) + ".";
+    const nm = document.createElement("span");
+    nm.style.flex = "1"; nm.textContent = t(r.key);
+    const st = document.createElement("span");
+    st.textContent = t(r.st);
+    st.style.color = r.ok ? "var(--ok, #188038)" : "var(--muted)";
+    d.append(n, nm, st);
+    box.appendChild(d);
+  });
+}
+
 function renderSharedNote(){
   const el = $("#sharedNote");
   if(!el) return;
@@ -476,6 +514,61 @@ function renderSharedNote(){
   if(!on) return;
   const { used, limit } = sharedUsage();
   el.textContent = t("shared.note").replace("{left}", Math.max(0, limit - used)).replace("{limit}", limit);
+}
+
+/**
+ * topbar 上的活動標記。
+ *
+ * 跟上面那一則的差別是**給誰看**：那一則只寫給正在借金鑰的人，所以已經有自己
+ * 金鑰的人（多半是照護者）完全不知道活動存在，也就不會想到可以叫還沒設定的
+ * 家人趁這幾天直接開始用。這一顆對每個帳號都出現，只要活動還在。
+ *
+ * 顯示條件只看 campaignActive()，不看 sharedAvailable()：後者在「今天次數用完」
+ * 時是 false，但活動並沒有結束——那時標記消失會讓人以為活動被取消了。
+ * 次數的事情留給點下去的說明講。
+ */
+function renderCampaignChip(){
+  const el = $("#campaignChip");
+  if(!el) return;
+  const on = campaignActive();
+  el.classList.toggle("hidden", !on);
+  if(!on) return;
+  // 日期直接寫在標記上——「活動中」三個字不會讓人知道還剩幾天，
+  // 而「還剩幾天」正是他要不要現在叫家人來用的依據。
+  // 標記是動態產生的文字，**不能靠 data-i18n**：applyI18n 只在切語言時掃一次 DOM，
+  // 之後才填進去的日期會被下一次切語言整段蓋掉。所以這裡自己取譯文。
+  const { from, until } = campaignDates();
+  el.textContent = t("campaign.chip").replace("{from}", from).replace("{until}", until);
+  el.removeAttribute("data-i18n");
+  el.title = t(campaignPersonal() ? "campaign.chipPersonalTip" : "campaign.chipTip");
+}
+
+/**
+ * 活動的起訖日。
+ *
+ * 結束那天要**退一毫秒**再取日期：campaignEnd() 存的是「最後一天的隔天 00:00」，
+ * 直接格式化會顯示成隔天，看的人會以為還能多用一天。
+ */
+function campaignDates(){
+  const from = campaignStart(), until = campaignEnd();
+  return {
+    from:  from  ? new Date(from).toLocaleDateString() : "",
+    until: until ? new Date(until - 1).toLocaleDateString() : "",
+  };
+}
+
+function showCampaignInfo(){
+  const { from, until } = campaignDates();
+  const borrowing = !(state.llmApis||[]).some(e => e.key);
+  // 三種來源組合各有各的話要講：全站、只有個人、兩份都有（次數相加）。
+  const key = campaignBoth()
+    ? (borrowing ? "campaign.both" : "campaign.bothOwn")
+    : campaignPersonal()
+      ? (borrowing ? "campaign.personal" : "campaign.personalOwn")
+      : (borrowing ? "campaign.borrow"   : "campaign.own");
+  const { used, limit } = sharedUsage();
+  toast(t(key).replace("{from}", from).replace("{until}", until)
+              .replace("{left}", Math.max(0, limit - used)).replace("{limit}", limit));
 }
 
 /**
@@ -909,7 +1002,7 @@ function renderAac(){
   $("#aacItems").innerHTML = list.map(cardHtml).join("")
     // 金額類尾巴掛「自訂金額」入口（找零／報價講不出來時直接打數字）
     + (!aacSearch && aacCat === AMOUNT_CAT
-        ? `<div class="acard" id="aacAmountBtn"><span class="emoji">🔢</span>${escapeHtml(t("aac.customAmount"))}</div>` : "");
+        ? `<div class="acard acard-tool" id="aacAmountBtn"><span class="emoji">🔢</span>${escapeHtml(t("aac.customAmount"))}</div>` : "");
   bindCards("#aacItems");
   const ab = $("#aacAmountBtn");
   if(ab) bindTap(ab, openAmountDialog, 250);
@@ -929,6 +1022,19 @@ function renderCombo(){
   $$("#aacCombo .chip").forEach(c=>bindTap(c, ()=>{ combo.splice(+c.dataset.i,1); recordUndo(); renderCombo(); }, 250));
   // 沒設 LLM 金鑰時「✨組成句子」按了只會報錯 → 直接隱藏，少一顆干擾按鈕
   $("#aacCompose")?.classList.toggle("hidden", !hasAnyLlmKey());
+}
+
+// 圖卡頁組好的那一句。留著是為了「朗讀」與「重組一次」還知道要處理哪一句。
+let aacSentence = "";
+function showAacResult(text){
+  aacSentence = text || "";
+  const card = $("#aacResult");
+  if(!card) return;
+  // 收起結果時把確認卡一起關掉。不關的話它會留在這張隱藏的卡裡「開著」，
+  // 使用者按清空以為取消了，實際上還有一句待確認的話掛在那。
+  if(!aacSentence) $("#confirmDlg")?.classList.add("hidden");
+  $("#aacResultText").textContent = aacSentence;
+  card.classList.toggle("hidden", !aacSentence);
 }
 
 // ── 自訂圖卡（拍照建檔）：原生相機 capture → canvas 縮圖 → 存帳號 ──
@@ -991,17 +1097,24 @@ function setupAac(){
   }, 250));
   // 整句緩衝一次連貫朗讀（Speak All）。強烈意圖（醫療／緊急）先跳確認大圖卡再唸。
   bindTap($("#aacSpeak"), ()=>{ if(combo.length) confirmThenSpeak(comboText()); });
-  bindTap($("#aacClear"), ()=>{ combo.length=0; renderCombo(); });
+  bindTap($("#aacClear"), ()=>{
+    showAacResult(""); combo.length=0; renderCombo(); });
   bindTap($("#aacCompose"), async ()=>{
     if(!combo.length){ toast(t("toast.pickCards")); return; }
     if(!hasAnyLlmKey()){ toast(t("toast.needLlmCompose")); return; }
     toast(t("toast.composing"));
     try{ const s = await composeAac(combo.map(c=>c.word), ctxText);
+      showAacResult(s);
       confirmThenSpeak(s);
-      $("#fragments").value = s; toast(t("toast.composed"));
+      $("#fragments").value = s;          // 想潤飾的人切過去就已經帶好了
+      toast(t("toast.composed"));
       addHistory({ original:"AAC: "+combo.map(c=>c.word).join("+"), reconstructed:s });
     }catch(e){ toast(t("toast.aacFail")+(e.message||e)); }
   });
+
+  bindTap($("#aacResultSpeak"), ()=>{ if(aacSentence) confirmThenSpeak(aacSentence); });
+  bindTap($("#aacResultRegen"), ()=>{ $("#aacCompose")?.click(); });
+  bindTap($("#aacResultRefine"), ()=>{ $('.tab[data-tab="compose"]')?.click(); });
 
   // 搜尋：輸入即篩（跨全部分類比對詞面）
   const sb = $("#aacSearch");
@@ -1136,7 +1249,15 @@ function confirmThenSpeak(text){
   rj.classList.toggle("hidden", rejectStreak === 0);
   if(rejectStreak) rj.textContent = t("confirm.reject")
     .replace("{n}", rejectStreak).replace("{m}", REJECT_LIMIT - rejectStreak);
-  $("#confirmDlg").classList.remove("hidden");
+  // **把確認卡搬到使用者現在看得到的地方。** 它原本固定住在重組分頁的結果卡裡，
+  // 從圖卡頁按「組成句子」時，卡片開在另一個分頁上——畫面上等於什麼都沒發生。
+  // 搬 DOM 節點不會掉事件監聽，所以不必複製一份 markup（複製了就會有兩份要維護，
+  // 而其中一份遲早會忘記改）。
+  const host = document.querySelector('.tab.active')?.dataset.tab === "aac"
+    ? $("#aacResult") : $("#result");
+  const dlg = $("#confirmDlg");
+  if(host && dlg.parentElement !== host) host.appendChild(dlg);
+  dlg.classList.remove("hidden");
 }
 async function onConfirmReject(){
   $("#confirmDlg").classList.add("hidden");
@@ -1266,14 +1387,19 @@ function renderWho(){
 function showApp(user){
   $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
   _user = user; renderWho();
-  applyTheme(); applyI18n(state.settings.lang); fillSettings(); renderFavorites();
+  applyTheme(); applyI18n(state.settings.lang);
+  // 設定索引的每一列是從卡片的 h3 抄過來的，**applyI18n 掃不到它**（它是動態產生的）。
+  // 雲端設定把語言換掉時不重建，索引就會卡在登入前那個語言——整頁都翻好了，
+  // 只有設定的目錄還是英文。
+  buildSettingsIndex();
+  renderCampaignChip(); fillSettings(); renderFavorites();
   // 雲端設定載入後重繪 AAC：帳號裡的字級/自訂圖卡/「📷 我的」分類才會立即出現。
   // renderCombo 也要在這裡重跑一次——setupAac() 在登入完成前就先畫過一次，
   // 那時 applyI18n 還沒跑，組合區的空狀態會卡在預設的中文。
   preloadZhConv();   // 簡繁對照表：背景載入，第一次重組時就有得用
   // 活動期間的共用金鑰：登入完在背景讀一次。借不到就安靜略過——
   // 使用者本來就還有免金鑰的保底可以用，不該因為借不到而看到錯誤。
-  initShared().then(renderSharedNote).catch(()=>{});
+  initShared().then(()=>{ renderSharedNote(); renderCampaignChip(); }).catch(()=>{});
   // 開了「讓電腦幫忙跑運算」就自動偵測一次，不要等使用者按「偵測連線」。
   //
   // 原本 detectLocalTts() 只掛在那顆按鈕上，所以設定明明開著、角色語音也選好了，
@@ -1282,6 +1408,7 @@ function showApp(user){
   // 背景跑、失敗就安靜略過：連不上本來就會自動退回雲端／瀏覽器語音。
   if(localComputeEnabled()) refreshLocalVoices().catch(()=>{});
 
+  $("#campaignChip").addEventListener("click", showCampaignInfo);
   renderAac(); renderCombo(); renderCcList(); renderQuickSos(); setupCrisis();
   setStoryToast(toast); setupStory();
   setupHeadControl(msg=>{ const el=$("#headStatus"); if(el) el.textContent = msg; });
@@ -1512,7 +1639,7 @@ async function renderVoices(){
           >${esc(t("set.voicesReauth"))}</button></p>`);
     }
     try{
-      const drive = await import("./drive.js?v=1.5.68");
+      const drive = await import("./drive.js?v=1.5.74");
       const d = await drive.diagnoseVoiceModels();
       // 同名根要先講。有兩個 VoiceWeaver 時，底下那些「沒有 Models」之類的
       // 描述全部都是在講錯的那一個資料夾，先看到它才不會被帶去修錯的地方。

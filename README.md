@@ -106,6 +106,10 @@ service cloud.firestore {
 }
 ```
 
+> **完整版在 [`firestore.rules`](firestore.rules)。** 上面只是最小的登入同步規則；
+> 用到限時活動、單獨發放、ngrok 配對的話，請把 `firestore.rules` **整份**貼上去。
+> Firestore 是整份取代，貼片段會讓沒貼到的那些功能靜靜地停掉。
+
 4. **專案設定 → 一般 → 你的應用程式 → Web** → 複製 `firebaseConfig`。
 5. 把 `config.example.js` 另存為 **`config.js`**，貼上你的 `firebaseConfig`。
 
@@ -150,6 +154,8 @@ GitHub repo → **Settings → Pages → Source: main / (root) → Save**。
 
 **規則只設定一次**，之後開啟／關閉／改期間都用管理工具改資料，不必再碰規則：
 
+（下面這段只是說明它怎麼運作；要貼的是 [`firestore.rules`](firestore.rules) 整份。）
+
 ```
 match /shared/apiKeys {
   // 登入者（含匿名）才讀得到，而且要文件自己說「現在是活動期間」。
@@ -173,6 +179,30 @@ match /shared/apiKeys {
 每人每天 50 次生成，計數存在 `users/{uid}/usage/{YYYY-MM-DD}`（沿用既有的
 「只有本人讀寫自己資料」規則，不必另外加）。用完會自動退回免金鑰的保底供應商，
 不會變成不能用。
+
+### 3.6（選用）單獨發活動給某一個人
+
+有時要開的不是全站，而是**只給某個人**——他的用量比較大，或全站活動已經結束
+但這個人還需要。這種放在 `grants/{uid}`：
+
+```
+match /grants/{uid} {
+  // 只有本人讀得到，而且一樣要在期間內——期限由規則強制，改前端沒有用。
+  allow read: if request.auth != null && request.auth.uid == uid
+              && resource.data.enabled == true
+              && request.time >= resource.data.activeFrom
+              && request.time <  resource.data.activeUntil;
+  allow write: if false;
+}
+```
+
+**為什麼是獨立的 collection，不是塞進 `users/{uid}`：** users 那條規則是
+「本人可讀寫自己的資料」，本人永遠讀得到——期限會形同虛設。放在 `grants` 才能
+跟 `shared/apiKeys` 一樣，由 `request.time` 真的擋住。
+
+欄位跟 `shared/apiKeys` 相同，另外多一個選用的 `dailyLimit`（不填就是 50）。
+兩份都存在時，**專屬的優先**：會單獨發給某個人，通常就是因為他需要特別處理，
+被全站那份蓋掉的話這個特別處理等於沒有發生。
 
 **管理工具（`vw_admin.py`）不在這個 repo 裡**——它要用 Firebase 服務帳戶私鑰，
 而那把私鑰繞過所有安全規則、等於整個專案與全部使用者資料的最高權限。

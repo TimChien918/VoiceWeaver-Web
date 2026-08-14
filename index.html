@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 <title>VoiceWeaver 網頁版</title>
-<link rel="stylesheet" href="style.css?v=1.5.68" />
+<link rel="stylesheet" href="style.css?v=1.5.74" />
 </head>
 <body>
   <!-- 登入閘 -->
@@ -29,6 +29,10 @@
       <!-- 求救入口：危機視窗原本只有 Escape×3 與「連錯 3 次」兩條路，手機沒有 Escape 鍵＝按不到。
            放 topbar 而不是重組分頁，是因為崩潰不挑分頁——在圖卡頁、復健頁也要按得到。 -->
       <button id="btnSos" class="chip sos-chip" data-i18n="sos.help">🆘 求救</button>
+      <!-- 活動進行中的標記。**每個帳號都看得到**（含已經有自己金鑰的人）：
+           設定頁那一則只寫給正在借金鑰的人，有自己金鑰的人完全不知道有這回事。
+           放 topbar 是因為它不挑分頁——在圖卡頁、復健頁也還在。 -->
+      <button id="campaignChip" class="chip campaign-chip hidden" data-i18n="campaign.chip">🎁 活動中</button>
       <span id="who" class="tiny muted"></span>
       <button id="btnLogout" class="chip" data-i18n="logout">登出</button>
     </header>
@@ -223,6 +227,18 @@
             <button id="aacClear" class="btn ghost" data-i18n="aac.clear">清空</button>
           </div>
         </div>
+        <!-- 組好的句子就顯示在這裡。原本只把結果塞進重組分頁的輸入框，然後跳一句
+             「去重組分頁看」——按下按鈕的人留在圖卡頁，看到的等於什麼都沒發生。
+             確認卡（#confirmDlg）也會被搬進這張卡，否則它會開在看不到的另一個分頁。 -->
+        <div id="aacResult" class="card hidden">
+          <label class="lbl" data-i18n="aac.result">組好的句子</label>
+          <div id="aacResultText" class="result-text"></div>
+          <div class="row wrap">
+            <button id="aacResultSpeak" class="btn primary" data-i18n="btn.speak">🔊 朗讀</button>
+            <button id="aacResultRegen" class="btn ghost" data-i18n="btn.regen">重組一次</button>
+            <button id="aacResultRefine" class="btn ghost" data-i18n="aac.refine">到重組頁潤飾</button>
+          </div>
+        </div>
         <div class="card">
           <div class="row" style="margin:0 0 8px;gap:6px;align-items:center">
             <span class="tiny muted" data-i18n="aac.fontSize">字體：</span>
@@ -303,6 +319,10 @@
           <p class="tiny muted" data-i18n="set.ttsDesc">比瀏覽器內建語音自然得多。「我的專屬聲音」有的話一律優先，這裡是電腦沒開時的替代；都沒有時仍會退回瀏覽器語音，永遠出得了聲。</p>
           <div id="ttsList"></div>
           <button id="addTts" class="btn ghost" style="margin-top:8px" data-i18n="set.addTts">＋ 新增語音供應商</button>
+          <!-- 上面那份清單只有「需要金鑰的雲端語音」。實際朗讀還會用到另外兩層，
+               不列出來的話，使用者會以為這個 App 只支援 Gemini 一種聲音。 -->
+          <p class="lbl" style="margin-top:14px" data-i18n="set.ttsLayers">實際朗讀的順序</p>
+          <div id="ttsLayers" class="tiny"></div>
           <label class="lbl" data-i18n="set.ttsVoice">嗓音</label>
           <select id="s_ttsVoice"></select>
         </div>
@@ -527,7 +547,7 @@
 
   <!-- 你的 Firebase 設定（複製 config.example.js 為 config.js 並填入）。沒有 config.js 時為純本機模式。 -->
   <script>window.__FIREBASE_CONFIG__ = null;</script>
-  <script src="config.js?v=1.5.68" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
-  <script type="module" src="js/app.js?v=1.5.68"></script>
+  <script src="config.js?v=1.5.74" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
+  <script type="module" src="js/app.js?v=1.5.74"></script>
 </body>
 </html>
