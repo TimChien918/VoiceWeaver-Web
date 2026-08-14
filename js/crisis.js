@@ -15,13 +15,13 @@
 // 這是刻意的——會走到這個畫面的人，正是最不該讓他一個人把求救關掉的時候。
 //
 // 呼吸引導不是裝飾：等待家人回應的那幾分鐘最難熬，給一個節奏可以跟著做。
-import { t } from "./i18n.js?v=1.5.73";
-import { state, save } from "./store.js?v=1.5.73";
+import { t } from "./i18n.js?v=1.5.74";
+import { state, save } from "./store.js?v=1.5.74";
 import {
   telegramSend, locationLine,
   telegramSendPhoto, telegramSendVoice, telegramPollReplies
-} from "./extras.js?v=1.5.73";
-import { currentHotlines, hotlinesFor, detectCountry } from "./hotlines.js?v=1.5.73";
+} from "./extras.js?v=1.5.74";
+import { currentHotlines, hotlinesFor, detectCountry } from "./hotlines.js?v=1.5.74";
 
 const $ = s => document.querySelector(s);
 

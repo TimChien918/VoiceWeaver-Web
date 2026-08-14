@@ -1,29 +1,29 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.73";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES, testEntry, hasCloudTts } from "./providers.js?v=1.5.73";
-import { initShared, sharedAvailable, sharedUsage, campaignActive, campaignStart, campaignEnd, campaignPersonal, campaignBoth } from "./shared.js?v=1.5.73";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.74";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES, testEntry, hasCloudTts } from "./providers.js?v=1.5.74";
+import { initShared, sharedAvailable, sharedUsage, campaignActive, campaignStart, campaignEnd, campaignPersonal, campaignBoth } from "./shared.js?v=1.5.74";
 import { WEBGPU_MODELS, webgpuSupported, probeWebgpu, webgpuEnabled, setWebgpuEnabled, webgpuModel,
-         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.5.73";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.73";
-import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.73";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.73";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.73";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.73";
-import { bindTap } from "./interaction.js?v=1.5.73";
-import { orderCards } from "./predict.js?v=1.5.73";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.73";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.73";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.73";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.73";
-import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.73";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.73";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.73";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.73";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.73";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.73";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.73";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled, localHas } from "./localtts.js?v=1.5.73";
-import { applyI18n, t } from "./i18n.js?v=1.5.73";
-import { setupDemo } from "./demo.js?v=1.5.73";
+         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.5.74";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.74";
+import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.74";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.74";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.74";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.74";
+import { bindTap } from "./interaction.js?v=1.5.74";
+import { orderCards } from "./predict.js?v=1.5.74";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.74";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.74";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.74";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.74";
+import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.74";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.74";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.74";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.74";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.74";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.74";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.74";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled, localHas } from "./localtts.js?v=1.5.74";
+import { applyI18n, t } from "./i18n.js?v=1.5.74";
+import { setupDemo } from "./demo.js?v=1.5.74";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -1387,7 +1387,12 @@ function renderWho(){
 function showApp(user){
   $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
   _user = user; renderWho();
-  applyTheme(); applyI18n(state.settings.lang); renderCampaignChip(); fillSettings(); renderFavorites();
+  applyTheme(); applyI18n(state.settings.lang);
+  // 設定索引的每一列是從卡片的 h3 抄過來的，**applyI18n 掃不到它**（它是動態產生的）。
+  // 雲端設定把語言換掉時不重建，索引就會卡在登入前那個語言——整頁都翻好了，
+  // 只有設定的目錄還是英文。
+  buildSettingsIndex();
+  renderCampaignChip(); fillSettings(); renderFavorites();
   // 雲端設定載入後重繪 AAC：帳號裡的字級/自訂圖卡/「📷 我的」分類才會立即出現。
   // renderCombo 也要在這裡重跑一次——setupAac() 在登入完成前就先畫過一次，
   // 那時 applyI18n 還沒跑，組合區的空狀態會卡在預設的中文。
@@ -1634,7 +1639,7 @@ async function renderVoices(){
           >${esc(t("set.voicesReauth"))}</button></p>`);
     }
     try{
-      const drive = await import("./drive.js?v=1.5.73");
+      const drive = await import("./drive.js?v=1.5.74");
       const d = await drive.diagnoseVoiceModels();
       // 同名根要先講。有兩個 VoiceWeaver 時，底下那些「沒有 Models」之類的
       // 描述全部都是在講錯的那一個資料夾，先看到它才不會被帶去修錯的地方。
