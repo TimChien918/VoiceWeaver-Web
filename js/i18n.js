@@ -276,6 +276,9 @@ export const STRINGS = {
   "providers.del": { "zh-TW":"刪除", "en":"Delete", "ja":"削除", "ko":"삭제" },
   // ── 用登入帳號自己的額度（OAuth 2.0，免金鑰）──
   "shared.note": { "zh-TW":"🎁 活動期間：你正在借用站方的 API 金鑰，今天還可以用 {left} / {limit} 次。想不受限就在下面加上自己的金鑰。", "en":"🎁 Event period: you're borrowing the site's API key — {left} of {limit} uses left today. Add your own key below to remove the limit.", "ja":"🎁 イベント期間中：サイト提供の API キーを借用中です。本日あと {left} / {limit} 回。制限をなくすには下で自分のキーを追加してください。", "ko":"🎁 이벤트 기간: 사이트의 API 키를 빌려 쓰는 중입니다. 오늘 {left}/{limit}회 남았습니다. 제한을 없애려면 아래에서 본인 키를 추가하세요." },
+  "campaign.chip": { "zh-TW":"🎁 活動中", "en":"🎁 Event on", "ja":"🎁 開催中", "ko":"🎁 이벤트 중" },
+  "campaign.borrow": { "zh-TW":"🎁 活動到 {date}：沒有金鑰也能用。你今天還可以用 {left} / {limit} 次。", "en":"🎁 Event runs through {date}: usable without your own key. You have {left} of {limit} uses left today.", "ja":"🎁 {date} まで開催：自分のキーがなくても使えます。本日あと {left} / {limit} 回。", "ko":"🎁 {date}까지 진행: 자기 키가 없어도 사용할 수 있습니다. 오늘 {left}/{limit}회 남았습니다." },
+  "campaign.own": { "zh-TW":"🎁 活動到 {date}：沒有金鑰的人也能直接使用。你已經有自己的金鑰，不受活動次數限制。", "en":"🎁 Event runs through {date}: people without a key can use the app directly. You already have your own key, so the event limit doesn't apply to you.", "ja":"🎁 {date} まで開催：キーがない人もそのまま使えます。あなたは自分のキーがあるので回数制限はありません。", "ko":"🎁 {date}까지 진행: 키가 없는 사람도 바로 사용할 수 있습니다. 회원님은 본인 키가 있어 횟수 제한이 없습니다." },
   "prov.pollinationsFree": { "zh-TW":"Pollinations（免金鑰・預設保底）", "en":"Pollinations (no key — always-on fallback)", "ja":"Pollinations（キー不要・常時フォールバック）", "ko":"Pollinations (키 불필요 · 상시 대비)" },
   "prov.geminiKey": { "zh-TW":"Google Gemini（自備 API 金鑰）", "en":"Google Gemini (your own API key)", "ja":"Google Gemini（自分の API キー）", "ko":"Google Gemini (직접 준비한 API 키)" },
   "prov.geminiImgKey": { "zh-TW":"Gemini Imagen（自備 API 金鑰）", "en":"Gemini Imagen (your own API key)", "ja":"Gemini Imagen（自分の API キー）", "ko":"Gemini Imagen (직접 준비한 API 키)" },

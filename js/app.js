@@ -1,29 +1,29 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.68";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES, testEntry } from "./providers.js?v=1.5.68";
-import { initShared, sharedAvailable, sharedUsage, campaignActive } from "./shared.js?v=1.5.68";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.69";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES, testEntry } from "./providers.js?v=1.5.69";
+import { initShared, sharedAvailable, sharedUsage, campaignActive, campaignEnd } from "./shared.js?v=1.5.69";
 import { WEBGPU_MODELS, webgpuSupported, probeWebgpu, webgpuEnabled, setWebgpuEnabled, webgpuModel,
-         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.5.68";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.68";
-import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.68";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.68";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.68";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.68";
-import { bindTap } from "./interaction.js?v=1.5.68";
-import { orderCards } from "./predict.js?v=1.5.68";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.68";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.68";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.68";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.68";
-import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.68";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.68";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.68";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.68";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.68";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.68";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.68";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.68";
-import { applyI18n, t } from "./i18n.js?v=1.5.68";
-import { setupDemo } from "./demo.js?v=1.5.68";
+         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.5.69";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.69";
+import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.69";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.69";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.69";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.69";
+import { bindTap } from "./interaction.js?v=1.5.69";
+import { orderCards } from "./predict.js?v=1.5.69";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.69";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.69";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.69";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.69";
+import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.69";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.69";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.69";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.69";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.69";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.69";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.69";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.69";
+import { applyI18n, t } from "./i18n.js?v=1.5.69";
+import { setupDemo } from "./demo.js?v=1.5.69";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -476,6 +476,38 @@ function renderSharedNote(){
   if(!on) return;
   const { used, limit } = sharedUsage();
   el.textContent = t("shared.note").replace("{left}", Math.max(0, limit - used)).replace("{limit}", limit);
+}
+
+/**
+ * topbar 上的活動標記。
+ *
+ * 跟上面那一則的差別是**給誰看**：那一則只寫給正在借金鑰的人，所以已經有自己
+ * 金鑰的人（多半是照護者）完全不知道活動存在，也就不會想到可以叫還沒設定的
+ * 家人趁這幾天直接開始用。這一顆對每個帳號都出現，只要活動還在。
+ *
+ * 顯示條件只看 campaignActive()，不看 sharedAvailable()：後者在「今天次數用完」
+ * 時是 false，但活動並沒有結束——那時標記消失會讓人以為活動被取消了。
+ * 次數的事情留給點下去的說明講。
+ */
+function renderCampaignChip(){
+  const el = $("#campaignChip");
+  if(!el) return;
+  el.classList.toggle("hidden", !campaignActive());
+}
+
+/** 活動最後一天。campaignEnd() 存的是「隔天 00:00」，退一毫秒才是使用者認知的那天。 */
+function campaignLastDay(){
+  const end = campaignEnd();
+  return end ? new Date(end - 1).toLocaleDateString() : "";
+}
+
+function showCampaignInfo(){
+  const date = campaignLastDay();
+  const borrowing = !(state.llmApis||[]).some(e => e.key);
+  if(!borrowing){ toast(t("campaign.own").replace("{date}", date)); return; }
+  const { used, limit } = sharedUsage();
+  toast(t("campaign.borrow").replace("{date}", date)
+        .replace("{left}", Math.max(0, limit - used)).replace("{limit}", limit));
 }
 
 /**
@@ -1273,7 +1305,7 @@ function showApp(user){
   preloadZhConv();   // 簡繁對照表：背景載入，第一次重組時就有得用
   // 活動期間的共用金鑰：登入完在背景讀一次。借不到就安靜略過——
   // 使用者本來就還有免金鑰的保底可以用，不該因為借不到而看到錯誤。
-  initShared().then(renderSharedNote).catch(()=>{});
+  initShared().then(()=>{ renderSharedNote(); renderCampaignChip(); }).catch(()=>{});
   // 開了「讓電腦幫忙跑運算」就自動偵測一次，不要等使用者按「偵測連線」。
   //
   // 原本 detectLocalTts() 只掛在那顆按鈕上，所以設定明明開著、角色語音也選好了，
@@ -1282,6 +1314,7 @@ function showApp(user){
   // 背景跑、失敗就安靜略過：連不上本來就會自動退回雲端／瀏覽器語音。
   if(localComputeEnabled()) refreshLocalVoices().catch(()=>{});
 
+  $("#campaignChip").addEventListener("click", showCampaignInfo);
   renderAac(); renderCombo(); renderCcList(); renderQuickSos(); setupCrisis();
   setStoryToast(toast); setupStory();
   setupHeadControl(msg=>{ const el=$("#headStatus"); if(el) el.textContent = msg; });
@@ -1512,7 +1545,7 @@ async function renderVoices(){
           >${esc(t("set.voicesReauth"))}</button></p>`);
     }
     try{
-      const drive = await import("./drive.js?v=1.5.68");
+      const drive = await import("./drive.js?v=1.5.69");
       const d = await drive.diagnoseVoiceModels();
       // 同名根要先講。有兩個 VoiceWeaver 時，底下那些「沒有 Models」之類的
       // 描述全部都是在講錯的那一個資料夾，先看到它才不會被帶去修錯的地方。

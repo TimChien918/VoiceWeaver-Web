@@ -53,6 +53,15 @@ body{ margin:0; font-family:-apple-system,"PingFang TC","Microsoft JhengHei",sys
 .topbar{ display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid var(--line);
   position:sticky; top:0; background:var(--bg); z-index:5; }
 .title{ font-weight:700; font-size:1.1rem; }
+/* topbar 的東西預設都不會縮，窄螢幕時最右邊的「登出」會被擠出畫面外——
+   按不到就等於登不出來，換帳號的照護者會卡住。所以：
+     · 按鈕與標題不縮（本來就該完整），
+     · 帳號名稱可以縮、超過就省略號（"Anonymous user" 在英文介面特別長）。
+   量過：360px 寬原本溢出 30px、320px 溢出 70px，加上活動標記後 430px 也會溢。 */
+.topbar > *{ flex:0 0 auto; }
+.topbar .spacer{ flex:1 1 auto; }
+.topbar #who{ flex:0 1 auto; min-width:0; overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap; }
 /* 六個分頁等分排滿、永遠全部看得到（對齊 App 的底部導覽）。
    原本是 overflow-x:auto——中文剛好塞得下，但英文／日文標籤較長會把「歷史」「設定」
    推出畫面外，得橫向捲才點得到；導覽列不該要捲動才按得到。 */
@@ -103,6 +112,23 @@ label.row{ margin-top:0; cursor:pointer; }
    觸控目標放大到 44px（iOS HIG 最小值），手抖也按得中。 */
 .chip.sos-chip{ background:var(--danger); color:#fff; border-color:var(--danger);
   font-weight:700; min-height:44px; padding:5px 16px; margin-right:8px; }
+/* 活動標記。用 accent 而不是 danger——它是好消息，不該跟求救搶同一種紅色的注意力。
+   窄螢幕時 topbar 已經擠了（標題＋求救＋帳號＋登出），所以字級與內距都比求救小一號。 */
+.chip.campaign-chip{ background:var(--accent); color:#fff; border-color:var(--accent);
+  font-weight:600; font-size:.82rem; padding:4px 10px; }
+/* 窄螢幕只留 🎁：文字讓位給「登出」，但按鈕還在、點下去照樣說明活動內容。
+   font-size:0 把整段文字（含原本的 emoji）收掉，再用 ::before 把圖示補回來。 */
+@media (max-width: 460px){
+  .chip.campaign-chip{ font-size:0; padding:4px 9px; }
+  .chip.campaign-chip::before{ content:"🎁"; font-size:.95rem; }
+  /* 320px 寬時 topbar 還是差 43px，而最寬的一項是標題（128px）——進到 App 之後
+     那行字是裝飾，「登出」才是功能。縮的是**橫向**內距與字級：垂直內距一動，
+     topbar 高度就變，而 .tabs 的 sticky top:49px 是寫死對齊它的，會蓋住分頁列。 */
+  .topbar{ padding-left:10px; padding-right:10px; gap:6px; }
+  .title{ font-size:.95rem; }
+  /* 求救鈕只縮橫向內距，44px 的觸控高度不能動——那是急著按的時候按得中的原因。 */
+  .chip.sos-chip{ margin-right:0; padding-left:13px; padding-right:13px; }
+}
 /* 復健題庫的題目在英文介面會是整句英文，比中文長很多；
    維持 nowrap 會直接撐爆一行，這裡允許換行並限制單一 chip 的寬度。 */
 #rehabBank .chip{ white-space:normal; max-width:100%; text-align:center; line-height:1.35; }

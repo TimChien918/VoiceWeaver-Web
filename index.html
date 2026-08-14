@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
 <title>VoiceWeaver 網頁版</title>
-<link rel="stylesheet" href="style.css?v=1.5.68" />
+<link rel="stylesheet" href="style.css?v=1.5.69" />
 </head>
 <body>
   <!-- 登入閘 -->
@@ -29,6 +29,10 @@
       <!-- 求救入口：危機視窗原本只有 Escape×3 與「連錯 3 次」兩條路，手機沒有 Escape 鍵＝按不到。
            放 topbar 而不是重組分頁，是因為崩潰不挑分頁——在圖卡頁、復健頁也要按得到。 -->
       <button id="btnSos" class="chip sos-chip" data-i18n="sos.help">🆘 求救</button>
+      <!-- 活動進行中的標記。**每個帳號都看得到**（含已經有自己金鑰的人）：
+           設定頁那一則只寫給正在借金鑰的人，有自己金鑰的人完全不知道有這回事。
+           放 topbar 是因為它不挑分頁——在圖卡頁、復健頁也還在。 -->
+      <button id="campaignChip" class="chip campaign-chip hidden" data-i18n="campaign.chip">🎁 活動中</button>
       <span id="who" class="tiny muted"></span>
       <button id="btnLogout" class="chip" data-i18n="logout">登出</button>
     </header>
@@ -527,7 +531,7 @@
 
   <!-- 你的 Firebase 設定（複製 config.example.js 為 config.js 並填入）。沒有 config.js 時為純本機模式。 -->
   <script>window.__FIREBASE_CONFIG__ = null;</script>
-  <script src="config.js?v=1.5.68" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
-  <script type="module" src="js/app.js?v=1.5.68"></script>
+  <script src="config.js?v=1.5.69" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
+  <script type="module" src="js/app.js?v=1.5.69"></script>
 </body>
 </html>
