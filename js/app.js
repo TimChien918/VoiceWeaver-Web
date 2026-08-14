@@ -1,29 +1,29 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.69";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES, testEntry } from "./providers.js?v=1.5.69";
-import { initShared, sharedAvailable, sharedUsage, campaignActive, campaignEnd } from "./shared.js?v=1.5.69";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.70";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES, testEntry } from "./providers.js?v=1.5.70";
+import { initShared, sharedAvailable, sharedUsage, campaignActive, campaignStart, campaignEnd, campaignPersonal } from "./shared.js?v=1.5.70";
 import { WEBGPU_MODELS, webgpuSupported, probeWebgpu, webgpuEnabled, setWebgpuEnabled, webgpuModel,
-         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.5.69";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.69";
-import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.69";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.69";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.69";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.69";
-import { bindTap } from "./interaction.js?v=1.5.69";
-import { orderCards } from "./predict.js?v=1.5.69";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.69";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.69";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.69";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.69";
-import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.69";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.69";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.69";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.69";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.69";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.69";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.69";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.69";
-import { applyI18n, t } from "./i18n.js?v=1.5.69";
-import { setupDemo } from "./demo.js?v=1.5.69";
+         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.5.70";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.70";
+import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.70";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.70";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.70";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.70";
+import { bindTap } from "./interaction.js?v=1.5.70";
+import { orderCards } from "./predict.js?v=1.5.70";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.70";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.70";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.70";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.70";
+import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.70";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.70";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.70";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.70";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.70";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.70";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.70";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.70";
+import { applyI18n, t } from "./i18n.js?v=1.5.70";
+import { setupDemo } from "./demo.js?v=1.5.70";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -310,6 +310,7 @@ function bindSettings(){
     renderWho();                              // 頂端使用者名（匿名／本機）也要跟著新語言
     applyTheme();                             // 風格說明文字（blurb）也是動態產生
     renderQuickSos();                         // 快速求救三顆鈕的字
+    renderCampaignChip();                     // 活動標記帶日期，是動態文字，applyI18n 掃不到
     { const b=$("#btnAudioDirect"); if(b && !isRecording()){ b.textContent=t("btn.audioDirect"); b.classList.toggle("hidden", !hasNativeAudio()); } }
     renderStory();                            // 故事題目與提示字
     renderCcList();                           // 自訂圖卡的空狀態文字
@@ -492,22 +493,42 @@ function renderSharedNote(){
 function renderCampaignChip(){
   const el = $("#campaignChip");
   if(!el) return;
-  el.classList.toggle("hidden", !campaignActive());
+  const on = campaignActive();
+  el.classList.toggle("hidden", !on);
+  if(!on) return;
+  // 日期直接寫在標記上——「活動中」三個字不會讓人知道還剩幾天，
+  // 而「還剩幾天」正是他要不要現在叫家人來用的依據。
+  // 標記是動態產生的文字，**不能靠 data-i18n**：applyI18n 只在切語言時掃一次 DOM，
+  // 之後才填進去的日期會被下一次切語言整段蓋掉。所以這裡自己取譯文。
+  const { from, until } = campaignDates();
+  el.textContent = t("campaign.chip").replace("{from}", from).replace("{until}", until);
+  el.removeAttribute("data-i18n");
+  el.title = t(campaignPersonal() ? "campaign.chipPersonalTip" : "campaign.chipTip");
 }
 
-/** 活動最後一天。campaignEnd() 存的是「隔天 00:00」，退一毫秒才是使用者認知的那天。 */
-function campaignLastDay(){
-  const end = campaignEnd();
-  return end ? new Date(end - 1).toLocaleDateString() : "";
+/**
+ * 活動的起訖日。
+ *
+ * 結束那天要**退一毫秒**再取日期：campaignEnd() 存的是「最後一天的隔天 00:00」，
+ * 直接格式化會顯示成隔天，看的人會以為還能多用一天。
+ */
+function campaignDates(){
+  const from = campaignStart(), until = campaignEnd();
+  return {
+    from:  from  ? new Date(from).toLocaleDateString() : "",
+    until: until ? new Date(until - 1).toLocaleDateString() : "",
+  };
 }
 
 function showCampaignInfo(){
-  const date = campaignLastDay();
+  const { from, until } = campaignDates();
   const borrowing = !(state.llmApis||[]).some(e => e.key);
-  if(!borrowing){ toast(t("campaign.own").replace("{date}", date)); return; }
+  const key = campaignPersonal()
+    ? (borrowing ? "campaign.personal" : "campaign.personalOwn")
+    : (borrowing ? "campaign.borrow"   : "campaign.own");
   const { used, limit } = sharedUsage();
-  toast(t("campaign.borrow").replace("{date}", date)
-        .replace("{left}", Math.max(0, limit - used)).replace("{limit}", limit));
+  toast(t(key).replace("{from}", from).replace("{until}", until)
+              .replace("{left}", Math.max(0, limit - used)).replace("{limit}", limit));
 }
 
 /**
@@ -1298,7 +1319,7 @@ function renderWho(){
 function showApp(user){
   $("#login").classList.add("hidden"); $("#app").classList.remove("hidden");
   _user = user; renderWho();
-  applyTheme(); applyI18n(state.settings.lang); fillSettings(); renderFavorites();
+  applyTheme(); applyI18n(state.settings.lang); renderCampaignChip(); fillSettings(); renderFavorites();
   // 雲端設定載入後重繪 AAC：帳號裡的字級/自訂圖卡/「📷 我的」分類才會立即出現。
   // renderCombo 也要在這裡重跑一次——setupAac() 在登入完成前就先畫過一次，
   // 那時 applyI18n 還沒跑，組合區的空狀態會卡在預設的中文。
@@ -1545,7 +1566,7 @@ async function renderVoices(){
           >${esc(t("set.voicesReauth"))}</button></p>`);
     }
     try{
-      const drive = await import("./drive.js?v=1.5.69");
+      const drive = await import("./drive.js?v=1.5.70");
       const d = await drive.diagnoseVoiceModels();
       // 同名根要先講。有兩個 VoiceWeaver 時，底下那些「沒有 Models」之類的
       // 描述全部都是在講錯的那一個資料夾，先看到它才不會被帶去修錯的地方。

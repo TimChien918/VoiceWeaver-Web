@@ -174,6 +174,30 @@ match /shared/apiKeys {
 「只有本人讀寫自己資料」規則，不必另外加）。用完會自動退回免金鑰的保底供應商，
 不會變成不能用。
 
+### 3.6（選用）單獨發活動給某一個人
+
+有時要開的不是全站，而是**只給某個人**——他的用量比較大，或全站活動已經結束
+但這個人還需要。這種放在 `grants/{uid}`：
+
+```
+match /grants/{uid} {
+  // 只有本人讀得到，而且一樣要在期間內——期限由規則強制，改前端沒有用。
+  allow read: if request.auth != null && request.auth.uid == uid
+              && resource.data.enabled == true
+              && request.time >= resource.data.activeFrom
+              && request.time <  resource.data.activeUntil;
+  allow write: if false;
+}
+```
+
+**為什麼是獨立的 collection，不是塞進 `users/{uid}`：** users 那條規則是
+「本人可讀寫自己的資料」，本人永遠讀得到——期限會形同虛設。放在 `grants` 才能
+跟 `shared/apiKeys` 一樣，由 `request.time` 真的擋住。
+
+欄位跟 `shared/apiKeys` 相同，另外多一個選用的 `dailyLimit`（不填就是 50）。
+兩份都存在時，**專屬的優先**：會單獨發給某個人，通常就是因為他需要特別處理，
+被全站那份蓋掉的話這個特別處理等於沒有發生。
+
 **管理工具（`vw_admin.py`）不在這個 repo 裡**——它要用 Firebase 服務帳戶私鑰，
 而那把私鑰繞過所有安全規則、等於整個專案與全部使用者資料的最高權限。
 它只能待在你自己的電腦上，所以已列入 `.gitignore`。

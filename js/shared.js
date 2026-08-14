@@ -12,8 +12,8 @@
 //     匿名使用者更是清掉瀏覽器資料就換一個身分。
 // 因此這個機制只適合限時活動，而且活動結束後那幾把金鑰應該換掉。
 
-import { state } from "./store.js?v=1.5.69";
-import { readSharedKeys, bumpSharedUsage, readSharedUsage } from "./store.js?v=1.5.69";
+import { state } from "./store.js?v=1.5.70";
+import { readSharedKeys, readGrant, bumpSharedUsage, readSharedUsage } from "./store.js?v=1.5.70";
 
 /**
  * 活動期間與開關，**存在 shared/apiKeys 那份文件裡**（enabled / activeFrom / activeUntil）。
@@ -25,13 +25,18 @@ import { readSharedKeys, bumpSharedUsage, readSharedUsage } from "./store.js?v=1
  *
  * 讀不到就當作沒有活動（保守），畫面照常走免金鑰的保底供應商。
  */
-let _window = null;   // { enabled, from, until }（毫秒）
+let _window = null;   // { enabled, from, until, personal }（毫秒）
 
-/** 每人每天可以用幾次站方的金鑰。 */
+/** 每人每天可以用幾次站方的金鑰（專屬活動可以自己指定，見 _limit）。 */
 export const DAILY_LIMIT = 50;
+let _limit = DAILY_LIMIT;
 
-/** 活動結束的時間點（毫秒）；沒有活動時回 0。 */
+/** 活動開始／結束的時間點（毫秒）；沒有活動時回 0。 */
+export function campaignStart(){ return _window?.from || 0; }
 export function campaignEnd(){ return _window?.until || 0; }
+
+/** 這是站方單獨發給這個人的，還是全站活動。 */
+export function campaignPersonal(){ return !!_window?.personal; }
 
 /** 今天是哪一天（用 UTC 切日，跟計數文件的 id 一致，不會因時區跳來跳去）。 */
 function today(){ return new Date().toISOString().slice(0, 10); }
@@ -111,15 +116,26 @@ function orderFor(list, uid){
 export async function initShared(){
   if(_loaded) return;
   _loaded = true;
-  // 先讀文件才知道有沒有活動——期間現在是文件裡的欄位，不是寫死的常數。
-  // 期間過了的話規則會直接拒絕，這裡拿到 null，等同沒有活動。
-  const d = await readSharedKeys();
+  // 先看有沒有「單獨發給這個人」的，再看全站活動。
+  //
+  // 專屬的優先：站方會單獨發給某個人，通常就是因為他的情況需要特別處理
+  // （用量比較大、或是全站活動已經結束但這個人還需要）。被全站那份蓋掉的話，
+  // 這個特別處理就等於沒有發生。兩份都讀得到時，專屬的期限與次數都以它為準。
+  //
+  // 期間過了的話規則會直接拒絕，這裡拿到 null，等同沒有這回事。
+  let d = await readGrant();
+  let personal = !!d;
+  if(!d) d = await readSharedKeys();
   if(!d) return;
   _window = {
     enabled: d.enabled !== false,        // 沒有這個欄位時視為開著（舊資料相容）
     from:  toMs(d.activeFrom)  || 0,
     until: toMs(d.activeUntil) || 0,
+    personal,
   };
+  // 專屬活動可以自己指定每日次數；沒指定就沿用預設。
+  const n = Number(d.dailyLimit);
+  _limit = (Number.isFinite(n) && n > 0) ? n : DAILY_LIMIT;
   if(!campaignActive()) return;
   // uid 決定順序：同一個人每次都拿到同一份排序，換裝置也一樣。
   const uid = state.uid || "anon";
@@ -135,7 +151,7 @@ export async function initShared(){
 
 /** 今天還能不能再借（次數還沒用完、活動還在）。 */
 export function sharedAvailable(){
-  return !!_picked && campaignActive() && _usedToday < DAILY_LIMIT;
+  return !!_picked && campaignActive() && _usedToday < _limit;
 }
 
 /** 這個人分到的是第幾把（給畫面／除錯用；沒有活動時回 -1）。 */
@@ -147,7 +163,7 @@ export function sharedKeyIndex(kind){
 }
 
 /** 今天用掉幾次／上限，給畫面顯示。 */
-export function sharedUsage(){ return { used: _usedToday, limit: DAILY_LIMIT }; }
+export function sharedUsage(){ return { used: _usedToday, limit: _limit }; }
 
 /**
  * 借一筆指定用途的金鑰（kind: "llm" | "image" | "tts"）。
@@ -183,8 +199,8 @@ export async function countSharedUse(){
     _usageDay = day;
     _usedToday = await readSharedUsage(day);
   }
-  if(_usedToday >= DAILY_LIMIT) return false;
+  if(_usedToday >= _limit) return false;
   const n = await bumpSharedUsage(day);
   _usedToday = n ?? (_usedToday + 1);
-  return _usedToday <= DAILY_LIMIT;
+  return _usedToday <= _limit;
 }

@@ -6,7 +6,7 @@ import {
 import {
   getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, getDocs, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { t } from "./i18n.js?v=1.5.69";
+import { t } from "./i18n.js?v=1.5.70";
 
 const DEFAULTS = {
   settings: { theme: "auto", lang: "en", rate: 0.95, font: 1.0,
@@ -76,6 +76,25 @@ export async function readSharedKeys(){
   }catch(e){
     // 期限過了規則就會拒絕讀取，這裡會走到——那是預期行為，不是錯誤。
     console.info("shared keys unavailable", e?.code || e);
+    return null;
+  }
+}
+
+/**
+ * 這個人專屬的活動（grants/{uid}）。站方單獨發給某個人的，優先於全站活動。
+ *
+ * 為什麼是獨立的 collection 而不是塞進 users/{uid}：users 那條規則是
+ * `allow read: if request.auth.uid == uid`，本人永遠讀得到——期限就形同虛設。
+ * 放在 grants 才能像 shared/apiKeys 一樣，由規則用 request.time 真的擋住。
+ */
+export async function readGrant(){
+  if(!_db || !state.uid || state.uid === "local") return null;
+  try{
+    const snap = await getDoc(doc(_db, "grants", state.uid));
+    return snap.exists() ? snap.data() : null;
+  }catch(e){
+    // 期限過了規則就拒絕，這裡會走到——預期行為，不是錯誤。
+    console.info("grant unavailable", e?.code || e);
     return null;
   }
 }
@@ -472,7 +491,7 @@ function saveLocalShortcuts(list){
 
 // Drive 用動態 import：drive.js 反過來要 store.js 的 driveToken，
 // 靜態互相 import 會踩到模組初始化順序。順便也讓沒用到 Drive 的人不必載這段。
-async function _drive(){ return import("./drive.js?v=1.5.69"); }
+async function _drive(){ return import("./drive.js?v=1.5.70"); }
 
 /**
  * 兩個雲端來源都讀：Firestore（即時、免 Drive 授權）與使用者自己 Drive 的
