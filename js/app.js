@@ -1,29 +1,29 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.72";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES, testEntry, hasCloudTts } from "./providers.js?v=1.5.72";
-import { initShared, sharedAvailable, sharedUsage, campaignActive, campaignStart, campaignEnd, campaignPersonal, campaignBoth } from "./shared.js?v=1.5.72";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.73";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES, testEntry, hasCloudTts } from "./providers.js?v=1.5.73";
+import { initShared, sharedAvailable, sharedUsage, campaignActive, campaignStart, campaignEnd, campaignPersonal, campaignBoth } from "./shared.js?v=1.5.73";
 import { WEBGPU_MODELS, webgpuSupported, probeWebgpu, webgpuEnabled, setWebgpuEnabled, webgpuModel,
-         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.5.72";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.72";
-import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.72";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.72";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.72";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.72";
-import { bindTap } from "./interaction.js?v=1.5.72";
-import { orderCards } from "./predict.js?v=1.5.72";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.72";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.72";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.72";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.72";
-import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.72";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.72";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.72";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.72";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.72";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.72";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.72";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled, localHas } from "./localtts.js?v=1.5.72";
-import { applyI18n, t } from "./i18n.js?v=1.5.72";
-import { setupDemo } from "./demo.js?v=1.5.72";
+         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.5.73";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.73";
+import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.73";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.73";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.73";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.73";
+import { bindTap } from "./interaction.js?v=1.5.73";
+import { orderCards } from "./predict.js?v=1.5.73";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.73";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.73";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.73";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.73";
+import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.73";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.73";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.73";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.73";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.73";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.73";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.73";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled, localHas } from "./localtts.js?v=1.5.73";
+import { applyI18n, t } from "./i18n.js?v=1.5.73";
+import { setupDemo } from "./demo.js?v=1.5.73";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -1002,7 +1002,7 @@ function renderAac(){
   $("#aacItems").innerHTML = list.map(cardHtml).join("")
     // 金額類尾巴掛「自訂金額」入口（找零／報價講不出來時直接打數字）
     + (!aacSearch && aacCat === AMOUNT_CAT
-        ? `<div class="acard" id="aacAmountBtn"><span class="emoji">🔢</span>${escapeHtml(t("aac.customAmount"))}</div>` : "");
+        ? `<div class="acard acard-tool" id="aacAmountBtn"><span class="emoji">🔢</span>${escapeHtml(t("aac.customAmount"))}</div>` : "");
   bindCards("#aacItems");
   const ab = $("#aacAmountBtn");
   if(ab) bindTap(ab, openAmountDialog, 250);
@@ -1634,7 +1634,7 @@ async function renderVoices(){
           >${esc(t("set.voicesReauth"))}</button></p>`);
     }
     try{
-      const drive = await import("./drive.js?v=1.5.72");
+      const drive = await import("./drive.js?v=1.5.73");
       const d = await drive.diagnoseVoiceModels();
       // 同名根要先講。有兩個 VoiceWeaver 時，底下那些「沒有 Models」之類的
       // 描述全部都是在講錯的那一個資料夾，先看到它才不會被帶去修錯的地方。

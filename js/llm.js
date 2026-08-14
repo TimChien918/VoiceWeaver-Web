@@ -1,8 +1,8 @@
 // 重組 / 組句：走多供應商輪詢（providers.js）。
-import { runLlm, hasLlm, usingSharedKey } from "./providers.js?v=1.5.72";
-import { t as tr } from "./i18n.js?v=1.5.72";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
-import { DEFENSIVE_SYSTEM_PROMPT } from "./safety.js?v=1.5.72";
-import { toTraditionalSync } from "./zhconv.js?v=1.5.72";
+import { runLlm, hasLlm, usingSharedKey } from "./providers.js?v=1.5.73";
+import { t as tr } from "./i18n.js?v=1.5.73";   // 別名：下方備援區塊有局部變數 t，避免遮蔽
+import { DEFENSIVE_SYSTEM_PROMPT } from "./safety.js?v=1.5.73";
+import { toTraditionalSync } from "./zhconv.js?v=1.5.73";
 
 // 第一層防禦：黏在所有 system prompt 最前面，先要求模型別生成自傷／絕望字眼。
 // 這只是「請求」不是保證——真正擋住的是 app.js 的分級閘門與 speech.js 的輸出消毒。

@@ -9,15 +9,24 @@
 // 詞性色碼＝費茲傑羅（Fitzgerald Key）："n"名詞→黃、"v"動詞→綠、"a"形容詞→藍，
 // 省略＝中性（時間詞、問句、社交詞不上色）。App 的資料沒有這一欄，依分類給預設值
 // ——同一類的詞性絕大多數一致，少數例外也比整片不上色好。
-import { AAC_CATEGORIES, AAC_ITEMS, CURRENCIES, labelIn } from "./aacdata.js?v=1.5.72";
+import { AAC_CATEGORIES, AAC_ITEMS, CURRENCIES, labelIn } from "./aacdata.js?v=1.5.73";
 
 export { AAC_CATEGORIES, AAC_ITEMS, CURRENCIES, labelIn };
 
+// 詞性標色（Fitzgerald Key 那一套：名詞黃、動詞綠、形容詞藍）。顏色是給患者的
+// 定位線索——同一類永遠同一色，找卡時先看顏色再讀字，比逐張讀快得多。
+//
+// **每一類都要有顏色。** 原本 Money／Time／Questions／Emergency 留空字串，
+// 於是同一排裡有的有色、有的沒有，看起來像壞掉——而那四類恰好常跟名詞混在
+// 「為你推薦」同一排。沒有顏色也等於少了那條定位線索。
 const POS_BY_CAT = {
   Products:"n", FoodDrink:"n", People:"n", Places:"n", Medical:"n",
+  Money:"n",              // 金額就是名詞（$50 是一個東西），跟著名詞黃
   Actions:"v", Needs:"v",
   Emotions:"a",
-  Money:"", Time:"", Questions:"", Emergency:"",
+  Time:"t",               // 時間詞：慣例用粉色
+  Questions:"q",          // 疑問詞：慣例用紫色
+  Emergency:"e",          // 緊急：紅色，跟求救鈕同一個顏色語彙
 };
 
 /** 分類 id 清單（順序＝App 的 enum 順序，患者靠位置記憶找卡，不可重排）。 */

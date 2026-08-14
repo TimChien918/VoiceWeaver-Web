@@ -154,6 +154,14 @@ label.row{ margin-top:0; cursor:pointer; }
 .acard.pos-n{ background:color-mix(in srgb,#ffcc00 22%,var(--bg)); border-color:#d9ae00; }
 .acard.pos-v{ background:color-mix(in srgb,#34c759 20%,var(--bg)); border-color:#2ea44f; }
 .acard.pos-a{ background:color-mix(in srgb,#0a84ff 18%,var(--bg)); border-color:#0a84ff; }
+/* 時間／疑問／緊急也要有色：留白的話同一排裡有的有色有的沒有，看起來像壞掉，
+   而且少了那條「先看顏色再讀字」的定位線索。 */
+/* 「自訂金額」那種功能鍵不是詞彙卡，**不能給它詞性色**——那等於宣稱它是名詞。
+   用虛線邊框表示「這是工具，不是一個字」，跟旁邊的實線卡一眼分得開。 */
+.acard.acard-tool{ border-style:dashed; color:var(--muted); }
+.acard.pos-t{ background:color-mix(in srgb,#ff2d92 16%,var(--bg)); border-color:#d81b60; }
+.acard.pos-q{ background:color-mix(in srgb,#af52de 18%,var(--bg)); border-color:#8e44ad; }
+.acard.pos-e{ background:color-mix(in srgb,#ff3b30 18%,var(--bg)); border-color:#d93025; }
 
 /* ── 超大字級＋網格自動降級：s1 普通(自動欄) → s2 大 → s3 特大(2欄) → s4 巨大(1欄) ──
    字越大欄越少、觸控區越大；word-break:keep-all 確保詞不斷行溢出。 */
