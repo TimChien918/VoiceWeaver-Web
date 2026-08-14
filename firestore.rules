@@ -1,0 +1,78 @@
+// VoiceWeaver 網頁版的 Firestore 安全規則（完整版）。
+//
+// **這份要整份貼到 Firebase Console → Firestore Database → 規則 → 發布。**
+// 規則不會跟著 GitHub Pages 自動部署，改程式不會改到它，所以它是唯一需要
+// 手動同步的東西。貼片段會出事：Firestore 是「整份取代」，少貼哪一段，
+// 對應的功能就會靜靜地停掉（前端多半只是 console 一行警告）。
+//
+// 這份涵蓋 app 實際會碰到的每一個路徑，逐一對應到 js/store.js：
+//   users/{uid}/**        個人資料、歷史、復健紀錄、聲學樣板、每日用量計數
+//   shared/apiKeys        全站活動的共用金鑰
+//   grants/{uid}          單獨發給某個人的活動
+//   cloudbridge/{配對碼}   ngrok 授權碼，給 Colab 用配對碼取用
+//
+// 管理工具（vw_admin.py）用服務帳戶連線，**繞過所有規則**，所以下面把
+// 活動相關的 write 全部關掉——網頁端永遠不需要寫，關掉就少一條被濫用的路。
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── 使用者自己的資料 ───────────────────────────────
+    // 包含 users/{uid} 本身與底下所有子集合：
+    //   history / rehabLogs / acousticTemplates / usage/{YYYY-MM-DD}
+    // 需要 list（歷史與復健紀錄是用 query + orderBy 讀的），所以用 read 而非 get。
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // ── 全站活動的共用金鑰 ─────────────────────────────
+    // 登入者（含匿名「直接開始」）才讀得到，而且要文件自己說「現在是活動期間」。
+    // 期間寫在文件欄位裡，所以調整期間＝改資料，規則不必重發。
+    //
+    // **到期日是這整個機制唯一真正擋得住的東西**：金鑰進了瀏覽器就等於交出去了，
+    // 使用者可以複製走；但期限一過，資料庫這一層就直接拒絕發放。
+    //
+    // 用 get 不用 read：read 同時給了 list，那會讓人能列舉 /shared 底下的文件。
+    match /shared/apiKeys {
+      allow get: if request.auth != null
+                 && resource.data.enabled == true
+                 && request.time >= resource.data.activeFrom
+                 && request.time <  resource.data.activeUntil;
+      allow list: if false;
+      allow write: if false;   // 只有管理工具（服務帳戶）寫得動
+    }
+
+    // ── 單獨發給某個人的活動 ───────────────────────────
+    // 條件跟上面一樣，再加上「只有本人讀得到自己那一份」。
+    //
+    // **為什麼不放在 users/{uid} 底下**：上面那條規則是「本人可讀寫自己的資料」，
+    // 本人永遠讀得到——期限就形同虛設。獨立一個 collection 才管得住時間。
+    match /grants/{uid} {
+      allow get: if request.auth != null
+                 && request.auth.uid == uid
+                 && resource.data.enabled == true
+                 && request.time >= resource.data.activeFrom
+                 && request.time <  resource.data.activeUntil;
+      allow list: if false;
+      allow write: if false;   // 同上，只有管理工具寫得動
+    }
+
+    // ── ngrok 配對（讓 Colab 用配對碼取用授權碼）────────
+    // 文件 id 就是配對碼，18 bytes 的亂數（見 store.js 的 ensurePairCode）。
+    // Colab 那端沒有登入，所以 get 必須開放——保護來自「猜不到的 id」。
+    //
+    // list 一定要關掉：開著的話，任何人都能列出整個 collection 把所有人的
+    // 授權碼撈走，那時配對碼再長也沒有意義。
+    //
+    // 寫入只要求已登入。文件 id 是配對碼而不是 uid，規則無從驗證擁有者，
+    // 所以知道別人配對碼的人可以覆蓋掉那一份（只能覆蓋，讀不到更多東西）。
+    // 這是這個設計的已知取捨；配對碼本來就該當成密碼看待。
+    match /cloudbridge/{pairCode} {
+      allow get: if true;
+      allow list: if false;
+      allow write: if request.auth != null;
+    }
+  }
+}

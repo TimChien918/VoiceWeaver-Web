@@ -106,6 +106,10 @@ service cloud.firestore {
 }
 ```
 
+> **完整版在 [`firestore.rules`](firestore.rules)。** 上面只是最小的登入同步規則；
+> 用到限時活動、單獨發放、ngrok 配對的話，請把 `firestore.rules` **整份**貼上去。
+> Firestore 是整份取代，貼片段會讓沒貼到的那些功能靜靜地停掉。
+
 4. **專案設定 → 一般 → 你的應用程式 → Web** → 複製 `firebaseConfig`。
 5. 把 `config.example.js` 另存為 **`config.js`**，貼上你的 `firebaseConfig`。
 
@@ -149,6 +153,8 @@ GitHub repo → **Settings → Pages → Source: main / (root) → Save**。
 自己已經填了金鑰的人不受影響——永遠優先用他自己的。
 
 **規則只設定一次**，之後開啟／關閉／改期間都用管理工具改資料，不必再碰規則：
+
+（下面這段只是說明它怎麼運作；要貼的是 [`firestore.rules`](firestore.rules) 整份。）
 
 ```
 match /shared/apiKeys {
