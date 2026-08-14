@@ -1,29 +1,29 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.71";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES, testEntry } from "./providers.js?v=1.5.71";
-import { initShared, sharedAvailable, sharedUsage, campaignActive, campaignStart, campaignEnd, campaignPersonal, campaignBoth } from "./shared.js?v=1.5.71";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.72";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES, testEntry, hasCloudTts } from "./providers.js?v=1.5.72";
+import { initShared, sharedAvailable, sharedUsage, campaignActive, campaignStart, campaignEnd, campaignPersonal, campaignBoth } from "./shared.js?v=1.5.72";
 import { WEBGPU_MODELS, webgpuSupported, probeWebgpu, webgpuEnabled, setWebgpuEnabled, webgpuModel,
-         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.5.71";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.71";
-import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.71";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.71";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.71";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.71";
-import { bindTap } from "./interaction.js?v=1.5.71";
-import { orderCards } from "./predict.js?v=1.5.71";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.71";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.71";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.71";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.71";
-import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.71";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.71";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.71";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.71";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.71";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.71";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.71";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled } from "./localtts.js?v=1.5.71";
-import { applyI18n, t } from "./i18n.js?v=1.5.71";
-import { setupDemo } from "./demo.js?v=1.5.71";
+         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.5.72";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.72";
+import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.72";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.72";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.72";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.72";
+import { bindTap } from "./interaction.js?v=1.5.72";
+import { orderCards } from "./predict.js?v=1.5.72";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.72";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.72";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.72";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.72";
+import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.72";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.72";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.72";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.72";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.72";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.72";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.72";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled, localHas } from "./localtts.js?v=1.5.72";
+import { applyI18n, t } from "./i18n.js?v=1.5.72";
+import { setupDemo } from "./demo.js?v=1.5.72";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -110,6 +110,7 @@ function fillSettings(){
   renderProviderList("#llmList", "llmApis", LLM_PROVIDERS);
   renderProviderList("#imgList", "imageApis", IMAGE_PROVIDERS);
   renderProviderList("#ttsList", "ttsApis", TTS_PROVIDERS);
+  renderTtsLayers();
   renderSharedNote();
   renderWebgpu();
   renderTtsVoices();
@@ -466,6 +467,42 @@ function renderProviderList(containerId, listKey, catalog){
  * 要講出剩幾次，不是只說「有在借」：使用者會突然發現重組不動了，
  * 而唯一的原因是額度用完——不先讓他看得到，那就是一個無法理解的故障。
  */
+/**
+ * 語音供應商那張卡底下的「實際朗讀順序」。
+ *
+ * 上面那份清單只有**需要金鑰的雲端語音**，而目前只有 Gemini 一家——所以卡片
+ * 看起來像「這個 App 只支援一種聲音」。其實朗讀會依序試三層，另外兩層是在
+ * 別的地方設定的（專屬聲音在「電腦幫忙跑」，瀏覽器語音根本不用設定）。
+ * 把三層都列出來，順序與狀態一眼看得到，才不會有人以為只有 Gemini。
+ */
+function renderTtsLayers(){
+  const box = $("#ttsLayers");
+  if(!box) return;
+  const webOk = "speechSynthesis" in window;
+  const rows = [
+    { key:"tts.layerLocal",   ok: localHas("tts"),
+      st: localHas("tts") ? "tts.stOn" : "tts.stOff" },
+    { key:"tts.layerCloud",   ok: hasCloudTts(),
+      st: hasCloudTts() ? "tts.stOn" : "tts.stNone" },
+    { key:"tts.layerBrowser", ok: webOk,
+      st: webOk ? "tts.always" : "tts.stNo" },
+  ];
+  box.innerHTML = "";
+  rows.forEach((r, i) => {
+    const d = document.createElement("div");
+    d.style.cssText = "display:flex;gap:8px;align-items:baseline;padding:3px 0";
+    const n = document.createElement("span");
+    n.className = "muted"; n.textContent = (i + 1) + ".";
+    const nm = document.createElement("span");
+    nm.style.flex = "1"; nm.textContent = t(r.key);
+    const st = document.createElement("span");
+    st.textContent = t(r.st);
+    st.style.color = r.ok ? "var(--ok, #188038)" : "var(--muted)";
+    d.append(n, nm, st);
+    box.appendChild(d);
+  });
+}
+
 function renderSharedNote(){
   const el = $("#sharedNote");
   if(!el) return;
@@ -987,6 +1024,19 @@ function renderCombo(){
   $("#aacCompose")?.classList.toggle("hidden", !hasAnyLlmKey());
 }
 
+// 圖卡頁組好的那一句。留著是為了「朗讀」與「重組一次」還知道要處理哪一句。
+let aacSentence = "";
+function showAacResult(text){
+  aacSentence = text || "";
+  const card = $("#aacResult");
+  if(!card) return;
+  // 收起結果時把確認卡一起關掉。不關的話它會留在這張隱藏的卡裡「開著」，
+  // 使用者按清空以為取消了，實際上還有一句待確認的話掛在那。
+  if(!aacSentence) $("#confirmDlg")?.classList.add("hidden");
+  $("#aacResultText").textContent = aacSentence;
+  card.classList.toggle("hidden", !aacSentence);
+}
+
 // ── 自訂圖卡（拍照建檔）：原生相機 capture → canvas 縮圖 → 存帳號 ──
 const CC_MAX = 12;            // 縮圖存設定文件（Firestore 單文件 1MB 上限），設個安全上限
 let ccPending = "";           // 待加入的縮圖 dataURL
@@ -1047,17 +1097,24 @@ function setupAac(){
   }, 250));
   // 整句緩衝一次連貫朗讀（Speak All）。強烈意圖（醫療／緊急）先跳確認大圖卡再唸。
   bindTap($("#aacSpeak"), ()=>{ if(combo.length) confirmThenSpeak(comboText()); });
-  bindTap($("#aacClear"), ()=>{ combo.length=0; renderCombo(); });
+  bindTap($("#aacClear"), ()=>{
+    showAacResult(""); combo.length=0; renderCombo(); });
   bindTap($("#aacCompose"), async ()=>{
     if(!combo.length){ toast(t("toast.pickCards")); return; }
     if(!hasAnyLlmKey()){ toast(t("toast.needLlmCompose")); return; }
     toast(t("toast.composing"));
     try{ const s = await composeAac(combo.map(c=>c.word), ctxText);
+      showAacResult(s);
       confirmThenSpeak(s);
-      $("#fragments").value = s; toast(t("toast.composed"));
+      $("#fragments").value = s;          // 想潤飾的人切過去就已經帶好了
+      toast(t("toast.composed"));
       addHistory({ original:"AAC: "+combo.map(c=>c.word).join("+"), reconstructed:s });
     }catch(e){ toast(t("toast.aacFail")+(e.message||e)); }
   });
+
+  bindTap($("#aacResultSpeak"), ()=>{ if(aacSentence) confirmThenSpeak(aacSentence); });
+  bindTap($("#aacResultRegen"), ()=>{ $("#aacCompose")?.click(); });
+  bindTap($("#aacResultRefine"), ()=>{ $('.tab[data-tab="compose"]')?.click(); });
 
   // 搜尋：輸入即篩（跨全部分類比對詞面）
   const sb = $("#aacSearch");
@@ -1192,7 +1249,15 @@ function confirmThenSpeak(text){
   rj.classList.toggle("hidden", rejectStreak === 0);
   if(rejectStreak) rj.textContent = t("confirm.reject")
     .replace("{n}", rejectStreak).replace("{m}", REJECT_LIMIT - rejectStreak);
-  $("#confirmDlg").classList.remove("hidden");
+  // **把確認卡搬到使用者現在看得到的地方。** 它原本固定住在重組分頁的結果卡裡，
+  // 從圖卡頁按「組成句子」時，卡片開在另一個分頁上——畫面上等於什麼都沒發生。
+  // 搬 DOM 節點不會掉事件監聽，所以不必複製一份 markup（複製了就會有兩份要維護，
+  // 而其中一份遲早會忘記改）。
+  const host = document.querySelector('.tab.active')?.dataset.tab === "aac"
+    ? $("#aacResult") : $("#result");
+  const dlg = $("#confirmDlg");
+  if(host && dlg.parentElement !== host) host.appendChild(dlg);
+  dlg.classList.remove("hidden");
 }
 async function onConfirmReject(){
   $("#confirmDlg").classList.add("hidden");
@@ -1569,7 +1634,7 @@ async function renderVoices(){
           >${esc(t("set.voicesReauth"))}</button></p>`);
     }
     try{
-      const drive = await import("./drive.js?v=1.5.71");
+      const drive = await import("./drive.js?v=1.5.72");
       const d = await drive.diagnoseVoiceModels();
       // 同名根要先講。有兩個 VoiceWeaver 時，底下那些「沒有 Models」之類的
       // 描述全部都是在講錯的那一個資料夾，先看到它才不會被帶去修錯的地方。
