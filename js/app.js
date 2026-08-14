@@ -1,6 +1,6 @@
 import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.70";
 import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES, testEntry } from "./providers.js?v=1.5.70";
-import { initShared, sharedAvailable, sharedUsage, campaignActive, campaignStart, campaignEnd, campaignPersonal } from "./shared.js?v=1.5.70";
+import { initShared, sharedAvailable, sharedUsage, campaignActive, campaignStart, campaignEnd, campaignPersonal, campaignBoth } from "./shared.js?v=1.5.70";
 import { WEBGPU_MODELS, webgpuSupported, probeWebgpu, webgpuEnabled, setWebgpuEnabled, webgpuModel,
          setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.5.70";
 import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.70";
@@ -523,9 +523,12 @@ function campaignDates(){
 function showCampaignInfo(){
   const { from, until } = campaignDates();
   const borrowing = !(state.llmApis||[]).some(e => e.key);
-  const key = campaignPersonal()
-    ? (borrowing ? "campaign.personal" : "campaign.personalOwn")
-    : (borrowing ? "campaign.borrow"   : "campaign.own");
+  // 三種來源組合各有各的話要講：全站、只有個人、兩份都有（次數相加）。
+  const key = campaignBoth()
+    ? (borrowing ? "campaign.both" : "campaign.bothOwn")
+    : campaignPersonal()
+      ? (borrowing ? "campaign.personal" : "campaign.personalOwn")
+      : (borrowing ? "campaign.borrow"   : "campaign.own");
   const { used, limit } = sharedUsage();
   toast(t(key).replace("{from}", from).replace("{until}", until)
               .replace("{left}", Math.max(0, limit - used)).replace("{limit}", limit));
