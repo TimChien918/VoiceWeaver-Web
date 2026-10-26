@@ -1,29 +1,30 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.78";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES, testEntry, hasCloudTts } from "./providers.js?v=1.5.78";
-import { initShared, sharedAvailable, sharedUsage, campaignActive, campaignStart, campaignEnd, campaignPersonal, campaignBoth } from "./shared.js?v=1.5.78";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.79";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES, testEntry, hasCloudTts } from "./providers.js?v=1.5.79";
+import { initShared, sharedAvailable, sharedUsage, campaignActive, campaignStart, campaignEnd, campaignPersonal, campaignBoth } from "./shared.js?v=1.5.79";
 import { WEBGPU_MODELS, webgpuSupported, probeWebgpu, webgpuEnabled, setWebgpuEnabled, webgpuModel,
-         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.5.78";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.78";
-import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.78";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.78";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.78";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.78";
-import { bindTap } from "./interaction.js?v=1.5.78";
-import { orderCards } from "./predict.js?v=1.5.78";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.78";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.78";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.78";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.78";
-import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.78";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.78";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.78";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.78";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.78";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.78";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.78";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled, localHas } from "./localtts.js?v=1.5.78";
-import { applyI18n, t } from "./i18n.js?v=1.5.78";
-import { setupDemo } from "./demo.js?v=1.5.78";
+         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.5.79";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.79";
+import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.79";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.79";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.79";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.79";
+import { bindTap } from "./interaction.js?v=1.5.79";
+import { safeImgSrc } from "./htmlsafe.js?v=1.5.79";   // 同步回來的圖卡不可信，見該檔案開頭
+import { orderCards } from "./predict.js?v=1.5.79";
+import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.79";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.79";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.79";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.79";
+import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.79";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.79";
+import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.79";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.79";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.79";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.79";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.79";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled, localHas } from "./localtts.js?v=1.5.79";
+import { applyI18n, t } from "./i18n.js?v=1.5.79";
+import { setupDemo } from "./demo.js?v=1.5.79";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -963,9 +964,12 @@ function aacCards(cat){
 }
 
 function cardHtml(c){
-  return `<div class="acard${c.pos?` pos-${c.pos}`:""}" data-w="${escapeHtml(c.word)}" data-pos="${c.pos||""}" data-id="${escapeHtml(c.id||"")}">${
-    c.img ? `<img class="aphoto" src="${c.img}" alt="" draggable="false" />`
-          : `<span class="emoji">${c.emoji}</span>`
+  // img／emoji／pos 全都要過濾：自建圖卡是從別的裝置同步回來的，
+  // 內容不是這支程式產生的（見 js/htmlsafe.js）。
+  const img = safeImgSrc(c.img);
+  return `<div class="acard${c.pos?` pos-${escapeHtml(c.pos)}`:""}" data-w="${escapeHtml(c.word)}" data-pos="${escapeHtml(c.pos||"")}" data-id="${escapeHtml(c.id||"")}">${
+    img ? `<img class="aphoto" src="${img}" alt="" draggable="false" />`
+        : `<span class="emoji">${escapeHtml(c.emoji)}</span>`
   }${escapeHtml(c.word)}</div>`;
 }
 // 點一張卡：進整句緩衝、記使用統計（含與句中其他卡的共現關聯，供推薦排序學習）
@@ -1080,8 +1084,8 @@ function fileToThumb(file, size=192){
 function renderCcList(){
   const list = state.customCards || [];
   $("#ccList").innerHTML = list.map(c=>
-    `<div class="acard ccitem${c.pos?` pos-${c.pos}`:""}"><button class="cc-del" data-id="${c.id}">✕</button>` +
-    `<img class="aphoto" src="${c.img}" alt="" draggable="false" />${escapeHtml(c.word)}</div>`).join("")
+    `<div class="acard ccitem${c.pos?` pos-${escapeHtml(c.pos)}`:""}"><button class="cc-del" data-id="${escapeHtml(c.id)}">✕</button>` +
+    `<img class="aphoto" src="${safeImgSrc(c.img)}" alt="" draggable="false" />${escapeHtml(c.word)}</div>`).join("")
     || `<span class="tiny muted">${t("cc.empty")}</span>`;
   $$("#ccList .cc-del").forEach(b=>bindTap(b, ()=>{
     state.customCards = state.customCards.filter(c=>c.id !== b.dataset.id);
@@ -1661,7 +1665,7 @@ async function renderVoices(){
           >${esc(t("set.voicesReauth"))}</button></p>`);
     }
     try{
-      const drive = await import("./drive.js?v=1.5.78");
+      const drive = await import("./drive.js?v=1.5.79");
       const d = await drive.diagnoseVoiceModels();
       // 同名根要先講。有兩個 VoiceWeaver 時，底下那些「沒有 Models」之類的
       // 描述全部都是在講錯的那一個資料夾，先看到它才不會被帶去修錯的地方。

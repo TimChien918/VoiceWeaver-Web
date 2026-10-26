@@ -5,10 +5,11 @@
 //   • 怎麼按都不會跳走：唯一出口是照護者「右上角隱形區連點 5 下 → 輸入 PIN」。
 //   • 點卡片＝立即朗讀＋放大微動畫（建立因果關係與信任）。
 //   • 所有觸發都綁 pointerup + 防連點（顫抖誤觸只算一次），全面禁止長按。
-import { state, save } from "./store.js?v=1.5.78";
-import { speakUpbeat } from "./speech.js?v=1.5.78";
-import { severeCore } from "./aac.js?v=1.5.78";
-import { bindTap } from "./interaction.js?v=1.5.78";   // 共用觸控防呆（pointerup + 防連點 + 禁長按）
+import { state, save } from "./store.js?v=1.5.79";
+import { speakUpbeat } from "./speech.js?v=1.5.79";
+import { severeCore } from "./aac.js?v=1.5.79";
+import { bindTap } from "./interaction.js?v=1.5.79";   // 共用觸控防呆（pointerup + 防連點 + 禁長按）
+import { safeImgSrc } from "./htmlsafe.js?v=1.5.79";   // 同步回來的圖卡不可信，見該檔案開頭
 
 const $ = (s)=>document.querySelector(s);
 const esc = (s)=>String(s??"").replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
@@ -68,9 +69,10 @@ function renderTrail(){
     `<button class="ktrail-ctl" data-act="clear" aria-label="clear">✕</button>` +
     _trail.map((c,i)=>
       `<div class="ktrail-item" data-i="${i}">${
-        // emoji 與文字都跳脫了，img 卻沒有——自建照片卡會跨裝置同步過來，
-        // 內容不是這支程式產生的就不能當成安全的。
-        c.img ? `<img src="${esc(c.img)}" alt="" draggable="false" />` : `<span class="ke">${esc(c.emoji)}</span>`
+        // 自建照片卡會跨裝置同步過來，內容不是這支程式產生的就不能當成安全的。
+        // 用白名單而不是只做跳脫：跳脫要求每個算繪點都記得呼叫，而底下那個
+        // 就漏了（相隔 55 行）。白名單是把關在值本身。
+        safeImgSrc(c.img) ? `<img src="${safeImgSrc(c.img)}" alt="" draggable="false" />` : `<span class="ke">${esc(c.emoji)}</span>`
       }<span class="kw">${esc(c.word)}</span></div>`).join("");
   // 點單張線索＝重唸那一個（幫家人確認）；整串重播；清空——都是家人操作，不碰 AI
   box.querySelectorAll(".ktrail-item").forEach(el=>bindTap(el, ()=>{
@@ -118,7 +120,7 @@ function renderScanCard(){
   box.dataset.n = 1;
   box.innerHTML =
     `<div class="kcard kscan" data-w="${esc(c.word)}">${
-      c.img ? `<img class="kimg" src="${c.img}" alt="" draggable="false" />`
+      safeImgSrc(c.img) ? `<img class="kimg" src="${safeImgSrc(c.img)}" alt="" draggable="false" />`
             : `<span class="kemoji">${esc(c.emoji)}</span>`
     }<span class="kword">${esc(c.word)}</span></div>`;
   const card = box.querySelector(".kcard");
