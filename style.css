@@ -577,3 +577,46 @@ body.demo-nocursor, body.demo-nocursor * { cursor: none !important; }
 .confirm-inline h3{ margin:0 0 6px; font-size:1rem; }
 .confirm-inline .row{ display:flex; gap:8px; margin-top:10px; }
 .confirm-inline .row .btn{ flex:1; }
+
+/* ── 無障礙掃描（a11yscan.js）────────────────────────────────
+   高亮要「粗、亮、會動」：掃描使用者是在等那一格亮到想要的東西，
+   細細一條框在圖卡網格裡根本看不出來現在輪到誰。 */
+.scan-hl{ outline:4px solid var(--accent) !important; outline-offset:3px;
+  box-shadow:0 0 0 8px color-mix(in srgb, var(--accent) 25%, transparent) !important;
+  animation:scanglow 1s ease-in-out infinite alternate; border-radius:12px; }
+@keyframes scanglow{ from{ outline-color:var(--accent); } to{ outline-color:var(--accent2); } }
+body.scan-on{ padding-bottom:84px; }
+.scan-bar{ position:fixed; left:8px; right:8px; bottom:calc(8px + env(safe-area-inset-bottom)); z-index:60;
+  display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:16px;
+  background:var(--card); color:var(--fg); border:2px solid var(--accent);
+  box-shadow:0 6px 24px rgba(0,0,0,.25); }
+.scan-bar.hidden{ display:none; }
+.scan-bar .scan-text{ flex:1; min-width:0; display:flex; flex-direction:column; }
+.scan-bar #scanLabel{ font-size:1.05rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.scan-bar .btn{ white-space:nowrap; }
+/* 眨眼進度：閉眼越久，眼睛圖示外圈填得越滿，使用者看得到「再撐一下就選到了」 */
+.scan-eye{ font-size:1.4rem; width:40px; height:40px; display:grid; place-items:center; border-radius:50%;
+  background:conic-gradient(var(--accent) calc(var(--p,0) * 360deg), var(--line) 0); }
+.scan-eye.hidden{ display:none; }
+body.kiosk-on .scan-bar{ z-index:45; }
+#dwellRing{ position:fixed; left:0; top:0; width:36px; height:36px; margin:-18px 0 0 -18px;
+  pointer-events:none; z-index:9998; display:none; }
+#dwellRing.on{ display:block; }
+#dwellRing svg{ width:100%; height:100%; transform:rotate(-90deg); }
+#dwellRing .ring-bg{ fill:none; stroke:rgba(0,0,0,.18); stroke-width:3; }
+#dwellRing .ring{ fill:none; stroke:var(--accent); stroke-width:3;
+  stroke-dasharray:100.5; stroke-dashoffset:calc(100.5 * (1 - var(--p, 0))); }
+
+/* ── 復健 AI 回饋細項（流暢度／語調／語意）── */
+.subscores{ display:flex; flex-direction:column; gap:4px; margin-top:8px; }
+.subscore{ display:grid; grid-template-columns:5.5em 1fr 2.2em; align-items:center; gap:8px; }
+.subbar{ height:8px; border-radius:99px; background:var(--line); overflow:hidden; }
+.subbar > i{ display:block; height:100%; background:var(--muted); }
+.subbar > i.good{ background:var(--accent2); } .subbar > i.mid{ background:#ff9f0a; } .subbar > i.low{ background:var(--danger); }
+.subscore b{ text-align:right; }
+
+/* ── 聲紋同意 ── */
+.vc-box{ margin-top:10px; padding:10px; border-radius:12px; border:1px dashed var(--line); }
+.vc-box .vc-status{ margin:0 0 6px; color:var(--danger); }
+.vc-box .vc-status.vc-on{ color:var(--ok, #188038); }
+.vc-card p{ line-height:1.55; }

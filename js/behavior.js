@@ -19,6 +19,37 @@ function bm() {
   return state.behavior;
 }
 
+// ── 逐日累計（復健軌跡趨勢圖用）──
+// 上面的彙總值只能回答「整體平均多少」，回答不了「有沒有在進步」——而後者才是
+// 治療師要看的。所以另外按日累計一份：每天只存四個數字（不存逐筆），
+// 一年也才幾百個小物件，跟著 behavior 一起走既有的 save() 同步到帳號。
+//   fs/fsMs＝當天「開啟到第一次發聲」的次數與總毫秒；ct/ch＝當天選句總數與第一候選命中數。
+// 日期鍵用**本機**日期：治療師看的是患者的「哪一天」，用 UTC 切的話台灣早上八點前
+// 的練習會被算到前一天。
+const DAILY_KEEP = 400;   // 留一年多就夠畫年度趨勢；更舊的就不再保留，避免設定文件無限長大
+
+export function dayKey(ts = Date.now()){
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+function today(){
+  const b = bm();
+  if (!b.daily || typeof b.daily !== "object") b.daily = {};
+  const k = dayKey();
+  const cur = b.daily[k] || (b.daily[k] = { fs:0, fsMs:0, ct:0, ch:0 });
+  for (const f of ["fs","fsMs","ct","ch"]) if (typeof cur[f] !== "number") cur[f] = 0;
+  const keys = Object.keys(b.daily);
+  if (keys.length > DAILY_KEEP) keys.sort().slice(0, keys.length - DAILY_KEEP).forEach(x => delete b.daily[x]);
+  return cur;
+}
+
+/** 逐日資料（唯讀複本）：{ "YYYY-MM-DD": {fs, fsMs, ct, ch} }。 */
+export function behaviorDaily(){
+  const d = bm().daily;
+  return (d && typeof d === "object") ? JSON.parse(JSON.stringify(d)) : {};
+}
+
 const _openedAt = Date.now();
 let _firstSpeakDone = false;
 
@@ -28,7 +59,9 @@ export function markFirstSpeak() {
   _firstSpeakDone = true;
   const b = bm();
   b.firstSpeakCount++;
-  b.firstSpeakSumMs += Date.now() - _openedAt;
+  const ms = Date.now() - _openedAt;
+  b.firstSpeakSumMs += ms;
+  const d = today(); d.fs++; d.fsMs += ms;
   save();
 }
 
@@ -37,6 +70,7 @@ export function recordCandidateChoice(firstHit) {
   const b = bm();
   b.candidateTotal++;
   if (firstHit) b.candidateFirstHit++;
+  const d = today(); d.ct++; if (firstHit) d.ch++;
   save();
 }
 

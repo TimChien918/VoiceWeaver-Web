@@ -58,7 +58,7 @@ function UNITS() {
     {
       id: "intro", icon: "🎬", title: "Title & overview", est: 12,
       steps: [
-        { cap: "Aphasia damages the route from thought to speech, while the thought itself stays intact.", act: () => titleCard("VoiceWeaver", "How it works — browser build") },
+        { cap: "Aphasia damages the route from thought to speech, while the thought itself stays intact.", act: () => titleCard("Speak My Life", "How it works — browser build") },
         { cap: "This is the browser build — no install, no account required, running entirely on this page.", act: () => titleSub("No install · runs in the browser") },
         { cap: "Here is how each part of it works.", act: hideTitle },
       ],
@@ -203,7 +203,7 @@ function UNITS() {
     {
       id: "outro", icon: "🏁", title: "Closing card", est: 8,
       steps: [
-        { cap: "Aphasia damages language. It does not damage the person underneath it.", act: () => titleCard("VoiceWeaver", "Aphasia communication · rehabilitation · safety") },
+        { cap: "Aphasia damages language. It does not damage the person underneath it.", act: () => titleCard("Speak My Life", "Aphasia communication · rehabilitation · safety") },
         { cap: "", act: hideTitle },
       ],
     },
@@ -995,7 +995,7 @@ function download(blob, suffix = "") {
   if (!blob) return;
   const d = new Date();
   const p = (n) => String(n).padStart(2, "0");
-  const name = `VoiceWeaver-Demo-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}${suffix}.webm`;
+  const name = `SpeakMyLife-Demo-${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}${suffix}.webm`;
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url; a.download = name;

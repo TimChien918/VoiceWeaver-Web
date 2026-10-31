@@ -43,7 +43,8 @@ function roomUrl() {
     "config.prejoinPageEnabled=false&" +
     "config.prejoinConfig.enabled=false&" +
     "config.requireDisplayName=false&" +
-    'userInfo.displayName=%22VoiceWeaver%22';
+    // 家人進視訊時看到的名字＝產品名（依介面語言）。房間名前綴 vw- 是識別字，不跟著改名。
+    "userInfo.displayName=" + encodeURIComponent(JSON.stringify(t("app.short")));
 }
 
 const QUICK = ["crisis.q1", "crisis.q2", "crisis.q3", "crisis.q4", "crisis.q5"];
@@ -74,10 +75,18 @@ export function openCrisis() {
   }));
 
   $("#crisisLog").innerHTML = "";
+  startBreathing();
+
+  // 危機訊息只送給設定裡指定的家人（apiKeys.tgchat），沒有其他收件人（設計書第 6 點）。
+  // 沒設定時明講「沒有傳出去」，不要顯示成一般的「傳送失敗」，更不能顯示「已通知家人」——
+  // 前者要照護者去補設定，後者會讓人以為只是網路不好、等一下就會到。
+  if (!state.apiKeys?.tgtoken || !state.apiKeys?.tgchat) {
+    $("#crisisStatus").textContent = t("crisis.noFamily");
+    pushMsg(t("crisis.noFamily"), "sys");
+    return;     // 沒有家人可通知：不拍照、不輪詢（拍了也沒有人收），專線與呼吸引導照常可用
+  }
   pushMsg(t("crisis.sysNotified"), "sys");
   pushMsg(t("crisis.sysVideoHint"), "sys");
-
-  startBreathing();
 
   // 通知家人（失敗不擋畫面——專線按鈕還是要能按）。
   // 先送出、位置隨後補第二則：等定位會讓通報整整晚 6 秒才出去。

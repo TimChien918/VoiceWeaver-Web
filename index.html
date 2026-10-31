@@ -3,7 +3,10 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-<title>VoiceWeaver 網頁版</title>
+<title>拾語者 Speak My Life｜網頁版</title>
+<meta name="description" content="拾語者 Speak My Life：中風失語者的 AI 溝通與居家復健系統。把散落的碎詞拾起，重組成自然的句子，由患者本人確認後說出口；並提供 AAC 圖卡、語音復健、復健軌跡與危機介入。" />
+<!-- 圖示：雙手（下方的弧）捧起一個對話框＝「把散落的話語拾起來」。inline SVG 免多一個檔案、也免多一次請求。 -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232f6f5e'/%3E%3Cpath d='M16 9h32a6 6 0 0 1 6 6v12a6 6 0 0 1-6 6H34l-7 6v-6H16a6 6 0 0 1-6-6V15a6 6 0 0 1 6-6z' fill='%23fff'/%3E%3Ccircle cx='22' cy='21' r='3' fill='%232f6f5e'/%3E%3Ccircle cx='32' cy='21' r='3' fill='%232f6f5e'/%3E%3Ccircle cx='42' cy='21' r='3' fill='%232f6f5e'/%3E%3Cpath d='M9 43c5 14 41 14 46 0' fill='none' stroke='%23ffd27a' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E" />
 <!-- 這一版是哪一版。由 tools/stamp-version.py 跟著 ?v= 一起更新。
      沒有這個東西的話，「網頁到底有沒有更新」誰都答不出來——只能猜快取、猜部署，
      而每猜一次就是使用者再白試一次。畫面右下角會顯示它，錯誤訊息也會帶著它。 -->
@@ -14,9 +17,10 @@
   <!-- 登入閘 -->
   <div id="login" class="login hidden">
     <div class="login-card">
-      <div class="logo">🗣️</div>
-      <h1>VoiceWeaver</h1>
-      <p class="muted" data-i18n="login.tagline">輕量網頁版 · 失語溝通輔助</p>
+      <!-- 與分頁圖示同一個圖：手托起對話框＝拾起話語。alt 留空：旁邊的 h1 已經念出產品名，讀屏不必念兩次。 -->
+      <div class="logo"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232f6f5e'/%3E%3Cpath d='M16 9h32a6 6 0 0 1 6 6v12a6 6 0 0 1-6 6H34l-7 6v-6H16a6 6 0 0 1-6-6V15a6 6 0 0 1 6-6z' fill='%23fff'/%3E%3Ccircle cx='22' cy='21' r='3' fill='%232f6f5e'/%3E%3Ccircle cx='32' cy='21' r='3' fill='%232f6f5e'/%3E%3Ccircle cx='42' cy='21' r='3' fill='%232f6f5e'/%3E%3Cpath d='M9 43c5 14 41 14 46 0' fill='none' stroke='%23ffd27a' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E" width="64" height="64" alt="" style="display:block;margin:0 auto;border-radius:14px" /></div>
+      <h1 data-i18n="app.name">拾語者 Speak My Life</h1>
+      <p class="muted" data-i18n="login.tagline">中風失語者的 AI 溝通與居家復健系統</p>
       <!-- 最簡入口：一顆大按鈕直接開始（免帳號）；Google 登入給照護者做跨裝置同步 -->
       <button id="btnAnon" class="btn primary big" data-i18n="login.anon">▶ 直接開始</button>
       <button id="btnGoogle" class="btn ghost" data-i18n="login.google">使用 Google 登入（跨裝置同步）</button>
@@ -28,7 +32,7 @@
   <!-- 主畫面 -->
   <div id="app" class="app hidden">
     <header class="topbar">
-      <span class="title">VoiceWeaver</span>
+      <span class="title" data-i18n="app.short">拾語者</span>
       <span class="spacer"></span>
       <!-- 求救入口：危機視窗原本只有 Escape×3 與「連錯 3 次」兩條路，手機沒有 Escape 鍵＝按不到。
            放 topbar 而不是重組分頁，是因為崩潰不挑分頁——在圖卡頁、復健頁也要按得到。 -->
@@ -169,6 +173,9 @@
             <button id="rehabNext" class="btn ghost hidden" data-i18n="rehab.next">下一句 ▶</button>
           </div>
           <div id="rehabScore"></div>
+          <!-- 設計書第 6 點「錄音評分後刪除」：跟讀走瀏覽器語音辨識，這支程式拿到的只有文字，
+               評分完只留文字與分數。寫在畫面上，家屬不必去猜聲音有沒有被存起來。 -->
+          <p class="tiny muted" style="margin:8px 0 0" data-i18n="rehab.privacyNote">🔒 跟讀的聲音只用於這次辨識評分，評分完立即丟棄，不會存進本機或雲端；只保留文字與分數。</p>
         </div>
         <div class="card">
           <label class="lbl" data-i18n="rehab.recent">最近練習</label>
@@ -212,6 +219,15 @@
         <div class="card">
           <label class="lbl" data-i18n="report.trend">分數趨勢</label>
           <canvas id="reportChart" style="width:100%;height:150px"></canvas>
+        </div>
+        <!-- 復健軌跡趨勢圖（設計書模組 3）：反應時間與命中率隨時間的變化，給語言治療師追蹤用 -->
+        <div class="card">
+          <label class="lbl"><span data-i18n="traj.title">📈 復健軌跡趨勢圖</span> <span id="trajRange" class="tiny muted"></span></label>
+          <div class="tiny muted" data-i18n="traj.reactionTitle">⏱ 反應時間（秒，越低越好）</div>
+          <canvas id="trajReaction" style="width:100%;height:170px"></canvas>
+          <div class="tiny muted" style="margin-top:8px" data-i18n="traj.hitTitle">🎯 命中率（%，越高越好）</div>
+          <canvas id="trajHit" style="width:100%;height:170px"></canvas>
+          <p class="tiny muted" style="margin-top:8px" data-i18n="traj.note">反應＝開 App 到第一次發聲／跟讀時開口前的停頓 · 命中＝AI 第一候選被採用／跟讀得分 ≥ 80。沒有練習的日子是斷點，不算 0 分。</p>
         </div>
         <div class="card">
           <label class="lbl" data-i18n="report.recent10">最近 10 筆練習</label>
@@ -355,6 +371,12 @@
           <p class="tiny muted" data-i18n="set.voicesDesc">存在你自己 Google Drive 的 VoiceWeaver/Models/ 裡，手機、電腦、網頁看到的是同一份。這裡只列出有哪些聲音，合成仍然在電腦或 Colab 上跑。</p>
           <div id="voiceList"></div>
           <p id="voiceMsg" class="tiny muted" style="margin:6px 0 0"></p>
+          <!-- 聲紋同意（設計書第 6 點）：沒有同意，專屬聲音一律不會被拿來朗讀 -->
+          <div class="vc-box">
+            <p class="tiny vc-status"></p>
+            <button type="button" class="btn ghost vc-grant" data-i18n="vc.grantBtn">📝 閱讀並同意使用聲紋</button>
+            <button type="button" class="btn ghost vc-revoke hidden" data-i18n="vc.revokeBtn">撤回聲紋同意</button>
+          </div>
         </div>
         <div class="card complex">
           <h3 data-i18n="set.tgTitle">🆘 緊急通報（Telegram，選用）</h3>
@@ -364,6 +386,9 @@
           <input id="k_familyPhone" type="tel" data-i18n-ph="ph.familyPhone" placeholder="例 0912345678" />
           <label class="lbl" data-i18n="set.tgChat">Chat ID（接收者）</label>
           <input id="k_tgchat" type="text" autocomplete="off" />
+          <!-- 設計書第 6 點「危機訊息僅傳送給指定家人」：收件人只有上面這一個 Chat ID -->
+          <p class="tiny muted" style="margin:8px 0 0" data-i18n="tgp.rule">🔒 求救與危機訊息（文字、位置、現場照片、語音）只會傳送到上面這個 Chat ID——也就是你指定的家人。沒有填就不會傳到任何地方，不會改送給開發者或其他人。</p>
+          <p id="tgPrivacyState" class="tiny" style="margin:4px 0 0"></p>
         </div>
         <div class="card">
           <h3 data-i18n="set.prefs">偏好</h3>
@@ -397,6 +422,26 @@
             <span><span data-i18n="set.confirmCard">AAC 確認卡</span>
             <br><span class="tiny muted" data-i18n="set.confirmCardDesc">組句後跳出大圖卡供確認，按「對」才朗讀。</span></span></label>
         </div>
+        <!-- 無障礙操作（設計書模組 2）：鼻控在「偏好」；這裡是掃描＋開關、眨眼選取、停留點選 -->
+        <div class="card" data-setkey="a11y">
+          <h3 data-i18n="a11y.title">♿ 無障礙操作（掃描／眨眼／停留點選）</h3>
+          <label class="row"><input id="s_scan" type="checkbox" />
+            <span><span data-i18n="scan.enable">掃描模式</span>
+            <br><span class="tiny muted" data-i18n="scan.desc">畫面自動逐一高亮區塊與按鈕；亮到想要的那格時，按空白鍵／Enter、或點畫面任何地方就選取。先選區塊、再選裡面的按鈕，一輪沒選會自動退回。</span></span></label>
+          <label class="lbl"><span data-i18n="scan.speed">掃描速度（每格停留）</span> <span id="scanSpeedVal" class="muted"></span></label>
+          <input id="s_scanSpeed" type="range" min="0.8" max="4" step="0.1" />
+          <label class="row"><input id="s_blink" type="checkbox" />
+            <span><span data-i18n="blink.enable">眨眼選取</span>
+            <br><span class="tiny muted" data-i18n="blink.desc">前鏡頭偵測刻意的長眨眼（雙眼閉住超過設定時間）＝選取目前高亮的項目；一般自然眨眼不會觸發。會一併開啟掃描模式。</span></span></label>
+          <label class="lbl"><span data-i18n="blink.hold">閉眼多久算選取</span> <span id="blinkHoldVal" class="muted"></span></label>
+          <input id="s_blinkHold" type="range" min="0.25" max="1.2" step="0.05" />
+          <p id="blinkStatus" class="tiny muted" style="margin:6px 0 0"></p>
+          <label class="row"><input id="s_dwell" type="checkbox" />
+            <span><span data-i18n="dwell.enable">停留點選（滑鼠／觸控筆）</span>
+            <br><span class="tiny muted" data-i18n="dwell.desc">指標停在按鈕上一段時間就自動點擊，不必按下去。停留時間也套用到鼻子頭控。</span></span></label>
+          <label class="lbl"><span data-i18n="dwell.time">停留時間</span> <span id="dwellVal" class="muted"></span></label>
+          <input id="s_dwellMs" type="range" min="0.5" max="3" step="0.1" />
+        </div>
         <div class="card">
           <h3 data-i18n="care.title">🧑‍⚕️ 使用模式（依嚴重程度）</h3>
           <div id="sevModes"></div>
@@ -420,6 +465,11 @@
             <button id="lt_add" class="btn ghost" data-i18n="set.addCloud">➕ 新增雲端</button>
           </div>
           <div id="lt_list" style="display:flex;flex-direction:column;gap:6px;margin-top:8px"></div>
+          <div class="vc-box">
+            <p class="tiny vc-status"></p>
+            <button type="button" class="btn ghost vc-grant" data-i18n="vc.grantBtn">📝 閱讀並同意使用聲紋</button>
+            <button type="button" class="btn ghost vc-revoke hidden" data-i18n="vc.revokeBtn">撤回聲紋同意</button>
+          </div>
           <label class="lbl" data-i18n="set.voiceLabel">角色語音</label>
           <select id="lt_voice"><option value="" data-i18n="set.voiceFirst">（先偵測連線）</option></select>
           <label class="lbl" data-i18n="set.emotionLabel">語氣情緒</label>
@@ -447,7 +497,7 @@
           <label class="lbl" data-i18n="ng.token">ngrok authtoken</label>
           <input id="ng_token" type="password" data-i18n-ph="ph.ngToken" placeholder="從 dashboard.ngrok.com 複製" autocomplete="off" />
           <label class="lbl" data-i18n="ng.domain">固定網域（選填，建議）</label>
-          <input id="ng_domain" type="text" data-i18n-ph="ph.ngDomain" placeholder="例 voiceweaver.ngrok-free.app（填了網址就永遠不變）" autocomplete="off" />
+          <input id="ng_domain" type="text" data-i18n-ph="ph.ngDomain" placeholder="例 speakmylife.ngrok-free.app（填了網址就永遠不變）" autocomplete="off" />
           <button id="ng_use" class="btn ghost" style="margin-top:6px" data-i18n="ng.useUrl">☁️ 用此 Colab 網址連線</button>
           <label class="lbl" data-i18n="ng.pair">Colab 配對碼（貼到 Colab 的 VW_PAIR_CODE）</label>
           <div class="row" style="gap:6px">
@@ -481,7 +531,7 @@
         </div>
         </div><!-- /settingsCards -->
         <p id="saveState" class="tiny muted center">—</p>
-        <p class="tiny muted center" data-i18n="footer">VoiceWeaver 網頁輕量版 · 純 API/瀏覽器、無本地運算</p>
+        <p class="tiny muted center" data-i18n="footer">拾語者 Speak My Life 網頁輕量版 · 純 API/瀏覽器、無本地運算</p>
       </section>
     </main>
     <!-- 重症／高齡防呆模式：去科技化全螢幕圖卡（像一張實體墊板；唯一出口＝右上角連點5下+PIN） -->
@@ -532,6 +582,21 @@
       <!-- 沒有關閉鈕是刻意的：結束由家人在 Telegram 打 /end 決定。
            會走到這個畫面的人，正是最不該讓他一個人把求救關掉的時候。 -->
       <p class="crisis-locked" data-i18n="crisis.lockedNote">🔒 為了你的安全，這個畫面需要家人確認後才能關閉（家人在訊息輸入 /end 即可結束）</p>
+    </div>
+  </div>
+  <!-- 聲紋使用知情同意（設計書第 6 點）：用、存、撤回三件事講清楚，勾選「本人或已取得本人同意」才能按同意 -->
+  <div id="voiceConsentDlg" class="modal hidden">
+    <div class="modal-card vc-card">
+      <h3 data-i18n="vc.title">🗣 使用專屬聲音（聲紋）之前</h3>
+      <p class="tiny" data-i18n="vc.what">用途：用 GPT-SoVITS 模仿一個真實的人的聲音（患者病發前的聲音，或家人的聲音），把患者確認過的句子用這個聲音唸出來。聽的人會以為是本人在說話，所以必須先取得聲音主人的同意。</p>
+      <p class="tiny" data-i18n="vc.where">存放：聲音模型存在你自己的 Google Drive（VoiceWeaver/Models/），合成在你自己的電腦或 Colab 上進行。這個網頁不會上傳、也不會保存任何錄音；設定裡只記錄「是否同意、何時同意」。</p>
+      <p class="tiny" data-i18n="vc.revoke">撤回：隨時可以在設定裡按「撤回聲紋同意」，撤回後立刻停用專屬聲音、改用一般語音。要徹底刪除聲音模型，請到 Google Drive 刪除對應資料夾。</p>
+      <label class="row" style="align-items:flex-start;gap:8px;margin:10px 0"><input id="vcAgreeChk" type="checkbox" />
+        <span class="tiny" data-i18n="vc.owner">我是這個聲音的本人，或已取得聲音本人（或其法定代理人）的同意。</span></label>
+      <div class="row">
+        <button id="vcAgree" class="btn primary" type="button" disabled data-i18n="vc.agree">同意並啟用</button>
+        <button id="vcDecline" class="btn ghost" type="button" data-i18n="vc.decline">不同意</button>
+      </div>
     </div>
   </div>
   <!-- 語音鎖定：偵測到自傷／拒絕治療語句時蓋掉整個畫面。

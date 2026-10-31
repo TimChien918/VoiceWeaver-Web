@@ -10,7 +10,7 @@ import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacr
 import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.78";
 import { bindTap } from "./interaction.js?v=1.5.78";
 import { orderCards } from "./predict.js?v=1.5.78";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.78";
+import { bankFor } from "./clinical.js?v=1.5.78";
 import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.78";
 import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.78";
 import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.78";
@@ -22,7 +22,10 @@ import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNo
 import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.78";
 import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.78";
 import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled, localHas } from "./localtts.js?v=1.5.78";
+import "./i18n-sml.js?v=1.5.78";
 import { applyI18n, t } from "./i18n.js?v=1.5.78";
+import { setupVoiceConsent, renderVoiceConsent, requestVoiceConsent, hasVoiceConsent, onVoiceConsentChange } from "./consent.js?v=1.5.78";
+import { setupA11yScan, renderA11yScan } from "./a11yscan.js?v=1.5.78";
 import { setupDemo } from "./demo.js?v=1.5.78";
 
 const $ = (s)=>document.querySelector(s);
@@ -147,6 +150,24 @@ function fillSettings(){
     $("#lt_voice").innerHTML = `<option value="${escapeHtml(state.settings.localVoiceName+"|"+state.settings.localVoiceLang)}">${escapeHtml(state.settings.localVoiceName)}（${escapeHtml(state.settings.localVoiceLang||"?")}）</option>`;
   }
   if($("#lt_emotion")) $("#lt_emotion").value = state.settings.voiceEmotion || "";
+  renderVoiceConsent();
+  renderTgPrivacy();
+}
+
+/**
+ * 「危機訊息僅傳送給指定家人」的狀態列（設計書第 6 點）。
+ * 通報只會送到這裡填的那一個 Chat ID（extras.js 的 telegramSend 只認 apiKeys.tgchat）；
+ * 沒填就**哪裡都不送**——不會改送給開發者、預設聯絡人或任何第三方。
+ * 把這件事寫在畫面上，家屬才知道「沒設定＝危機時沒有人會收到」，要自己補上。
+ */
+function renderTgPrivacy(){
+  const el = $("#tgPrivacyState");
+  if(!el) return;
+  const { tgtoken, tgchat } = state.apiKeys;
+  const ready = !!(tgtoken && tgchat);
+  const tail = String(tgchat||"").slice(-4);
+  el.textContent = ready ? t("tgp.ready").replace("{id}", "…" + tail) : t("tgp.none");
+  el.style.color = ready ? "var(--ok, #188038)" : "var(--danger)";
 }
 
 // 介面語言（zh-TW/en-US/ja-JP/ko-KR）→ 語音標籤（ZH/EN/JA/KO）
@@ -295,6 +316,8 @@ function renderLibraryRows(box, chars){
     const btn = row.querySelector(".lib_prep");
     if(dl) btn.style.opacity = ".55";
     btn.addEventListener("click", async ()=>{
+      // 「預備」會把聲紋模型下載到運算端——那已經是在使用聲紋了，要先同意
+      if(!await requestVoiceConsent()){ toast(t("vc.needed")); return; }
       btn.disabled = true; const old = btn.textContent; btn.textContent = t("lib.preparing");
       try{
         const r = await localPrepare(c.character||c.name, c.lang||"");
@@ -319,8 +342,8 @@ function renderLibraryRows(box, chars){
 }
 
 function bindSettings(){
-  $("#k_tgtoken").addEventListener("input", e=>{ state.apiKeys.tgtoken=e.target.value.trim(); save(); });
-  $("#k_tgchat").addEventListener("input", e=>{ state.apiKeys.tgchat=e.target.value.trim(); save(); });
+  $("#k_tgtoken").addEventListener("input", e=>{ state.apiKeys.tgtoken=e.target.value.trim(); save(); renderTgPrivacy(); });
+  $("#k_tgchat").addEventListener("input", e=>{ state.apiKeys.tgchat=e.target.value.trim(); save(); renderTgPrivacy(); });
   $("#s_theme").addEventListener("change", e=>{ state.settings.theme=e.target.value; applyTheme(); save(); });
   $("#s_lang").addEventListener("change", e=>{ state.settings.lang=e.target.value;
     applyI18n(state.settings.lang);          // 先翻譯整個介面（含儲存狀態用的語言）
@@ -343,6 +366,9 @@ function bindSettings(){
 
     renderCloudList();                        // 雲端／電腦清單的空狀態（實機掃到它留在舊語言）
     renderVoices();                           // 專屬聲音的空狀態與「缺權重」提示
+    renderVoiceConsent();                     // 聲紋同意狀態列（含日期，是動態文字）
+    renderA11yScan();                         // 無障礙掃描的浮動列與速度標籤
+    renderTgPrivacy();                        // 危機訊息只送指定家人的狀態列
     buildSettingsIndex();                     // 設定索引的每一列都取自 h3 的譯文
     // 成績單內容是「載入當下」畫出來的（含圖表裡的「尚無資料」與空狀態），
     // 正在看報表時要重跑一次，否則畫面會留著舊語言的字。
@@ -375,6 +401,11 @@ function bindSettings(){
   // 本地語音引擎
   $("#lt_enabled").addEventListener("change", async e=>{
     state.settings.localTtsEnabled = e.target.checked; save();
+    // 開電腦運算時若已選了角色語音、卻還沒有聲紋同意，就在這裡問一次。
+    // 不同意也不把開關收回去：生圖、文字照樣可以交給電腦，只有聲音不用專屬聲紋。
+    if(e.target.checked && state.settings.localVoiceName && !hasVoiceConsent()){
+      if(!await requestVoiceConsent()) toast(t("vc.needed"));
+    }
     if(e.target.checked) await refreshLocalVoices();
   });
   $("#lt_add").addEventListener("click", addCloudServer);
@@ -416,6 +447,8 @@ function bindSettings(){
     const [name, lang] = (e.target.value||"").split("|");
     if(!name) return;
     state.settings.localVoiceName = name; state.settings.localVoiceLang = lang||""; save();
+    // 選角色＝要開始用某個人的聲紋講話，沒有同意就先停在這裡（選擇照樣記住，同意後即生效）
+    if(!await requestVoiceConsent()){ toast(t("vc.needed")); return; }
     toast(t("toast.voiceSwitching").replace("{name}", name));
     try{ await localSwitch(name, lang); toast(t("toast.voiceSwitched").replace("{name}", name)); }
     catch(x){ toast(t("toast.voiceSwitchFail")+(x.message||x)); }
@@ -499,8 +532,10 @@ function renderTtsLayers(){
   if(!box) return;
   const webOk = "speechSynthesis" in window;
   const rows = [
-    { key:"tts.layerLocal",   ok: localHas("tts"),
-      st: localHas("tts") ? "tts.stOn" : "tts.stOff" },
+    // 專屬聲音要有聲紋同意才會真的用（localtts.js 的 localTtsEnabled 會擋），
+    // 這裡跟著顯示，不然列表寫「使用中」、實際唸出來卻是別的聲音。
+    { key:"tts.layerLocal",   ok: localHas("tts") && hasVoiceConsent(),
+      st: !localHas("tts") ? "tts.stOff" : hasVoiceConsent() ? "tts.stOn" : "vc.layerNeed" },
     { key:"tts.layerCloud",   ok: hasCloudTts(),
       st: hasCloudTts() ? "tts.stOn" : "tts.stNone" },
     { key:"tts.layerBrowser", ok: webOk,
@@ -681,7 +716,7 @@ function settingsCards(){
 function buildSettingsIndex(){
   // 版本號不隨語言變，但這支是每次切語言都會重跑的，順手填掉最省事。
   const ver = $("#appVersion");
-  if(ver) ver.textContent = "VoiceWeaver " + APP_VERSION;
+  if(ver) ver.textContent = t("app.short") + " " + APP_VERSION;
   const idx = $("#settingsIndex");
   if(!idx) return;
   idx.innerHTML = settingsCards().map((c, i) => {
@@ -1308,13 +1343,15 @@ function renderClinicalBank(onPick){
   const box = $("#rehabBank"); if(!box) return;
   // 題目跟著介面語言走：英文介面就練英文句子（辨識也是英文，見 speech.js 的 rec.lang）。
   // 顯示的字和送去練習的字是同一個字串，不然唸的跟比對的不一樣，分數會永遠是 0。
-  box.innerHTML = CLINICAL_BANK.map((g,gi)=>
-    `<div style="margin-top:8px"><div class="tiny muted">${escapeHtml(t(g.key))}</div>
+  // 四級（名詞→動作→短句→情境句）由易到難，每級在四種語言都至少 8 題（見 clinical.js）。
+  const bank = bankFor();
+  box.innerHTML = bank.map((g,gi)=>
+    `<div style="margin-top:8px"><div class="tiny muted">${escapeHtml(t(g.levelKey))} · ${escapeHtml(t(g.key))}</div>
       <div class="chips" style="margin-top:4px">${g.items.map((s,i)=>
-        `<span class="chip" data-g="${gi}" data-i="${i}">${escapeHtml(practiceItem(s))}</span>`
+        `<span class="chip" data-g="${gi}" data-i="${i}">${escapeHtml(s)}</span>`
       ).join("")}</div></div>`).join("");
   $$("#rehabBank .chip").forEach(c=>bindTap(c, ()=>
-    onPick(practiceItem(CLINICAL_BANK[+c.dataset.g].items[+c.dataset.i])), 250));
+    onPick(bank[+c.dataset.g].items[+c.dataset.i]), 250));
 }
 
 // ── 歷史 ──
@@ -1434,6 +1471,9 @@ function showApp(user){
   renderAac(); renderCombo(); renderCcList(); renderQuickSos(); setupCrisis();
   setStoryToast(toast); setupStory();
   setupHeadControl(msg=>{ const el=$("#headStatus"); if(el) el.textContent = msg; });
+  // 同意／撤回後：朗讀層級清單要跟著變（撤回＝立刻停用專屬聲音）
+  if(setupVoiceConsent()) onVoiceConsentChange(ok=>{ renderTtsLayers(); toast(t(ok ? "vc.granted" : "vc.revoked")); });
+  setupA11yScan();
   // 臨床題庫點一下＝填進目標句欄位並捲到練習區
   renderClinicalBank(s=>{ const inp=$("#rehabTarget"); if(!inp) return;
     inp.value = s; $('.tab[data-tab="rehab"]')?.click();

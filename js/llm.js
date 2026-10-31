@@ -260,18 +260,35 @@ function sysRehabEval(){
   "這是一次完全獨立的評估：只依據下面「這一次」的目標句與患者語音判分，沒有任何先前的練習、分數或對話——不得參考、比較或延續任何過去的評估。\n"+
   "評分細則：語意完整性（50%，核心意思有沒有傳達、關鍵詞有沒有說到，即使用詞稍異但意思相同可給高分）；"+
   "流暢性（30%，有無重複、結巴、語氣是否連貫自然）；語氣語調（20%，是否符合句型如問句/請求/感謝）。\n"+
-  `只回傳 JSON：{"score":整數0到100,"feedback":"一句${outLang()}鼓勵或指引（20字以內）","wrongChars":["說得不準或漏掉的字或詞"]}`;
+  "三個細項要分開給分（各 0~100），讓治療師看得出是哪一塊需要加強：semantic＝語意完整、fluency＝流暢度、prosody＝語調；"+
+  "score＝依上面權重算出的總分。若有提供作答時間（開口前停頓、說話耗時），用它輔助判斷流暢度：停頓很久或說得極慢代表提取困難。\n"+
+  "錯誤內容分兩類列出：wrongChars＝目標句裡說錯或漏掉的字詞；extraWords＝患者多說或替換成的字詞（錯語），沒有就給空陣列。\n"+
+  `只回傳 JSON：{"score":整數0到100,"semantic":整數,"fluency":整數,"prosody":整數,"feedback":"一句${outLang()}鼓勵或指引（30字以內，點出最需要改善的一項）","wrongChars":["..."],"extraWords":["..."]}\n`+
+  outputLanguageDirective("feedback");
 }
 
+const clampScore = (v) => Number.isFinite(+v) ? Math.max(0, Math.min(100, Math.round(+v))) : null;
 
-// AI 評分：回 { score, feedback, wrongChars }。失敗時退回字元相似度估算（不擲例外）。
-export async function scoreRehab(target, recognized){
-  const user = `目標句：${target}\n患者說出的：${recognized || "（未偵測到聲音）"}`;
+
+// AI 評分：回 { score, feedback, wrongChars, extraWords, semantic, fluency, prosody }。
+// 失敗時退回字元相似度估算（不擲例外）。
+//
+// timing（選填）：{ latencyMs 開口前停頓, durationMs 說話耗時 }，來自 rehab.js 量的
+// 語音辨識事件時間。模型只看得到文字，看不到聲音——給它這兩個數字，「流暢度」
+// 才不是單憑文字猜的（說得斷斷續續的人，文字可能一字不差，但花了三倍時間）。
+export async function scoreRehab(target, recognized, timing = {}){
+  const tm = [];
+  if(Number.isFinite(timing.latencyMs)) tm.push(`開口前停頓：${(timing.latencyMs/1000).toFixed(1)} 秒`);
+  if(Number.isFinite(timing.durationMs)) tm.push(`說話耗時：${(timing.durationMs/1000).toFixed(1)} 秒`);
+  const user = `目標句：${target}\n患者說出的：${recognized || "（未偵測到聲音）"}` + (tm.length ? `\n作答時間：${tm.join("；")}` : "");
   try{
     const raw = await runLlm(sysRehabEval(), user, { temperature: 0.1, stable: true });
     const j = JSON.parse(extractJson(raw) || "{}");
     const score = Math.max(0, Math.min(100, Math.round(j.score)));
-    if(Number.isFinite(score)) return { score, feedback: (j.feedback||"").trim(), wrongChars: Array.isArray(j.wrongChars)?j.wrongChars:[] };
+    const list = (a) => Array.isArray(a) ? a.map(x=>String(x).trim()).filter(Boolean) : [];
+    if(Number.isFinite(score)) return { score, feedback: (j.feedback||"").trim(), wrongChars: list(j.wrongChars),
+      extraWords: list(j.extraWords),
+      semantic: clampScore(j.semantic), fluency: clampScore(j.fluency), prosody: clampScore(j.prosody) };
     throw new Error("分數無效");
   }catch(e){
     // 備援（沒金鑰或 LLM 掛掉時）：重疊比例 + 找出沒被辨識到的部分。
@@ -285,7 +302,11 @@ export async function scoreRehab(target, recognized){
     let m = 0; const wrong = [];
     for(const u of t){ if(r.includes(u)) m++; else if(!wrong.includes(u)) wrong.push(u); }
     const score = t.length ? Math.round(m/t.length*100) : 0;
-    return { score, feedback: tr("llm.fallbackFeedback"), wrongChars: wrong };
+    // 多說／替換的字（錯語）：辨識結果裡有、目標句沒有的
+    const extra = [...new Set(r.filter(u=>!t.includes(u)))];
+    // 備援沒有模型可問，流暢度與語調不硬編一個數字（顯示「—」），只給得出來的語意重疊分
+    return { score, feedback: tr("llm.fallbackFeedback"), wrongChars: wrong, extraWords: extra,
+             semantic: score, fluency: null, prosody: null };
   }
 }
 

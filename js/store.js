@@ -442,9 +442,15 @@ function pushLocalHistory(rec){
 function getLocalHistory(){ try{ return JSON.parse(localStorage.getItem(LS+"_hist")||"[]"); }catch{ return []; } }
 
 // ── 復健日誌（與手機 App 同結構：users/{uid}/rehabLogs）──
-export async function addRehabLog({ target, recognized, score, feedback }){
+export async function addRehabLog({ target, recognized, score, feedback, latencyMs, fluency, prosody, semantic }){
   const rec = { timestamp: Date.now(), targetSentence: target, recognized: recognized||"",
                 score, feedback: feedback||"", locationTag: "網頁版" };
+  // 選填的細項（網頁版新增）：跟讀起始反應時間與 AI 三項分數，給「復健軌跡趨勢圖」用。
+  // 只在是有效數字時才寫——舊紀錄與手機 App 的紀錄沒有這些欄位，讀取端一律當成「沒有」。
+  // **只存文字與數字，錄音本身從來不進這筆紀錄**（聲音評分完就丟，見 rehab.js）。
+  for(const [k,v] of Object.entries({ latencyMs, fluency, prosody, semantic })){
+    if(Number.isFinite(v)) rec[k] = Math.round(v);
+  }
   if(_db && state.uid && state.uid!=="local"){
     try{ await addDoc(collection(_db,"users",state.uid,"rehabLogs"), rec); }catch(e){ pushLocalRehab(rec); }
   } else pushLocalRehab(rec);

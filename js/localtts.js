@@ -6,6 +6,7 @@
 // 連不上時上層會自動退回瀏覽器原生語音。
 import { state } from "./store.js?v=1.5.78";
 import { t } from "./i18n.js?v=1.5.78";
+import { hasVoiceConsent } from "./consent.js?v=1.5.78";
 
 let _base = null;   // 已確認可用的橋接 base URL
 
@@ -41,8 +42,13 @@ export function localComputeEnabled() {
   return !!state.settings.localTtsEnabled;
 }
 // 向後相容：語音是否走電腦
+//
+// **沒有聲紋同意就不走。** 電腦端合成用的是 GPT-SoVITS 複製出來的真人聲音，
+// 未經聲音主人同意不能拿來講話（設計書第 6 點）。擋在這一層，所有朗讀路徑
+// （一般朗讀、重度模式的輕快語調）都一起擋到，退回雲端／瀏覽器語音照樣出得了聲。
+// 生圖、文字這兩項電腦運算跟聲紋無關，不受影響（它們看的是 localHas）。
 export function localTtsEnabled() {
-  return localComputeEnabled() && _health.voice !== false;
+  return localComputeEnabled() && hasVoiceConsent() && _health.voice !== false;
 }
 export function localBase() { return _base; }
 // 各項運算電腦端是否可用（需先 detectLocalTts 過一次）

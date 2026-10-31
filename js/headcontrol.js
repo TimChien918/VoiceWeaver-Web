@@ -33,7 +33,13 @@ const LEGACY_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.163355
 
 const NOSE = 1, L_OUT = 33, R_OUT = 263;
 const BASE_SENS_X = 4.5, BASE_SENS_Y = 6.0;
-const DWELL_MS = 1000;
+// 停留多久算點擊。預設 1 秒；可在設定的「無障礙操作」調（與滑鼠停留點選共用同一個值）：
+// 頭部控制還不穩的人需要更長，熟練之後縮短才不會覺得拖。
+let DWELL_MS = 1000;
+export function setDwellMs(ms){
+  const v = Number(ms);
+  if (Number.isFinite(v)) DWELL_MS = Math.max(400, Math.min(4000, v));
+}
 
 
 // ── One-Euro 濾波 ──────────────────────────────────
@@ -215,6 +221,7 @@ export async function startHeadControl(statusFn){
     running = true;
     ensureCursor().classList.add("on");
     setSensitivity(state.settings.noseSensitivity || 1);
+    if (state.settings.dwellMs) setDwellMs(state.settings.dwellMs);
     onStatus(t("head.tracking"));
 
     let lastTs = -1;
