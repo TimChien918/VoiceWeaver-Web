@@ -6,7 +6,7 @@
 //
 // 這一頁只有開發者看得到，但仍然四種語言都給：介面語言切成英文時，
 // 半頁中文半頁英文會讓「這是不是壞掉了」變得很難判斷。
-import { STRINGS } from "./i18n.js?v=1.5.78";
+import { STRINGS } from "./i18n.js?v=1.6.0";
 
 Object.assign(STRINGS, {
   "adm.title": { "zh-TW":"🛠 開發者控制中心", "en":"🛠 Developer console", "ja":"🛠 開発者コンソール", "ko":"🛠 개발자 콘솔" },

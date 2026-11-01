@@ -6,7 +6,7 @@ import {
 import {
   getFirestore, doc, getDoc, setDoc, collection, addDoc, getDocs, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { t } from "./i18n.js?v=1.5.78";
+import { t } from "./i18n.js?v=1.6.0";
 
 const DEFAULTS = {
   settings: { theme: "auto", lang: "en", rate: 0.95, font: 1.0,
@@ -481,7 +481,7 @@ function getLocalRehab(){ try{ return JSON.parse(localStorage.getItem(LS+"_rehab
 
 // Drive 用動態 import：drive.js 反過來要 store.js 的 driveToken，
 // 靜態互相 import 會踩到模組初始化順序。順便也讓沒用到 Drive 的人不必載這段。
-async function _drive(){ return import("./drive.js?v=1.5.78"); }
+async function _drive(){ return import("./drive.js?v=1.6.0"); }
 
 /**
  * 專屬聲音（語音模型）清單，直接從 Drive 讀。

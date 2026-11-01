@@ -5,9 +5,9 @@
 // 設計原則：這支只「看」DOM（MutationObserver），不改任何狀態、不攔任何事件——
 // 功能邏輯全在 app.js 等原本的模組裡。所以它壞掉或被拿掉，App 照樣能用，只是少了動畫。
 // 減少動態（prefers-reduced-motion）時，所有位移／縮放改成單純淡入。
-import { t } from "./i18n.js?v=1.5.78";
-import { listHistory } from "./store.js?v=1.5.78";
-import { speak } from "./speech.js?v=1.5.78";
+import { t } from "./i18n.js?v=1.6.0";
+import { listHistory } from "./store.js?v=1.6.0";
+import { speak } from "./speech.js?v=1.6.0";
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
