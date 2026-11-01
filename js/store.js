@@ -1,4 +1,5 @@
 // 狀態保存：Firebase（登入 + Firestore 自動同步）；沒設定 Firebase 時退回 localStorage。
+import "./migrate.js?v=1.6.0";   // 舊鍵（voiceweaver_web、vw_*）→ sml_*，必須在讀 localStorage 之前
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, signOut, onAuthStateChanged
@@ -52,7 +53,8 @@ export function ensurePairCode(){
     const a = new Uint8Array(18);
     if(globalThis.crypto?.getRandomValues) globalThis.crypto.getRandomValues(a);
     else for(let i=0;i<a.length;i++) a[i] = Math.floor(Math.random()*256);
-    state.apiKeys.ngrokPairCode = "vw" + Array.from(a, b=>b.toString(36).padStart(2,"0")).join("").slice(0,22);
+    // 前綴只是辨識用（舊版是 "vw"，已產生的碼照用、不重產）；總長維持 24 字。
+    state.apiKeys.ngrokPairCode = "sml" + Array.from(a, b=>b.toString(36).padStart(2,"0")).join("").slice(0,21);
     save();   // 沒存檔的話下次載入又產一組新的，Colab 那端就再也對不上
   }
   return state.apiKeys.ngrokPairCode;
@@ -202,7 +204,7 @@ function applyLoaded(d){
 }
 
 let _app=null, _auth=null, _db=null, _saveTimer=null, _onSaved=()=>{};
-const LS = "voiceweaver_web";
+const LS = "sml_web";   // 舊名 voiceweaver_web，由 migrate.js 搬過來
 
 export function hasFirebase(){ return !!window.__FIREBASE_CONFIG__?.apiKey && !window.__FIREBASE_CONFIG__.apiKey.startsWith("貼上"); }
 
@@ -218,7 +220,7 @@ export function initAuth({ onUser, onSaved }){
   _app = initializeApp(window.__FIREBASE_CONFIG__);
   _auth = getAuth(_app);
   _db = getFirestore(_app);
-  try{ _driveToken = sessionStorage.getItem("vw_drive_token") || null; }catch{}   // 重新整理後沿用
+  try{ _driveToken = sessionStorage.getItem("sml_drive_token") || null; }catch{}   // 重新整理後沿用
   onAuthStateChanged(_auth, async (u) => {
     if(u){
       state.uid = u.uid; state.online = true;
@@ -256,7 +258,7 @@ export const DRIVE_METADATA_SCOPE = "https://www.googleapis.com/auth/drive.metad
 // 這種人打開專屬聲音會看到空清單，而曲庫好端端在 Drive 上，畫面卻說「還沒有」。
 // 拿到權杖時蓋一個世代章，看得出這個權杖是不是在新範圍之後拿的。
 // 以後再加範圍就把 SCOPE_GEN 往上加一號。
-const DRIVE_SCOPE_MARK = "vw_drive_scope_gen";
+const DRIVE_SCOPE_MARK = "sml_drive_scope_gen";
 const SCOPE_GEN = "2";
 
 /** 目前這個 Drive 權杖是不是舊範圍拿的（需要重新授權才看得到語音模型）。 */
@@ -319,7 +321,7 @@ export async function loginGoogle(opts = {}){
     _driveToken = cred?.accessToken || null;
     try{
       if(_driveToken){
-        sessionStorage.setItem("vw_drive_token", _driveToken);
+        sessionStorage.setItem("sml_drive_token", _driveToken);
         // 記下「這個權杖是在有要 metadata 範圍之後拿到的」。
         // 不去打 tokeninfo 問實際授了哪些範圍：那個端點只吃網址參數，
         // 等於把 access token 寫進 URL（會進各種紀錄檔）。為了一句提示，不值得。
@@ -367,7 +369,7 @@ export async function logout(){
   _driveToken = null;
   _email = "";
   try{
-    sessionStorage.removeItem("vw_drive_token"); sessionStorage.removeItem(DRIVE_SCOPE_MARK);
+    sessionStorage.removeItem("sml_drive_token"); sessionStorage.removeItem(DRIVE_SCOPE_MARK);
   }catch{}
   if(_auth) await signOut(_auth);
   else { location.reload(); }

@@ -1,6 +1,6 @@
 // 開發者控制中心：限時活動（shared/apiKeys、grants/{uid}）與帳號名冊的管理介面。
 //
-// 以前這些文件只能由開發者電腦上的 vw_admin.py 用服務帳戶私鑰寫入；那把私鑰
+// 以前這些文件只能由開發者電腦上的管理腳本（舊名 vw_admin.py）用服務帳戶私鑰寫入；那把私鑰
 // 繞過所有規則、等於整個專案的最高權限，帶著它走來走去本身就是風險。
 // 現在改成「開發者用自己的 Google 帳號在網頁上寫」，權限由 Firestore 規則的
 // isAdmin() 把關——私鑰從此不必存在任何地方。
@@ -213,7 +213,7 @@ function disablePatch(old){
 // 使用者登入時自己登記一筆。只有開發者讀得到（規則），本人只能寫自己那份、
 // 而且 email 必須等於登入憑證裡的 email——不能替別人登記，也不能冒用別人的信箱。
 
-const DIR_LS = "vw_dir_touch";
+const DIR_LS = "sml_dir_touch";
 
 /** 登入後在背景登記名冊。一天最多寫一次；任何失敗都安靜略過（規則沒部署也一樣）。 */
 export async function touchDirectory(){

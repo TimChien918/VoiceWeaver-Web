@@ -11,7 +11,7 @@
 //    被 LLM 逾時、金鑰過期、網路抖動毀掉。所以畫面用的是真的元件、真的版面，
 //    只有 AI 的回覆是預先寫好的樣本。更重要的是：緊急通報、危機介入**絕對不能真的
 //    送出去**——演示一次就吵到家人一次。危機那一段只照著真畫面重演，不呼叫 openCrisis()；
-//    就算哪裡漏了，extras.js 的 Telegram 出口在 window.__VW_DEMO__ 期間也一律攔下。
+//    就算哪裡漏了，extras.js 的 Telegram 出口在 window.__SML_DEMO__ 期間也一律攔下。
 // ② **不寫入任何資料。** 不呼叫 save()、不寫歷史、不碰 Firestore/Drive。
 //    只改記憶體與 DOM，結束時還原（借用的節點整批搬走再搬回，事件監聽不會掉）。
 // ③ **字幕與旁白跟著介面語言（中／英／日／韓）。** 評審可能是任何一國人，按下去之前
@@ -27,9 +27,9 @@ import { drawTrajectory, loadReport } from "./report.js?v=1.6.0";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
-// 排練／自動測試用的加速倍率（window.__VW_DEMO_SPEED__ = 8 就是八倍速）。
+// 排練／自動測試用的加速倍率（window.__SML_DEMO_SPEED__ = 8 就是八倍速）。
 // 正式播放不設，等於 1。只縮短「等待」，不跳過任何一步——加速跑完沒卡住，原速就不會卡住。
-const speed = () => Math.max(1, +window.__VW_DEMO_SPEED__ || 1);
+const speed = () => Math.max(1, +window.__SML_DEMO_SPEED__ || 1);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms / speed()));
 
 // 每一步的最短停留時間。沒有這個下限，動作做完就立刻跳下一步，評審連畫面變了什麼都看不清楚。
@@ -411,7 +411,7 @@ function buildOverlay() {
   $("#demoStop").addEventListener("click", () => { _abort = true; });
   // 錄影時畫面上沒有 Stop 鈕 → Esc 當中止出口（看不見，但隨時按得到）
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && window.__VW_DEMO__) _abort = true;
+    if (e.key === "Escape" && window.__SML_DEMO__) _abort = true;
   });
 }
 
@@ -1031,22 +1031,70 @@ const NARRATION_RATE = 1.15;
 // ── 預錄旁白的存放 ───────────────────────────────────────────────────────
 // 存 IndexedDB，不是只放記憶體：重新整理一次就全沒了的話，每次開頁面都要重新合成一輪
 // （CPU 上每句 25 秒）——那就不叫預錄了。到評審現場前在家先跑一次，現場就不用等。
-const DB_NAME = "vw_demo_narration";
+const DB_NAME = "sml_demo_narration";
+// 更名前的資料庫名。預錄旁白合成一句要 25 秒，更名後整批重來太傷，
+// 所以新資料庫第一次建立時把舊的內容搬過來，搬完刪掉舊的。
+const LEGACY_DB_NAME = "vw_demo_narration";
 const STORE = "clips";
 let _db = null;
 
-function openDb() {
-  if (_db) return Promise.resolve(_db);
+/** 打開舊資料庫；不存在就回 null（而且**不會**順手建出一個空的舊資料庫）。 */
+function openLegacyDb() {
   return new Promise((resolve) => {
     let req;
+    try { req = indexedDB.open(LEGACY_DB_NAME); } catch { resolve(null); return; }
+    let fresh = false;
+    req.onupgradeneeded = (e) => {
+      // oldVersion 0 ＝ 這個資料庫本來不存在。中止升級，它就不會被建出來。
+      if (e.oldVersion === 0) { fresh = true; req.transaction.abort(); }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => { if (fresh) { try { indexedDB.deleteDatabase(LEGACY_DB_NAME); } catch {} } resolve(null); };
+    req.onblocked = () => resolve(null);
+  });
+}
+
+async function migrateLegacyClips(db) {
+  const old = await openLegacyDb();
+  if (!old) return;
+  try {
+    if (!old.objectStoreNames.contains(STORE)) return;
+    const rows = await new Promise((resolve) => {
+      const out = [];
+      const r = old.transaction(STORE).objectStore(STORE).openCursor();
+      r.onsuccess = () => { const c = r.result; if (c) { out.push([c.key, c.value]); c.continue(); } else resolve(out); };
+      r.onerror = () => resolve(out);
+    });
+    if (rows.length) await new Promise((resolve) => {
+      const tx = db.transaction(STORE, "readwrite");
+      for (const [k, v] of rows) tx.objectStore(STORE).put(v, k);
+      tx.oncomplete = tx.onerror = tx.onabort = () => resolve();
+    });
+  } catch { /* 搬不動就重新合成，不擋示範 */ }
+  finally {
+    old.close();
+    try { indexedDB.deleteDatabase(LEGACY_DB_NAME); } catch {}
+  }
+}
+
+let _dbOpening = null;   // 開啟中（含搬舊資料）的同一個 Promise，並發呼叫共用它
+function openDb() {
+  if (_db) return Promise.resolve(_db);
+  if (_dbOpening) return _dbOpening;
+  return (_dbOpening = new Promise((resolve) => {
+    let req, created = false;
     try { req = indexedDB.open(DB_NAME, 1); } catch { resolve(null); return; }
-    req.onupgradeneeded = () => {
+    req.onupgradeneeded = (e) => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+      created = e.oldVersion === 0;
     };
-    req.onsuccess = () => { _db = req.result; resolve(_db); };
+    req.onsuccess = async () => {
+      if (created) { try { await migrateLegacyClips(req.result); } catch {} }
+      _db = req.result; resolve(_db);
+    };
     req.onerror = () => resolve(null);   // 無痕模式等情況拿不到 → 退回只用記憶體
-  });
+  }));
 }
 function dbGet(key) {
   return openDb().then((db) => db && new Promise((resolve) => {
@@ -1234,7 +1282,7 @@ function releaseAwake() {
 let _wentHidden = false;
 
 document.addEventListener("visibilitychange", () => {
-  if (!window.__VW_DEMO__) return;
+  if (!window.__SML_DEMO__) return;
   if (document.visibilityState === "hidden") {
     _wentHidden = true;
     releaseAwake();
@@ -1393,7 +1441,7 @@ async function run(ids, opts) {
 
   _abort = false;
   _narrate = !!opts.narrate;
-  window.__VW_DEMO__ = true;
+  window.__SML_DEMO__ = true;
   keepAwake();                 // 預錄那一段最久，也最容易讓人走開 → 從這裡就開始
   buildOverlay();
   $("#demoPrepTitle").textContent = t("demo.prep");
@@ -1422,7 +1470,7 @@ async function run(ids, opts) {
   }
   if (_abort) {
     restore(); releaseAwake();
-    ui().classList.add("hidden"); window.__VW_DEMO__ = false; return;
+    ui().classList.add("hidden"); window.__SML_DEMO__ = false; return;
   }
 
   let recording = false;
@@ -1479,7 +1527,7 @@ async function run(ids, opts) {
     document.body.classList.remove("demo-nocursor");
     $("#demoHud")?.classList.remove("hidden");
     ui().classList.add("hidden");
-    window.__VW_DEMO__ = false;
+    window.__SML_DEMO__ = false;
     if (recording) {
       const out = await stopRecording();
       // 一次錄影兩份：有旁白的、以及同一段畫面但沒有聲音的。只出得來一份時就只下載那一份。
@@ -1492,7 +1540,7 @@ async function run(ids, opts) {
 
 // ── 設定頁裡的面板 ──────────────────────────────────────────────────────
 
-const PICK_KEY = "vw_demo_units";
+const PICK_KEY = "sml_demo_units";
 
 function loadPicked() {
   const ids = UNITS().map((u) => u.id);

@@ -14,15 +14,14 @@
 ![No backend](https://img.shields.io/badge/後端-無（純%20API）-lightgrey)
 ![i18n](https://img.shields.io/badge/介面-中%20%7C%20EN%20%7C%20日%20%7C%20한-6f42c1)
 
-[🌐 Live Demo](https://timchien918.github.io/VoiceWeaver-Web/) ·
-[Android App 原始碼](https://github.com/TimChien918/VoiceWeaver)
+[🌐 Live Demo](https://timchien918.github.io/Speak-My-Life-Web/) ·
+[Android App 原始碼](https://github.com/TimChien918/Speak-My-Life)
 
 </div>
 
-> **關於名稱**：本專案原名 **VoiceWeaver**，現更名為「**拾語者 Speak My Life**」。
-> 網址（`timchien918.github.io/VoiceWeaver-Web`）、repo 名稱、Google Drive 曲庫資料夾（`VoiceWeaver/…`）、
-> 瀏覽器儲存鍵名與 Firebase 專案都**沿用舊名**，以維持既有使用者的連結、設定與資料——改了它們，
-> 已經在用的人書籤會失效、曲庫會「消失」。介面上看得到的名字則依語言顯示：
+> **關於名稱**：本專案原名 **VoiceWeaver**，現更名為「**拾語者 Speak My Life**」，
+> 網址、repo、Google Drive 曲庫資料夾與瀏覽器儲存鍵名都已改成新名，舊資料會自動搬過來——
+> 見下方〈[從 VoiceWeaver 更名](#從-voiceweaver-更名)〉。介面上看得到的名字依語言顯示：
 > 繁中「拾語者」、英文「Speak My Life」、日韓「Speak My Life（拾語者）」。
 
 ---
@@ -37,8 +36,47 @@
 
 | 版本 | 說明 | 連結 |
 | --- | --- | --- |
-| **網頁輕量版**（本專案） | 純瀏覽器／API，免安裝，手機、平板、電腦打開就能用 | [Live Demo](https://timchien918.github.io/VoiceWeaver-Web/) |
-| **Android App** | 完整功能：離線推理、相機、定位、鼻控、GPT-SoVITS | [原始碼](https://github.com/TimChien918/VoiceWeaver) |
+| **網頁輕量版**（本專案） | 純瀏覽器／API，免安裝，手機、平板、電腦打開就能用 | [Live Demo](https://timchien918.github.io/Speak-My-Life-Web/) |
+| **Android App** | 完整功能：離線推理、相機、定位、鼻控、GPT-SoVITS | [原始碼](https://github.com/TimChien918/Speak-My-Life) |
+
+## 從 VoiceWeaver 更名
+
+本專案原名 **VoiceWeaver**。改名不只是換招牌，識別名也一起換了：
+
+| 項目 | 舊 | 新 |
+| --- | --- | --- |
+| 網頁版網址 | `https://timchien918.github.io/Speak-My-Life-Web/` | **https://timchien918.github.io/Speak-My-Life-Web/** |
+| GitHub repo | `TimChien918/VoiceWeaver-Web`、`TimChien918/VoiceWeaver` | `TimChien918/Speak-My-Life-Web`、`TimChien918/Speak-My-Life` |
+| Google Drive 曲庫根資料夾 | `VoiceWeaver/` | `Speak-My-Life/` |
+| 瀏覽器儲存鍵 | `voiceweaver_web*`、`vw_*` | `sml_web*`、`sml_*` |
+| Firebase 專案 ID | `voiceweaver-af4da` | **不變**（見下） |
+
+**自動搬遷（不用動手）**
+
+- **瀏覽器裡的設定與紀錄**：新版第一次開啟時（`js/migrate.js`，比任何讀取都早執行）把舊鍵搬到新鍵——
+  語言、金鑰、自訂圖卡、本機歷史與復健紀錄、上次停留的分頁、AAC 排序學習都會沿用；新鍵已有值時以新的為準，
+  只做一次（記 `sml_migrated`）。
+- **Google Drive 曲庫**：找根資料夾時先找 `Speak-My-Life/`；沒有、但有舊的 `VoiceWeaver/` 時，
+  **把舊資料夾改名成 `Speak-My-Life/`**（內容、`catalog.json` 格式都不變）；兩個都有就用新的、不動舊的；
+  改名失敗（例如那個資料夾不是本 App 建立的，drive.file 權限改不了）就**直接沿用舊資料夾**——曲庫不會消失。
+  手機 App 與電腦端也照同一條規則。
+- **雲端同步的資料**（Firestore 裡的設定、歷史、復健紀錄）本來就跟著 Google 帳號走，用同一個帳號登入就全部回來。
+
+**Firebase 專案 ID 為什麼沒改**：Firebase 專案 ID 建立後**永遠不能改名**，所以 `config.js` 的
+`authDomain`／`projectId`／`storageBucket` 仍是 `voiceweaver-af4da`。這只是內部識別字，使用者看不到；
+Console 上的「顯示名稱」可以自己改成 Speak My Life。
+
+**使用者要做的事**
+
+1. **改用新網址** https://timchien918.github.io/Speak-My-Life-Web/ 並更新書籤／主畫面捷徑。
+   GitHub repo 改名後，Pages 的舊網址**不會**自動轉址。
+2. **在新網址重新登入一次**（同一個 Google 帳號）。瀏覽器儲存是「依網址」分開的：舊網址存的本機資料，
+   新網址讀不到——雲端同步的部分登入就回來；只存在本機、沒登入過的資料（純本機模式）請先在舊網址登入 Google 同步上雲，
+   或照常在新網址重新設定。同網址下的舊鍵則會自動搬遷。
+3. 第一次在新版打開「設定 → 專屬聲音」時，網頁會試著把 Drive 上的 `VoiceWeaver/` 改名成 `Speak-My-Life/`。
+   改名成功後，**還沒更新的舊版 App／電腦端**會找不到 `VoiceWeaver/`——請把各裝置都更新到新版。
+4. Colab 的 Secret 名稱改為 `SML_PAIR_CODE`（配對碼本身不變）。
+5. 開發者：GitHub 上把兩個 repo 改名，Firebase → Authentication → Authorized domains 確認 `timchien918.github.io` 仍在清單內。
 
 ## 設計動機
 
@@ -232,11 +270,11 @@ flowchart LR
 網頁本身不存模型、不做語音合成——語音、生圖、文字都是打「運算端」的 HTTP 橋接（port `9879`）代理過去：
 
 - **同一台電腦**：開網頁的電腦＝跑語音中心（Mac/Win）的電腦 → 免填位址，直接「偵測連線」即可。
-- **Colab 免費 GPU**：電腦沒空、或想用免費 GPU 時，執行 `VoiceWeaver_GPT_SoVITS_Colab.ipynb`（檔名沿用舊名），複製 ngrok 給的公開網址貼進設定頁，或直接按「☁️ 用此 Colab 網址連線」一鍵套用。
+- **Colab 免費 GPU**：電腦沒空、或想用免費 GPU 時，執行 `Speak-My-Life_GPT_SoVITS_Colab.ipynb`，複製 ngrok 給的公開網址貼進設定頁，或直接按「☁️ 用此 Colab 網址連線」一鍵套用。
 - **遠端電腦**：跑 `tailscale serve --bg 9879`（把橋接埠對外成 HTTPS），設定頁填 `https://主機.xxx.ts.net`。
 - ⚠️ 瀏覽器混合內容限制：HTTPS 頁面連不到區網 `http://192.168.x.x`，僅「同機」「Colab（ngrok）」「Tailscale」三種連法可用。
 
-**雲端曲庫**：不論連到電腦還是 Colab，看到的都是同一個 Google Drive 曲庫（`VoiceWeaver/Models/`，資料夾名沿用舊名；`js/localtts.js` 的 `localCatalog()` / `localPrepare()`）——角色清單標示已下載／未下載，未下載的按「下載」請運算端先從 Drive 抓下來，之後合成不用等。
+**雲端曲庫**：不論連到電腦還是 Colab，看到的都是同一個 Google Drive 曲庫（`Speak-My-Life/Models/`，舊的 `VoiceWeaver/` 會自動改名過來；`js/localtts.js` 的 `localCatalog()` / `localPrepare()`）——角色清單標示已下載／未下載，未下載的按「下載」請運算端先從 Drive 抓下來，之後合成不用等。
 
 ## 快速開始
 
@@ -270,8 +308,8 @@ service cloud.firestore {
 ### 2. 部署到 GitHub Pages
 
 ```bash
-git clone https://github.com/TimChien918/VoiceWeaver-Web.git
-cd VoiceWeaver-Web
+git clone https://github.com/TimChien918/Speak-My-Life-Web.git
+cd Speak-My-Life-Web
 # 填好 config.js 後：
 git add config.js && git commit -m "add firebase config"
 git push
@@ -279,7 +317,7 @@ git push
 
 GitHub repo → **Settings → Pages → Source: main / (root) → Save**。
 
-等約 1 分鐘，網址會是 `https://<你的帳號>.github.io/VoiceWeaver-Web/`。
+等約 1 分鐘，網址會是 `https://<你的帳號>.github.io/Speak-My-Life-Web/`。
 
 > **Google 登入授權網域**：回 Firebase → Authentication → Settings → Authorized domains，加入 `你的帳號.github.io`。
 
@@ -391,8 +429,8 @@ match /grants/{uid} {
 只能有這幾個欄位；讀取、列出、刪除只有開發者。匿名使用者不登記，
 所以要單獨發放給某人，請他先用 Google 登入一次。
 
-**管理工具：`vw_admin.py` 與服務帳戶私鑰不再需要。** 以前活動文件只能由本機的
-`vw_admin.py` 用服務帳戶私鑰寫入（那把私鑰繞過所有規則、等於整個專案的最高權限）；
+**管理工具：本機管理腳本（舊名 `vw_admin.py`）與服務帳戶私鑰不再需要。** 以前活動文件只能由本機的
+管理腳本用服務帳戶私鑰寫入（那把私鑰繞過所有規則、等於整個專案的最高權限）；
 現在改由開發者用自己的 Google 帳號在網頁上寫，權限由規則的 `isAdmin()` 把關。
 舊的私鑰建議到 Google Cloud Console → IAM → 服務帳戶 → 金鑰 刪掉。
 （`.gitignore` 裡那幾行保留，避免有人又把私鑰放回 repo。）
@@ -467,6 +505,7 @@ s2t_map.txt / s2t_phrases.txt   簡轉繁字元／詞組對照表（zhconv.js �
 js/
 ├── app.js              主邏輯（分頁、重組、AAC、最愛、多語朗讀、雲端曲庫清單渲染、防呆模式切換）
 ├── i18n.js             四語介面字串（繁中／英／日／韓）與產品名
+├── migrate.js          更名搬遷：舊 localStorage 鍵（voiceweaver_web、vw_*）→ sml_*，最早執行
 ├── store.js            Firebase 登入 + Firestore 同步（無 Firebase 退 localStorage）
 ├── admin.js            開發者控制中心（限時活動／單獨發放／帳號名冊；只有開發者帳號看得到）
 ├── i18n-admin.js       控制中心的四語字串
@@ -475,7 +514,7 @@ js/
 ├── hotlines.js          依國別選擇緊急／心理支持專線號碼
 ├── llm.js               多供應商 LLM 重組（自我一致性排序）+ 危機意圖分類 + 復健 AI 評分 + AI 建議
 ├── localtts.js          電腦／Colab 橋接（偵測、角色切換、合成、曲庫瀏覽與下載）
-├── drive.js             使用者自己 Google Drive 的 VoiceWeaver/ 曲庫存取
+├── drive.js             使用者自己 Google Drive 的 Speak-My-Life/ 曲庫存取（含舊 VoiceWeaver/ 改名搬遷）
 ├── providers.js         LLM / 語音 / 生圖供應商清單與輪詢邏輯（含 Gemini TTS 的 PCM→WAV）
 ├── speech.js            TTS（含 speakIn 多語）/ STT，跟著介面語言走
 ├── audiodirect.js       原生音訊直接理解（跳過 STT，餵給支援音訊的模型）

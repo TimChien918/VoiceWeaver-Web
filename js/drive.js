@@ -9,8 +9,11 @@
 // 手機 App 與 Mac 端用的是同一個專案，所以三邊看得到彼此建立的檔案。
 //
 // 資料夾結構（三端共用）：
-//   VoiceWeaver/Models/<LANG>/<角色>/            語音模型（GPT-SoVITS 聲文權重）
-//   VoiceWeaver/AcousticModels/<分類>/<id>.json  聲波模型（專屬發音的關鍵字樣板）
+//   Speak-My-Life/Models/<LANG>/<角色>/            語音模型（GPT-SoVITS 聲文權重）
+//   Speak-My-Life/AcousticModels/<分類>/<id>.json  聲波模型（專屬發音的關鍵字樣板）
+//
+// 根資料夾原名 VoiceWeaver/（更名前）。找根時先找新名；只有舊名時把它改名成新名，
+// 改名失敗就直接沿用舊資料夾——三端（App、電腦端、網頁）同一條規則，見 speakMyLifeRoot。
 //
 // 聲波模型的檔名是內部 id（唯一鍵；關鍵字是使用者隨時會改的東西，拿來當檔名
 // 改一次就多一個孤兒檔）。看不看得懂交給資料夾——平放時使用者在自己的雲端硬碟
@@ -21,7 +24,9 @@ import { driveToken } from "./store.js?v=1.6.0";
 const FILES = "https://www.googleapis.com/drive/v3/files";
 const FOLDER_MIME = "application/vnd.google-apps.folder";
 
-export const ROOT_FOLDER = "VoiceWeaver";
+export const ROOT_FOLDER = "Speak-My-Life";
+/** 更名前的根資料夾名。只用來找到舊曲庫並把它改名過來。 */
+export const LEGACY_ROOT_FOLDER = "VoiceWeaver";
 export const MODELS_DIR = "Models";
 export const ACOUSTIC_DIR = "AcousticModels";
 const LANG_DIRS = ["ZH", "EN", "JA", "KO"];
@@ -58,7 +63,7 @@ async function findId(name, parent, folder){
 /**
  * 同名的資料夾**全部**列出來。
  *
- * Drive 沒有「同一層不能同名」這條規則——同一個父層底下可以有兩個 VoiceWeaver，
+ * Drive 沒有「同一層不能同名」這條規則——同一個父層底下可以有兩個 Speak-My-Life，
  * 在網頁介面上長得一模一樣。findId 只拿 files[0]，而這個查詢沒有指定排序，
  * 等於在兩者之間擲骰子：使用者的曲庫在 A，網頁卻一直在看 B。
  */
@@ -78,7 +83,7 @@ async function findFolders(name, parent){
   return out;
 }
 
-// 認定的 VoiceWeaver 根。挑根要多打好幾次 API（每個候選都得看一眼裡面有什麼），
+// 認定的 Speak-My-Life 根。挑根要多打好幾次 API（每個候選都得看一眼裡面有什麼），
 // 而列聲音、讀索引、存聲波模型每一次都要用到它，一次畫面就會問好幾遍。
 //
 // 但**不能永久記住**：使用者照著提示把兩個資料夾合併之後，答案就變了。
@@ -86,6 +91,8 @@ async function findFolders(name, parent){
 // 60 秒夠短，重畫一次就會重新挑；也夠長，一次渲染不會重複問。
 const ROOT_TTL_MS = 60_000;
 let _rootId = null, _rootTok = "", _rootAt = 0;
+let _rootName = ROOT_FOLDER;     // 目前用的根叫什麼（改名失敗、沿用舊資料夾時是舊名）
+const _renameFailed = new Set(); // 這次工作階段改名失敗過的舊資料夾 id，不再每分鐘重試
 
 /** 一個候選根「像不像正主」。分數高的贏；同分時保持 Drive 回來的順序。 */
 async function rootScore(id){
@@ -97,7 +104,7 @@ async function rootScore(id){
 }
 
 /**
- * VoiceWeaver 根資料夾的 id。
+ * Speak-My-Life 根資料夾的 id。
  *
  * 為什麼不能直接 findId：Drive 允許同名資料夾，而這裡**真的會有兩個**——
  * 電腦端建過一個，網頁端因為 drive.file 逐檔授權看不到它，於是又自己建了一個。
@@ -106,28 +113,67 @@ async function rootScore(id){
  *
  * 挑「裝著曲庫的那個」，不是「剛好排第一的那個」。
  */
-async function voiceWeaverRoot(){
-  const tok = driveToken() || "";
-  if(_rootId && _rootTok === tok && Date.now() - _rootAt < ROOT_TTL_MS) return _rootId;
-  const cands = await findFolders(ROOT_FOLDER, "root");
-  let id = null;
-  // 一個都沒有就回 null：網頁只讀不建根（建根是電腦端／手機的事）
-  if(cands.length === 1){
-    id = cands[0].id;
-  }else if(cands.length > 1){
-    let bestScore = -1;
-    for(const c of cands){
-      const s = await rootScore(c.id);
-      if(s > bestScore){ bestScore = s; id = c.id; }
-    }
+async function pickRoot(cands){
+  if(cands.length === 1) return cands[0].id;
+  let id = null, bestScore = -1;
+  for(const c of cands){
+    const s = await rootScore(c.id);
+    if(s > bestScore){ bestScore = s; id = c.id; }
   }
-  if(id){ _rootId = id; _rootTok = tok; _rootAt = Date.now(); }
   return id;
 }
 
-/** 有幾個同名的 VoiceWeaver（0 或 1 代表沒有這個問題）。 */
+/**
+ * 把資料夾改名（files.update 只送 name）。成功回 true。
+ * drive.file 允許改「本專案建立的檔案」；不是本專案建的（例如 Colab 掛載建的）會 403。
+ */
+async function renameFolder(id, name){
+  try{
+    await api(`${FILES}/${encodeURIComponent(id)}?fields=id,name`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name }),
+    });
+    return true;
+  }catch(e){
+    console.warn("[drive] 舊曲庫資料夾改名失敗，沿用舊名：", e?.message || e);
+    return false;
+  }
+}
+
+/**
+ * 更名搬遷（VoiceWeaver → Speak-My-Life），三端同一條規則：
+ *   1. 有 Speak-My-Life → 用它（就算同時還有舊的 VoiceWeaver 也不動舊的）。
+ *   2. 沒有新的、有舊的 → 把舊的改名成 Speak-My-Life 再用。
+ *   3. 改名失敗 → 直接沿用舊資料夾。曲庫絕不能因為改名而「消失」。
+ */
+async function speakMyLifeRoot(){
+  const tok = driveToken() || "";
+  if(_rootId && _rootTok === tok && Date.now() - _rootAt < ROOT_TTL_MS) return _rootId;
+  let id = null, name = ROOT_FOLDER;
+  // 一個都沒有就回 null：網頁只讀不建根（建根是電腦端／手機的事）
+  const cands = await findFolders(ROOT_FOLDER, "root");
+  if(cands.length){
+    id = await pickRoot(cands);
+  }else{
+    const legacy = await findFolders(LEGACY_ROOT_FOLDER, "root");
+    if(legacy.length){
+      id = await pickRoot(legacy);
+      // 只改「裝著曲庫的那一個」；其他同名的舊資料夾原封不動。
+      const ok = !_renameFailed.has(id) && await renameFolder(id, ROOT_FOLDER);
+      if(!ok){ _renameFailed.add(id); name = LEGACY_ROOT_FOLDER; }
+    }
+  }
+  if(id){ _rootId = id; _rootTok = tok; _rootAt = Date.now(); _rootName = name; }
+  return id;
+}
+
+/** 目前使用中的根資料夾名稱（通常是 Speak-My-Life；改名失敗時是舊名 VoiceWeaver）。 */
+export function rootFolderName(){ return _rootName; }
+
+/** 有幾個同名的根資料夾（0 或 1 代表沒有這個問題）。算的是目前使用中的那個名字。 */
 export async function countRoots(){
-  return (await findFolders(ROOT_FOLDER, "root")).length;
+  return (await findFolders(_rootName, "root")).length;
 }
 
 export async function listChildren(parent, foldersOnly){
@@ -154,12 +200,12 @@ async function readJson(fileId){
 // ── 語音模型（專屬聲音）────────────────────────────────────
 
 /**
- * Drive 上語音模型的父資料夾。新版面是 VoiceWeaver/Models，
- * 舊版面（語言資料夾直接掛在 VoiceWeaver 底下）就回 VoiceWeaver 本身——
+ * Drive 上語音模型的父資料夾。新版面是 Speak-My-Life/Models，
+ * 舊版面（語言資料夾直接掛在根底下）就回根本身——
  * 與 Mac 端 emotion_models.models_root、App 端 DriveApi.modelsFolder 同一條規則。
  */
 async function modelsParent(){
-  const root = await voiceWeaverRoot();
+  const root = await speakMyLifeRoot();
   if(!root) return null;
   const models = await findId(MODELS_DIR, root, true);
   if(models) return models;
@@ -177,13 +223,13 @@ const CATALOG_NAME = "catalog.json";
  * 只要中間任何一層這個瀏覽器看不見（drive.file 是逐檔授權的），整批就會靜靜消失。
  * 索引是一個檔案、一次呼叫，而且是產生曲庫的那一端自己寫的——它知道有什麼。
  *
- * **兩個地方都要找**：Mac 端 upload_catalog 傳到 VoiceWeaver/，
- * Colab 直接掛載 Drive 寫在 VoiceWeaver/Models/。同一份東西兩個位置，
+ * **兩個地方都要找**：Mac 端 upload_catalog 傳到 Speak-My-Life/，
+ * Colab 直接掛載 Drive 寫在 Speak-My-Life/Models/。同一份東西兩個位置，
  * 只看其中一邊的話，另一端更新過的曲庫就會被當成不存在。
  * 兩邊都在時取 updatedAt 較新的那份。
  */
 async function readCatalog(){
-  const root = await voiceWeaverRoot();
+  const root = await speakMyLifeRoot();
   if(!root) return null;
   const models = await findId(MODELS_DIR, root, true);
   const ids = [];
@@ -238,8 +284,9 @@ function fromCatalogEntry(c){
  * 只列資料夾名稱，不讀任何檔案內容。
  */
 export async function diagnoseVoiceModels(){
-  const root = await voiceWeaverRoot();
-  if(!root) return { step: "noRoot", root: ROOT_FOLDER };
+  const root = await speakMyLifeRoot();
+  if(!root) return { step: "noRoot", root: `${ROOT_FOLDER}（${LEGACY_ROOT_FOLDER}）`, rootName: ROOT_FOLDER };
+  const rootName = _rootName;
   // 同名根的數量要一起講。它會讓所有其他症狀變得莫名其妙——
   // 「AcousticModels 存得進去，曲庫卻永遠是空的」在只看一個資料夾時完全講不通。
   let roots = 1;
@@ -248,7 +295,7 @@ export async function diagnoseVoiceModels(){
   const models = await findId(MODELS_DIR, root, true);
   if(!models){
     const legacy = rootKids.filter(n => LANG_DIRS.includes(n.toUpperCase()));
-    return { step: legacy.length ? "legacy" : "noModels", rootKids, legacy, roots };
+    return { step: legacy.length ? "legacy" : "noModels", rootKids, legacy, roots, rootName };
   }
   const modelKids = (await listChildren(models, true)).map(f => f.name);
   const langs = modelKids.filter(n => LANG_DIRS.includes(n.toUpperCase()));
@@ -260,7 +307,7 @@ export async function diagnoseVoiceModels(){
   // 這是兩者最有鑑別力的一組對照，所以一起回報。
   let catalog = 0;
   try{ catalog = (await readCatalog())?.characters?.length || 0; }catch{ /* 沒有就沒有 */ }
-  return { step: "walked", rootKids, modelKids, langs, chars, catalog, roots };
+  return { step: "walked", rootKids, modelKids, langs, chars, catalog, roots, rootName };
 }
 
 export async function listVoiceModels(){
