@@ -205,7 +205,7 @@ function UNITS(L = demoLang()) {
                  "Anything about pain or medicine gets an extra large-print confirmation card. Nothing is said until he taps Yes — the choice of words stays with the patient.",
                  "痛みや医療に関わる文には、大きな確認カードがもう一度出ます。「はい」を押すまで読み上げません。言葉を選ぶ権利は、ご本人に返します。",
                  "통증이나 의료와 관련된 문장은 큰 확인 카드가 한 번 더 뜨고, “네”를 눌러야 읽어 줍니다. 말을 고르는 권리를 환자에게 돌려줍니다.") },
-        { act: () => confirmYes(S.medical), focus: "#confirmYes", cap: "" },
+        { act: () => confirmYes(S.medical), cap: "" },   // press() 自己會亮那顆鈕
       ],
     },
     {
@@ -232,12 +232,12 @@ function UNITS(L = demoLang()) {
                  "選んだカードは手がかりとして並び、家族はひと目で理解できます。",
                  "고른 카드는 단서처럼 남아 가족이 한눈에 알아볼 수 있습니다.") },
         { act: async () => { kioskClose(); restoreSeverity(); goSetting("prefs"); await noseDemo(); },
-          focus: () => $("#s_head")?.closest("label"),
+          focus: () => row("#s_head"),
           cap: c("手不方便時，前鏡頭追蹤鼻尖來移動游標，停留約一秒就自動點擊——鼻控加上停留點選。",
                  "If the hands can't help, the front camera tracks the tip of the nose to move a cursor, and resting on a button for a second clicks it — nose control with dwell selection.",
                  "手が使えなくても、前面カメラが鼻先を追ってカーソルを動かし、ボタンの上で約1秒止まると自動でクリックします。鼻操作と停留クリックです。",
                  "손을 쓰기 어려우면 전면 카메라가 코끝을 따라 커서를 움직이고, 버튼 위에 1초쯤 머물면 자동으로 누릅니다. 코 조작과 머무름 선택입니다.") },
-        { act: () => { goSetting("a11y"); scanDemoStart(); }, focus: () => $("#s_scan")?.closest("label"), hold: 1200,
+        { act: () => { goSetting("a11y"); scanDemoStart(); }, focus: () => row("#s_scan"), hold: 1200,
           cap: c("連指標都無法移動的人，可以用掃描模式：畫面逐一高亮，按一下大開關就選取。",
                  "For those who can't move a pointer at all, switch scanning highlights each item in turn; one press of a big switch selects it.",
                  "ポインタも動かせない方には、スキャン操作。画面が順に強調表示され、大きなスイッチを一度押せば選べます。",
@@ -247,7 +247,7 @@ function UNITS(L = demoLang()) {
                  "The switch can even be a deliberate long blink — natural blinking won't trigger it.",
                  "スイッチは意図的な長いまばたきでも構いません。自然なまばたきでは反応しません。",
                  "스위치는 의도적인 긴 눈 깜빡임이어도 됩니다. 자연스러운 깜빡임에는 반응하지 않습니다.") },
-        { act: async () => { scanDemoStop(); goSetting("prefs"); await visionDemo(); }, focus: () => $("#s_contrast")?.closest("label"),
+        { act: async () => { scanDemoStop(); goSetting("prefs"); await visionDemo(); }, focus: () => row("#s_contrast"),
           cap: c("再加上高對比與超大字，視力退化的長輩也看得清楚。",
                  "Add high contrast and extra-large type, and even low vision is no barrier.",
                  "さらに高コントラストと特大文字で、視力が落ちた方にも見やすくします。",
@@ -275,7 +275,7 @@ function UNITS(L = demoLang()) {
                  "AI feedback arrives instantly: scores for meaning, fluency and intonation, the mispronounced word highlighted, and how long he paused before speaking.",
                  "AIがすぐにフィードバック。意味・流暢さ・抑揚の3項目を採点し、言い間違えた語を示し、話し始めるまでの時間も記録します。",
                  "AI가 바로 피드백합니다. 의미·유창성·억양 세 항목 점수와 잘못 말한 단어, 말하기 전 멈춘 시간까지 기록합니다.") },
-        { focus: '#rehabPractice [data-i18n="rehab.privacyNote"]',
+        { focus: '[data-i18n="rehab.privacyNote"]',
           cap: c("跟讀的錄音評分完立即刪除，只留下文字與分數。",
                  "The recording is discarded right after scoring; only text and scores are kept.",
                  "音声は採点後すぐに破棄され、残るのは文字と点数だけです。",
@@ -285,7 +285,8 @@ function UNITS(L = demoLang()) {
                  "Every response time and hit rate is turned automatically into a rehabilitation trajectory chart.",
                  "毎回の反応時間と正答率は、自動でリハビリ推移グラフになります。",
                  "매번의 반응 시간과 적중률은 자동으로 재활 추이 그래프가 됩니다.") },
-        { act: async () => { spotSel("#trajHit"); await sleep(1600); spotSel("#reportCsv"); }, focus: "#trajHit",
+        // 先停在命中率圖（至少等錄影池量完位置），再移到匯出鈕
+        { act: async () => { await Promise.all([sleep(1800), new Promise((r) => setTimeout(r, FOCUS_SETTLE + 100))]); spotSel("#reportCsv"); }, focus: "#trajHit",
           cap: c("語言治療師看得出進步的趨勢，也能匯出 CSV、PDF，或推送給家人。",
                  "Speech therapists can follow the trend, export it as CSV or PDF, or send it to the family.",
                  "言語聴覚士は改善の傾向を確認でき、CSVやPDFへの書き出し、家族への送信もできます。",
@@ -300,7 +301,7 @@ function UNITS(L = demoLang()) {
                  "Module four: the semantic safeguard. Every sentence is checked for meaning before it is spoken.",
                  "モジュール4、意味ガード。すべての文は、声にする前に意味をチェックします。",
                  "모듈 4, 의미 보호. 모든 문장은 말하기 전에 의미를 먼저 검사합니다.") },
-        { act: async () => { await press("#btnCompose"); showLock(); }, focus: "#lockDlg .modal-card", hold: 600,
+        { act: async () => { await press("#btnCompose"); showLock(); }, focus: "#lockBody", hold: 600,
           cap: c("偵測到求救或自傷的語意時，不會唸出來，而是立刻啟動危機介入。",
                  "When it detects a cry for help or self-harm, it does not speak — it starts crisis intervention instead.",
                  "助けを求める言葉や自傷の意図を検知すると、読み上げずに危機介入を始めます。",
@@ -310,7 +311,7 @@ function UNITS(L = demoLang()) {
                  "It automatically sends the GPS location to the designated family member, opens a video link, and switches to a calming breathing guide.",
                  "指定した家族にGPSの位置を自動で送り、ビデオ通話のリンクを開き、画面は呼吸ガイドに切り替わります。",
                  "지정된 가족에게 GPS 위치를 자동으로 보내고 영상 통화 링크를 열며, 화면은 호흡 안내로 바뀝니다.") },
-        { focus: () => $("#crisisHotlineEmergency")?.parentElement, hold: 1000,
+        { focus: "#crisisHotlineEmergency", hold: 1000,
           cap: c("下方可以一鍵直撥 119 和 1925 安心專線；這個畫面要家人確認後才會關閉。",
                  "Below, one tap dials emergency services or a crisis line — 119 and 1925 in Taiwan. The screen closes only after the family responds.",
                  "下のボタンで救急や相談窓口にワンタップで電話できます（台湾では119と1925）。この画面は家族が確認するまで閉じません。",
@@ -325,7 +326,7 @@ function UNITS(L = demoLang()) {
     {
       id: "voice", icon: "🗣", title: c("⑤ 擬真聲紋・情感語音", "⑤ Personal voice & emotional speech", "⑤ 本人の声と感情音声", "⑤ 실제 같은 목소리와 감정 음성"),
       steps: [
-        { act: () => goSetting("voice"), focus: '[data-setkey="voice"] h3',
+        { act: () => goSetting("voice"), focus: () => settingCard("voice"),
           cap: c("模組五，擬真聲紋。失去語言的同時，很多人也失去了自己的聲音。",
                  "Module five: a voice that sounds like you. Losing speech often means losing one's own voice, too.",
                  "モジュール5、本人そっくりの声。言葉を失うと、自分の声も失ってしまうことが多いのです。",
@@ -335,7 +336,7 @@ function UNITS(L = demoLang()) {
                  "Speak My Life uses GPT-SoVITS to clone a personal voice from recordings made before the stroke, or from a family member, and keeps it in the user's own Google Drive.",
                  "GPT-SoVITSで、発症前の録音や家族の声から専用の音声モデルを作り、ご本人のGoogleドライブに保存します。",
                  "GPT-SoVITS로 발병 전 녹음이나 가족의 목소리에서 전용 음성 모델을 만들어 사용자 본인의 Google 드라이브에 저장합니다.") },
-        { act: consentMock, focus: () => $("#vcAgreeChk")?.closest("label"), hold: 800,
+        { act: consentMock, focus: () => row("#vcAgreeChk"), hold: 800,
           cap: c("但聲紋一定要先經過本人或法定代理人同意；隨時可以撤回，撤回後立刻停用。",
                  "But a voiceprint is used only with consent from its owner or a legal guardian — and consent can be withdrawn at any time, taking effect immediately.",
                  "ただし声紋は、本人または法定代理人の同意があって初めて使えます。同意はいつでも撤回でき、撤回すればすぐに停止します。",
@@ -442,6 +443,10 @@ function spot(el) {
   }
 }
 function spotSel(sel) { spot($(sel)); }
+// 設定卡本身（索引列上也帶同一個 data-setkey，要排除掉）
+function settingCard(key) { return $$(`[data-setkey="${key}"]`).find((e) => !e.matches("#settingsIndex *")); }
+// 勾選框本身太小，要亮的是它那一行（label）；版面改了找不到 label 就退回元素本身
+function row(sel) { const el = $(sel); return el?.closest("label") || el; }
 function clearSpot() { spot(null); }
 
 // 按鈕「被按下去」的視覺回饋。**不觸發真的 click**——演示不做任何有副作用的事。
@@ -481,7 +486,8 @@ async function ensureVisible(focus, cap) {
   const name = typeof focus === "function" ? "(fn)" : focus;
   if (!el) { console.warn(`[demo] 錄影池：找不到「${name}」 — 「${(cap || "").slice(0, 48)}」`); return; }
   spot(el);                               // spot() 會 scrollIntoView({block:"center"})
-  await sleep(FOCUS_SETTLE);              // 等 smooth 捲動停下來再量，否則會誤報
+  // 等 smooth 捲動停下來再量，否則會誤報。不吃加速倍率：捲動動畫的長度由瀏覽器決定
+  await new Promise((r) => setTimeout(r, FOCUS_SETTLE));
   const r = el.getBoundingClientRect();
   const vh = window.innerHeight || document.documentElement.clientHeight;
   const vw = window.innerWidth || document.documentElement.clientWidth;
@@ -694,7 +700,7 @@ function noseRemove() { _nose?.remove(); _nose = null; }
 
 async function noseDemo() {
   await sleep(FOCUS_SETTLE + 200);
-  const target = $("#s_headRecenter"), from = $("#s_head")?.closest("label");
+  const target = $("#s_headRecenter"), from = row("#s_head");
   if (!target || !from) return;
   const a = from.getBoundingClientRect(), b = target.getBoundingClientRect();
   const x0 = a.left + 20, y0 = a.top + 10, x1 = b.left + b.width / 2, y1 = b.top + b.height / 2;
@@ -1432,7 +1438,8 @@ async function run(ids, opts) {
           .catch((e) => console.warn("[demo] 動作失敗", u.id, e));
         // 錄影池：旁白開始講之前，先把這一步要講的地方露出來並確認它真的看得見。
         // **一定要在 acting 之後**：切分頁是寫在 act 裡的，先檢查的話量到的是上一個分頁。
-        // goTab／goSetting 是同步的，所以 acting 這個 microtask 一排下去分頁就換好了。
+        // goTab／goSetting 是同步的，所以下面先讓出一個 microtask，分頁就換好了。
+        await null;   // 讓 acting 的第一段（同步的切分頁／建節點）先跑完
         await ensureVisible(s.focus, s.cap);
         await Promise.all([acting, narrate(s.cap)]);
         if (_narrate && s.cap) await sleep(TAIL_PAD);   // 講完再讓畫面多停一下

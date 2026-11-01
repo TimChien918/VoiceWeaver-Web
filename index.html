@@ -11,14 +11,40 @@
      沒有這個東西的話，「網頁到底有沒有更新」誰都答不出來——只能猜快取、猜部署，
      而每猜一次就是使用者再白試一次。畫面右下角會顯示它，錯誤訊息也會帶著它。 -->
 <meta name="app-version" content="1.5.78" />
+<!-- 品牌字體 Noto Sans TC（依字元切片下載，只抓畫面用到的字）。連不到時 style.css 的字體堆疊
+     會退回各平台系統中文字，日文、韓文介面另有各自的後備。 -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;800&amp;display=swap" />
 <link rel="stylesheet" href="style.css?v=1.5.78" />
 </head>
 <body>
-  <!-- 登入閘 -->
+  <!-- 登入閘＝品牌開場。深綠底上漂著幾個「碎詞」，一條暖黃絲線穿過畫面：
+       產品在做的事（把碎詞拾起、織成句子）第一眼就看得到。 -->
   <div id="login" class="login hidden">
-    <div class="login-card">
-      <!-- 與分頁圖示同一個圖：手托起對話框＝拾起話語。alt 留空：旁邊的 h1 已經念出產品名，讀屏不必念兩次。 -->
-      <div class="logo"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232f6f5e'/%3E%3Cpath d='M16 9h32a6 6 0 0 1 6 6v12a6 6 0 0 1-6 6H34l-7 6v-6H16a6 6 0 0 1-6-6V15a6 6 0 0 1 6-6z' fill='%23fff'/%3E%3Ccircle cx='22' cy='21' r='3' fill='%232f6f5e'/%3E%3Ccircle cx='32' cy='21' r='3' fill='%232f6f5e'/%3E%3Ccircle cx='42' cy='21' r='3' fill='%232f6f5e'/%3E%3Cpath d='M9 43c5 14 41 14 46 0' fill='none' stroke='%23ffd27a' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E" width="64" height="64" alt="" style="display:block;margin:0 auto;border-radius:14px" /></div>
+    <div class="login-deco" aria-hidden="true">
+      <span class="ld-word" style="--x:7%;--y:12%;--d:0s">水</span>
+      <span class="ld-word" style="--x:78%;--y:9%;--d:-2s">謝謝</span>
+      <span class="ld-word" style="--x:86%;--y:44%;--d:-4s">回家</span>
+      <span class="ld-word" style="--x:4%;--y:58%;--d:-1s">想</span>
+      <span class="ld-word" style="--x:16%;--y:86%;--d:-3s">家人</span>
+      <span class="ld-word" style="--x:70%;--y:88%;--d:-5s">休息</span>
+      <svg class="ld-thread" viewBox="0 0 1200 800" preserveAspectRatio="none"><path pathLength="1" d="M-40 560 C 180 380, 360 720, 600 520 S 980 260, 1240 420"/></svg>
+    </div>
+    <div class="login-wrap">
+      <div class="login-hero">
+        <p class="login-eyebrow">Speak My Life</p>
+        <h2 class="login-motto" data-i18n="login.motto">讓說不出口的話，被世界聽見。</h2>
+        <ul class="login-points">
+          <li><span class="lp-ico" aria-hidden="true">🧩</span><span data-i18n="login.p1">把碎詞拾起，AI 織成三個候選句</span></li>
+          <li><span class="lp-ico" aria-hidden="true">✅</span><span data-i18n="login.p2">由你本人確認，才說出口</span></li>
+          <li><span class="lp-ico" aria-hidden="true">🛟</span><span data-i18n="login.p3">圖卡、語音復健與危機守護</span></li>
+        </ul>
+      </div>
+      <div class="login-card">
+        <!-- 與分頁圖示同一個圖：對話框＋三個碎詞＋暖黃絲線。inline SVG 才能讓三個點依序浮現、絲線織進來。
+             aria-hidden：旁邊的 h1 已經念出產品名，讀屏不必念兩次。 -->
+        <div class="logo"><svg class="logo-mark" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="#2f6f5e"/><path d="M16 9h32a6 6 0 0 1 6 6v12a6 6 0 0 1-6 6H34l-7 6v-6H16a6 6 0 0 1-6-6V15a6 6 0 0 1 6-6z" fill="#fff"/><circle class="lm-dot" cx="22" cy="21" r="3" fill="#2f6f5e"/><circle class="lm-dot" cx="32" cy="21" r="3" fill="#2f6f5e"/><circle class="lm-dot" cx="42" cy="21" r="3" fill="#2f6f5e"/><path class="lm-thread" d="M9 43c5 14 41 14 46 0" pathLength="1" fill="none" stroke="#ffd27a" stroke-width="5" stroke-linecap="round"/></svg></div>
       <h1 data-i18n="app.name">拾語者 Speak My Life</h1>
       <p class="muted" data-i18n="login.tagline">中風失語者的 AI 溝通與居家復健系統</p>
       <!-- 最簡入口：一顆大按鈕直接開始（免帳號）；Google 登入給照護者做跨裝置同步 -->
@@ -26,58 +52,117 @@
       <button id="btnGoogle" class="btn ghost" data-i18n="login.google">使用 Google 登入（跨裝置同步）</button>
       <p class="tiny muted" data-i18n="login.note">「直接開始」資料存在這台裝置。照護者用 Google 登入，設定與圖卡換裝置也會跟著走。</p>
       <p id="loginErr" class="tiny err"></p>
+      </div>
     </div>
   </div>
 
   <!-- 主畫面 -->
   <div id="app" class="app hidden">
     <header class="topbar">
+      <span class="brand-mark" aria-hidden="true"></span>
       <span class="title" data-i18n="app.short">拾語者</span>
       <span class="spacer"></span>
-      <!-- 求救入口：危機視窗原本只有 Escape×3 與「連錯 3 次」兩條路，手機沒有 Escape 鍵＝按不到。
-           放 topbar 而不是重組分頁，是因為崩潰不挑分頁——在圖卡頁、復健頁也要按得到。 -->
-      <button id="btnSos" class="chip sos-chip" data-i18n="sos.help">🆘 求救</button>
       <!-- 活動進行中的標記。**每個帳號都看得到**（含已經有自己金鑰的人）：
            設定頁那一則只寫給正在借金鑰的人，有自己金鑰的人完全不知道有這回事。
            放 topbar 是因為它不挑分頁——在圖卡頁、復健頁也還在。 -->
       <button id="campaignChip" class="chip campaign-chip hidden" data-i18n="campaign.chip">🎁 活動中</button>
-      <span id="who" class="tiny muted"></span>
-      <button id="btnLogout" class="chip" data-i18n="logout">登出</button>
+      <!-- 歷史與設定不常用，收在頂端（底部導覽只放 5 個最常用的，手指才找得到）。
+           它們仍然是 .tab[data-tab]：app.js 的 setupTabs 與演示照樣按得到。 -->
+      <button class="tab tab-icon" data-tab="history"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span class="tab-lbl" data-i18n="nav.history">歷史</span></button>
+      <button class="tab tab-icon" data-tab="settings"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2.2"/><circle cx="9" cy="17" r="2.2"/></svg><span class="tab-lbl" data-i18n="nav.settings">設定</span></button>
+      <!-- 求救入口：危機視窗原本只有 Escape×3 與「連錯 3 次」兩條路，手機沒有 Escape 鍵＝按不到。
+           放 topbar 而不是某個分頁，是因為崩潰不挑分頁——在圖卡頁、復健頁也要按得到。 -->
+      <button id="btnSos" class="chip sos-chip" data-i18n="sos.help">🆘 求救</button>
     </header>
 
+    <!-- 主要導覽：手機是固定在底部的大圖示列（拇指搆得到），寬螢幕（≥960px）變成左側欄。
+         標籤放在內層 span 上（data-i18n 會整個換掉元素的文字，放在按鈕上會把圖示洗掉）。 -->
     <nav class="tabs">
-      <button class="tab active" data-tab="compose" data-i18n="nav.compose">重組</button>
-      <button class="tab" data-tab="rehab" data-i18n="nav.rehab">復健</button>
-      <button class="tab" data-tab="aac" data-i18n="nav.aac">圖卡</button>
-      <button class="tab" data-tab="report" data-i18n="nav.report">報表</button>
-      <button class="tab" data-tab="history" data-i18n="nav.history">歷史</button>
-      <button class="tab" data-tab="settings" data-i18n="nav.settings">設定</button>
+      <button class="tab active" data-tab="home"><span class="tab-ico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 10.5 12 3.5l8.5 7"/><path d="M5.5 9v11h4.5v-6h4v6h4.5V9"/></svg></span><span class="tab-lbl" data-i18n="nav.home">首頁</span></button>
+      <button class="tab" data-tab="compose"><span class="tab-ico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 4.5h15a1.5 1.5 0 0 1 1.5 1.5v9.5a1.5 1.5 0 0 1-1.5 1.5H12l-5 4v-4H4.5A1.5 1.5 0 0 1 3 15.5V6a1.5 1.5 0 0 1 1.5-1.5z"/><path d="M8 10.8h.01M12 10.8h.01M16 10.8h.01" stroke-width="2.8"/></svg></span><span class="tab-lbl" data-i18n="nav.compose">重組</span></button>
+      <button class="tab" data-tab="rehab"><span class="tab-ico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg></span><span class="tab-lbl" data-i18n="nav.rehab">復健</span></button>
+      <button class="tab" data-tab="aac"><span class="tab-ico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg></span><span class="tab-lbl" data-i18n="nav.aac">圖卡</span></button>
+      <button class="tab" data-tab="report"><span class="tab-ico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v16h16"/><path d="m7.5 14.5 3.5-4 3 3 5-6"/></svg></span><span class="tab-lbl" data-i18n="nav.report">報表</span></button>
+      <p class="nav-foot" data-i18n="login.tagline">中風失語者的 AI 溝通與居家復健系統</p>
     </nav>
 
     <main>
-      <!-- 重組 -->
-      <section id="tab-compose" class="panel">
-        <!-- 一鍵發聲：講不出話又急的時候，不該還要先組句。放最上面。 -->
-        <div class="card">
-          <label class="lbl" style="color:var(--danger);font-weight:700" data-i18n="sos.quickTitle">🏥 快速求救（一鍵發聲）</label>
+      <!-- 首頁主控台：問候＋一鍵求救在最上面，中間是設計書的六張功能卡當大入口，
+           下面是我的最愛與最近說過的話。長輩打開就知道「可以做什麼、從哪裡開始」。 -->
+      <section id="tab-home" class="panel">
+        <div class="card hero-card">
+          <div class="hero-text">
+            <h2 id="homeGreet" class="hero-greet" data-i18n="home.afternoon">午安</h2>
+            <p class="hero-sub" data-i18n="home.sub">今天想說什麼？慢慢來，我們一起把話拾起來。</p>
+          </div>
+          <button type="button" class="btn hero-cta" data-go="compose" data-i18n="home.cta">✨ 開始說話</button>
+          <svg class="hero-thread" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M-10 96 C 70 40, 140 120, 220 70 S 340 20, 410 52"/></svg>
+        </div>
+        <!-- 一鍵發聲：講不出話又急的時候，不該還要先組句。放在首頁最上面。 -->
+        <div class="card sos-card">
+          <label class="lbl sos-lbl" data-i18n="sos.quickTitle">🏥 快速求救（一鍵發聲）</label>
           <div id="quickSos" class="row"></div>
         </div>
-        <div class="card">
-          <label class="lbl" data-i18n="compose.label">碎詞／想說的（可用語音輸入）</label>
+        <div class="card feat-card">
+          <h3 data-i18n="home.features">功能</h3>
+          <div class="feat-grid">
+          <button type="button" class="feat feat-compose" data-go="compose"><span class="feat-ico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 4.5h15a1.5 1.5 0 0 1 1.5 1.5v9.5a1.5 1.5 0 0 1-1.5 1.5H12l-5 4v-4H4.5A1.5 1.5 0 0 1 3 15.5V6a1.5 1.5 0 0 1 1.5-1.5z"/><path d="M8 10.8h.01M12 10.8h.01M16 10.8h.01" stroke-width="2.8"/></svg></span><span class="feat-t" data-i18n="feat.compose"></span><span class="feat-d" data-i18n="feat.composeD"></span></button>
+          <button type="button" class="feat feat-rehab" data-go="rehab"><span class="feat-ico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></svg></span><span class="feat-t" data-i18n="feat.rehab"></span><span class="feat-d" data-i18n="feat.rehabD"></span></button>
+          <button type="button" class="feat feat-aac" data-go="aac"><span class="feat-ico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg></span><span class="feat-t" data-i18n="feat.aac"></span><span class="feat-d" data-i18n="feat.aacD"></span></button>
+          <button type="button" class="feat feat-report" data-go="report"><span class="feat-ico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4v16h16"/><path d="m7.5 14.5 3.5-4 3 3 5-6"/></svg></span><span class="feat-t" data-i18n="feat.report"></span><span class="feat-d" data-i18n="feat.reportD"></span></button>
+          <button type="button" class="feat feat-tts" data-go="settings" data-go-set="prefs"><span class="feat-ico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 3.6 5.4 3.6 8.5s-1.1 5.9-3.6 8.5c-2.5-2.6-3.6-5.4-3.6-8.5S9.5 6.1 12 3.5z"/></svg></span><span class="feat-t" data-i18n="feat.tts"></span><span class="feat-d" data-i18n="feat.ttsD"></span></button>
+          <button type="button" class="feat feat-sync" data-go="settings"><span class="feat-ico"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18.5h10a4 4 0 0 0 .6-7.95A5.5 5.5 0 0 0 7.1 9.6 4.5 4.5 0 0 0 7 18.5z"/><path d="m9.5 14 2 2 3.5-3.5"/></svg></span><span class="feat-t" data-i18n="feat.sync"></span><span class="feat-d" data-i18n="feat.syncD"></span></button>
+          </div>
+        </div>
+        <div id="favCard" class="card hidden">
+          <label class="lbl" data-i18n="fav.label">⭐ 我的最愛（點一下朗讀）</label>
+          <div id="favList" class="chips"></div>
+        </div>
+        <div class="card recent-card">
+          <div class="card-head">
+            <h3 data-i18n="home.recent">🕘 最近說過的話（點一下再唸一次）</h3>
+            <button type="button" class="btn link" data-go="history" data-i18n="home.allHistory">全部紀錄 ›</button>
+          </div>
+          <div id="homeRecent"></div>
+        </div>
+      </section>
+
+      <!-- 重組：步驟流程（說出碎詞 → 加入情境 → 挑一句 → 確認）。頁首的步驟條由 js/ui.js
+           依目前進度點亮，讓使用者知道自己走到哪一步、下一步要做什麼。 -->
+      <section id="tab-compose" class="panel hidden">
+        <header class="page-head">
+          <h2 data-i18n="nav.compose">重組</h2>
+          <p data-i18n="page.compose">說出碎詞，AI 幫你織成句子，由你決定要說哪一句。</p>
+          <ol class="stepper" aria-hidden="true">
+            <li data-stage="input"><i>1</i><span data-i18n="stage.input">輸入</span></li>
+            <li data-stage="context"><i>2</i><span data-i18n="stage.context">情境</span></li>
+            <li data-stage="pick"><i>3</i><span data-i18n="stage.pick">候選</span></li>
+            <li data-stage="confirm"><i>4</i><span data-i18n="stage.confirm">確認</span></li>
+          </ol>
+        </header>
+        <div class="card step-card" data-step="input">
+          <div class="step-head"><span class="step-no">1</span><span data-i18n="step.input">說出想說的</span></div>
+          <label class="lbl" for="fragments" data-i18n="compose.label">碎詞／想說的（可用語音輸入）</label>
           <textarea id="fragments" rows="3" placeholder="例：水 休息 現在" data-i18n-ph="compose.ph"></textarea>
           <div class="row wrap">
             <button id="btnMic" class="btn ghost" data-i18n="btn.mic">🎤 語音輸入</button>
             <!-- 直接聽：跳過語音轉文字，把錄音原封不動交給 AI 判斷意思。
                  沒有支援原生音訊的金鑰時由 JS 隱藏。 -->
             <button id="btnAudioDirect" class="btn ghost hidden" data-i18n="btn.audioDirect">🗣 直接說給 AI 聽</button>
+            <span id="audioHint" class="tiny muted"></span>
+          </div>
+        </div>
+        <div class="card step-card" data-step="context">
+          <div class="step-head"><span class="step-no">2</span><span data-i18n="step.context">加入情境（選填）</span></div>
+          <div class="row wrap">
             <button id="btnLoc" class="btn ghost" data-i18n="btn.loc">📍 加入地點</button>
             <button id="btnCam" class="btn ghost" data-i18n="btn.cam">📷 拍照辨識</button>
             <span id="ctx" class="tiny muted"></span>
-            <span id="audioHint" class="tiny muted"></span>
           </div>
           <button id="btnCompose" class="btn primary big" data-i18n="btn.compose">✨ 重組成自然句</button>
         </div>
-        <div id="result" class="card result hidden">
+        <div id="result" class="card result step-card hidden" data-step="pick">
+          <div class="step-head"><span class="step-no">3</span><span data-i18n="step.pick">挑一句，確認後說出口</span></div>
           <div id="resultText" class="result-text"></div>
           <!-- 三個候選一起攤開讓使用者挑（與 App 一致）：一次只看得到一句的話，
                「三個都不對？」這種說法對他而言是沒有依據的。點一下只是選定、不發聲，
@@ -122,15 +207,16 @@
           </div>
           <img id="resultImg" class="result-img hidden" alt="意圖圖卡" />
         </div>
-        <div id="favCard" class="card hidden">
-          <label class="lbl" data-i18n="fav.label">⭐ 我的最愛（點一下朗讀）</label>
-          <div id="favList" class="chips"></div>
-        </div>
       </section>
 
       <!-- 語音復健 -->
       <section id="tab-rehab" class="panel hidden">
-        <div class="card">
+        <header class="page-head">
+          <h2 data-i18n="nav.rehab"></h2>
+          <p data-i18n="page.rehab"></p>
+        </header>
+        <div class="card step-card">
+          <div class="step-head"><span class="step-no">1</span><span data-i18n="step.choose">選一句來練習</span></div>
           <label class="lbl" data-i18n="rehab.targetLabel">練習句子</label>
           <div class="row">
             <input id="rehabTarget" type="text" placeholder="輸入目標句，或讓 AI 推薦" data-i18n-ph="rehab.targetPh" />
@@ -139,9 +225,26 @@
           <div id="rehabSuggestions" class="chips hidden" style="margin-top:10px"></div>
           <!-- 臨床常用題庫：不需要 LLM 金鑰，離線也能直接開始練 -->
           <label class="lbl" data-i18n="rehab.bank">臨床常用題庫（點一下開始練）</label>
-          <div id="rehabBank"></div>
+          <div id="rehabBank" class="bank"></div>
           <button id="rehabStart" class="btn primary big" data-i18n="rehab.start">開始練習</button>
           <button id="rehabParagraph" class="btn ghost" style="width:100%;margin-top:8px" data-i18n="rehab.paragraph">📖 整段練習（自動分句逐句練）</button>
+        </div>
+        <!-- 跟讀與回饋緊接在選題下面：按「開始練習」後，要練的那一句就出現在手指旁邊，不必往下找。 -->
+        <div id="rehabPractice" class="card step-card practice-card hidden">
+          <div class="step-head"><span class="step-no">2</span><span data-i18n="step.practice">跟讀與 AI 回饋</span></div>
+          <div id="rehabQueueBar" class="hidden" style="font-size:.85rem;font-weight:600;color:var(--accent);margin-bottom:8px"></div>
+          <label class="lbl" data-i18n="rehab.targetDisplay">目標句（點字卡可單獨發音）</label>
+          <div id="rehabTargetDisplay" class="result-text" style="padding-bottom:6px"></div>
+          <div id="rehabChips" class="chips"></div>
+          <div class="row">
+            <button id="rehabListen" class="btn ghost" data-i18n="rehab.listen">🔊 聽整句</button>
+            <button id="rehabRecord" class="btn primary" data-i18n="rehab.record">🎤 開始跟讀</button>
+            <button id="rehabNext" class="btn ghost hidden" data-i18n="rehab.next">下一句 ▶</button>
+          </div>
+          <div id="rehabScore"></div>
+          <!-- 設計書第 6 點「錄音評分後刪除」：跟讀走瀏覽器語音辨識，這支程式拿到的只有文字，
+               評分完只留文字與分數。寫在畫面上，家屬不必去猜聲音有沒有被存起來。 -->
+          <p class="tiny muted" style="margin:8px 0 0" data-i18n="rehab.privacyNote">🔒 跟讀的聲音只用於這次辨識評分，評分完立即丟棄，不會存進本機或雲端；只保留文字與分數。</p>
         </div>
         <!-- 圖片說故事：比跟讀單句更高階的練習（要自己組織語意順序）-->
         <div class="card">
@@ -162,21 +265,6 @@
             <p id="storyScore" class="tiny muted" style="margin:0"></p>
           </div>
         </div>
-        <div id="rehabPractice" class="card hidden">
-          <div id="rehabQueueBar" class="hidden" style="font-size:.85rem;font-weight:600;color:var(--accent);margin-bottom:8px"></div>
-          <label class="lbl" data-i18n="rehab.targetDisplay">目標句（點字卡可單獨發音）</label>
-          <div id="rehabTargetDisplay" class="result-text" style="padding-bottom:6px"></div>
-          <div id="rehabChips" class="chips"></div>
-          <div class="row">
-            <button id="rehabListen" class="btn ghost" data-i18n="rehab.listen">🔊 聽整句</button>
-            <button id="rehabRecord" class="btn primary" data-i18n="rehab.record">🎤 開始跟讀</button>
-            <button id="rehabNext" class="btn ghost hidden" data-i18n="rehab.next">下一句 ▶</button>
-          </div>
-          <div id="rehabScore"></div>
-          <!-- 設計書第 6 點「錄音評分後刪除」：跟讀走瀏覽器語音辨識，這支程式拿到的只有文字，
-               評分完只留文字與分數。寫在畫面上，家屬不必去猜聲音有沒有被存起來。 -->
-          <p class="tiny muted" style="margin:8px 0 0" data-i18n="rehab.privacyNote">🔒 跟讀的聲音只用於這次辨識評分，評分完立即丟棄，不會存進本機或雲端；只保留文字與分數。</p>
-        </div>
         <div class="card">
           <label class="lbl" data-i18n="rehab.recent">最近練習</label>
           <div id="rehabLogs"></div>
@@ -184,8 +272,12 @@
       </section>
 
       <!-- 成績單 -->
-      <section id="tab-report" class="panel hidden">
-        <div class="card">
+      <section id="tab-report" class="panel dash hidden">
+        <header class="page-head">
+          <h2 data-i18n="nav.report"></h2>
+          <p data-i18n="page.report"></p>
+        </header>
+        <div class="card dash-toolbar">
           <div class="row wrap" style="margin:0;justify-content:space-between">
             <div id="reportRange" class="chips" style="margin:0">
               <span class="chip" data-r="today" data-i18n="report.today">今日</span>
@@ -197,8 +289,8 @@
             <button id="reportTg" class="btn ghost" style="white-space:nowrap">📤 Telegram</button>
           </div>
         </div>
-        <div class="card">
-          <div class="stats">
+        <div class="card dash-kpi">
+          <div class="stats kpi">
             <div class="stat"><div class="stat-val" id="statSessions">—</div><div class="stat-lbl" data-i18n="report.sessions">練習次數</div></div>
             <div class="stat"><div class="stat-val" id="statAvg">—</div><div class="stat-lbl" data-i18n="report.avg">平均分</div></div>
             <div class="stat"><div class="stat-val" id="statStreak">—</div><div class="stat-lbl" data-i18n="report.streak">連續天數</div></div>
@@ -206,7 +298,7 @@
           </div>
         </div>
         <!-- 行為數據：治療師評估用，全期累計，不隨上面的期間切換 -->
-        <div class="card">
+        <div class="card dash-kpi">
           <label class="lbl" data-i18n="report.behavior">🧭 行為數據（治療師評估用，全期累計）</label>
           <div class="stats">
             <div class="stat"><div class="stat-val" id="bmReaction">—</div><div class="stat-lbl" data-i18n="report.bmReaction">⏱ 反應</div></div>
@@ -216,12 +308,12 @@
           </div>
           <p class="tiny muted" style="margin-top:8px" data-i18n="report.bmNote">反應＝開 App 到第一次發聲的平均耗時 · 選句＝AI 第一候選被採用率 · 修改＝退回／刪卡累計 · 圖卡＝圖卡輸入佔總輸入比例</p>
         </div>
-        <div class="card">
+        <div class="card dash-chart">
           <label class="lbl" data-i18n="report.trend">分數趨勢</label>
           <canvas id="reportChart" style="width:100%;height:150px"></canvas>
         </div>
         <!-- 復健軌跡趨勢圖（設計書模組 3）：反應時間與命中率隨時間的變化，給語言治療師追蹤用 -->
-        <div class="card">
+        <div class="card dash-chart">
           <label class="lbl"><span data-i18n="traj.title">📈 復健軌跡趨勢圖</span> <span id="trajRange" class="tiny muted"></span></label>
           <div class="tiny muted" data-i18n="traj.reactionTitle">⏱ 反應時間（秒，越低越好）</div>
           <canvas id="trajReaction" style="width:100%;height:170px"></canvas>
@@ -229,7 +321,7 @@
           <canvas id="trajHit" style="width:100%;height:170px"></canvas>
           <p class="tiny muted" style="margin-top:8px" data-i18n="traj.note">反應＝開 App 到第一次發聲／跟讀時開口前的停頓 · 命中＝AI 第一候選被採用／跟讀得分 ≥ 80。沒有練習的日子是斷點，不算 0 分。</p>
         </div>
-        <div class="card">
+        <div class="card dash-wide">
           <label class="lbl" data-i18n="report.recent10">最近 10 筆練習</label>
           <div id="reportLogs"></div>
         </div>
@@ -237,8 +329,13 @@
 
       <!-- AAC -->
       <section id="tab-aac" class="panel hidden">
-        <!-- 整句緩衝在最上面：點卡片進緩衝、按「朗讀」整句一次連貫唸（輕症語法訓練） -->
-        <div class="card">
+        <header class="page-head">
+          <h2 data-i18n="nav.aac"></h2>
+          <p data-i18n="page.aac"></p>
+        </header>
+        <!-- 整句緩衝在最上面：點卡片進緩衝、按「朗讀」整句一次連貫唸（輕症語法訓練）。
+             手機上會黏在頂端：往下捲找圖卡時，句子條一直看得到。 -->
+        <div class="card aac-combo">
           <label class="lbl" data-i18n="aac.selected">已選</label>
           <div id="aacCombo" class="combo"></div>
           <div class="row">
@@ -259,7 +356,7 @@
             <button id="aacResultRefine" class="btn ghost" data-i18n="aac.refine">到重組頁潤飾</button>
           </div>
         </div>
-        <div class="card">
+        <div class="card aac-board">
           <div class="row" style="margin:0 0 8px;gap:6px;align-items:center">
             <span class="tiny muted" data-i18n="aac.fontSize">字體：</span>
             <span class="chip aac-scale-chip" data-s="1">A</span>
@@ -292,7 +389,7 @@
             </div>
           </div>
         </div>
-        <div class="card">
+        <div class="card aac-custom">
           <h3 data-i18n="cc.title">📷 自訂圖卡（拍熟悉的東西）</h3>
           <p class="tiny muted" data-i18n="cc.desc">用手機直接拍長輩熟悉的物品或家人照片做成圖卡——看到自己認得的東西，最能建立信任。照片會縮小存進帳號。</p>
           <input id="ccPhoto" type="file" accept="image/*" capture="environment" class="hidden" />
@@ -314,14 +411,32 @@
 
       <!-- 歷史 -->
       <section id="tab-history" class="panel hidden">
+        <header class="page-head">
+          <h2 data-i18n="nav.history"></h2>
+          <p data-i18n="page.history"></p>
+        </header>
         <div id="historyList" class="card"></div>
       </section>
 
       <!-- 設定 -->
       <section id="tab-settings" class="panel hidden">
+        <header class="page-head">
+          <h2 data-i18n="nav.settings"></h2>
+          <p data-i18n="page.settings"></p>
+        </header>
         <!-- 設定改成「索引 → 子頁」：卡片一路往下堆的話，一頁要捲很久才找得到東西，
              而這個 App 的使用者本來就不擅長在長頁面裡定位。索引由 settingsCards 底下
              每張卡的 h3 自動產生（見 app.js buildSettingsIndex），新增卡片不用改這裡。 -->
+        <!-- 帳號與登出原本在 topbar，窄螢幕時會把「登出」擠出畫面；搬到設定頁最上面，
+             像手機的系統設定一樣。進到子頁時由 CSS 收起（只看得到那一區）。 -->
+        <div class="card account-card">
+          <span class="acct-avatar" aria-hidden="true">👤</span>
+          <div class="acct-text">
+            <div class="acct-label" data-i18n="acct.title">帳號</div>
+            <span id="who" class="acct-who"></span>
+          </div>
+          <button id="btnLogout" class="btn ghost" data-i18n="logout">登出</button>
+        </div>
         <div id="settingsIndex" class="card"></div>
         <!-- 版本號。放在索引底下、進子頁前就看得到，回報問題時不必先弄壞什麼
              才知道自己跑的是哪一版。內容由 app.js 依 <meta app-version> 填。 -->
@@ -389,7 +504,7 @@
           <p class="tiny muted" style="margin:8px 0 0" data-i18n="tgp.rule">🔒 求救與危機訊息（文字、位置、現場照片、語音）只會傳送到上面這個 Chat ID——也就是你指定的家人。沒有填就不會傳到任何地方，不會改送給開發者或其他人。</p>
           <p id="tgPrivacyState" class="tiny" style="margin:4px 0 0"></p>
         </div>
-        <div class="card">
+        <div class="card" data-setkey="prefs">
           <h3 data-i18n="set.prefs">偏好</h3>
           <label class="lbl" data-i18n="set.theme">介面主題</label>
           <select id="s_theme"><option value="auto" data-i18n="theme.auto">跟隨系統</option><option value="light" data-i18n="theme.light">淺色</option><option value="dark" data-i18n="theme.dark">深色</option></select>
@@ -441,7 +556,7 @@
           <label class="lbl"><span data-i18n="dwell.time">停留時間</span> <span id="dwellVal" class="muted"></span></label>
           <input id="s_dwellMs" type="range" min="0.5" max="3" step="0.1" />
         </div>
-        <div class="card">
+        <div class="card" data-setkey="care">
           <h3 data-i18n="care.title">🧑‍⚕️ 使用模式（依嚴重程度）</h3>
           <div id="sevModes"></div>
           <label class="lbl" data-i18n="care.pin">重度退出密碼（4 位數字）</label>
@@ -507,9 +622,8 @@
           <p class="tiny muted" data-i18n="ng.hint">授權碼只存在你的帳號、與一份用配對碼保護的雲端文件（只有拿到配對碼才讀得到）。需登入才能同步。</p>
         </div>
 
-        <!-- 自動演示：一鍵把主要功能走一遍並錄影，做報告用。
-             面板刻意全英文——錄出來的影片是要拿去做報告的，字幕與旁白都英文，
-             設定面板跟著英文才不會一段中文一段英文。 -->
+        <!-- 自動演示：依設計書的敘事順序（開場→五大模組→收尾）自動操作一遍並可錄影，
+             給評審現場播放或錄參賽影片用。字幕與旁白跟著介面語言（中／英／日／韓）。 -->
         <div class="card complex">
           <h3 data-i18n="demo.title">🎬 功能介紹與螢幕錄影</h3>
           <p class="tiny muted" data-i18n="demo.desc"></p>

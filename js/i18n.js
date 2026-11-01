@@ -132,8 +132,8 @@ export const STRINGS = {
   "set.tgChat":   { "zh-TW":"Chat ID（接收者）", "en":"Chat ID (recipient)", "ja":"Chat ID（受信者）", "ko":"Chat ID (수신자)" },
   "set.prefs":    { "zh-TW":"偏好", "en":"Preferences", "ja":"設定", "ko":"환경설정" },
   // ── 自動演示 ＋ 螢幕錄影 ──
-  // 面板跟著介面語言走；影片裡的旁白與字幕一律英文（報告用途），
-  // 單元名稱也保持英文——那是影片的段落名，會出現在錄進去的進度列上。
+  // 面板、單元名稱、影片裡的旁白與字幕全部跟著介面語言走（評審可能是任何一國人，
+  // 開演示前把介面切成他的語言即可）。
   "demo.title":   { "zh-TW":"🎬 功能介紹與螢幕錄影", "en":"🎬 Feature tour & screen recording", "ja":"🎬 機能紹介と画面録画", "ko":"🎬 기능 소개 및 화면 녹화" },
   "demo.desc":    { "zh-TW":"自動走過主要功能並錄影，錄完可以直接放進報告。以下全部是預先寫好的示範資料——不會呼叫 AI、不寫入雲端，也不會送出任何訊息（求救與危機介入只是重演畫面）。",
                     "en":"Walks through the app on its own and records the screen, so you can drop the clip straight into a report. Everything below is scripted sample data — no AI requests, no cloud writes, and no messages are ever sent (the SOS and crisis sections are simulated).",
@@ -144,10 +144,11 @@ export const STRINGS = {
   "demo.none":    { "zh-TW":"清除", "en":"Clear", "ja":"クリア", "ko":"지우기" },
   "demo.unitsN":  { "zh-TW":"個單元", "en":"sections", "ja":"セクション", "ko":"섹션" },
   "demo.about":   { "zh-TW":"約", "en":"about", "ja":"約", "ko":"약" },
-  "demo.narrate": { "zh-TW":"英文旁白與字幕（用你的 GPT-SoVITS 角色唸；電腦端連不上時退回瀏覽器語音）",
-                    "en":"Narration + subtitles (English, spoken with your GPT-SoVITS voice; falls back to the browser voice if the computer bridge is offline)",
-                    "ja":"英語ナレーションと字幕（GPT-SoVITSの声で読み上げ。PCに接続できない場合はブラウザ音声）",
-                    "ko":"영어 내레이션 및 자막(GPT-SoVITS 음성으로 낭독. 컴퓨터에 연결되지 않으면 브라우저 음성)" },
+  "demo.narrate": { "zh-TW":"旁白與字幕（跟著介面語言：中／英／日／韓；用你的 GPT-SoVITS 角色唸，電腦端連不上時退回瀏覽器語音）",
+                    "en":"Narration + subtitles (in the interface language — Chinese, English, Japanese or Korean; spoken with your GPT-SoVITS voice, or the browser voice if the computer bridge is offline)",
+                    "ja":"ナレーションと字幕（画面の言語に合わせて中・英・日・韓。GPT-SoVITSの声で読み上げ、PCに接続できない場合はブラウザ音声）",
+                    "ko":"내레이션 및 자막(인터페이스 언어에 맞춰 중·영·일·한. GPT-SoVITS 음성으로 낭독하며, 컴퓨터에 연결되지 않으면 브라우저 음성)" },
+  "demo.recFail": { "zh-TW":"沒有開始錄影，演示會照常進行但不錄影：", "en":"Screen recording was not started; the demo will run without recording: ", "ja":"録画を開始できませんでした。録画なしでデモを続けます：", "ko":"녹화를 시작하지 못했습니다. 녹화 없이 데모를 진행합니다: " },
   "demo.narrateHint": { "zh-TW":"每一句都在開始錄影之前先合成好，影片裡不會有等待。Mac 用 CPU 跑時第一次每句約 25 秒；合成過的會留著，第二次幾乎不用等。",
                     "en":"Every line is synthesised before recording starts, so the video has no waiting in it. On a CPU-only Mac that preparation takes roughly 25 s per line the first time; lines are cached, so a second run starts almost immediately.",
                     "ja":"各行は録画開始前に合成されるため、動画に待ち時間は入りません。CPUのみのMacでは初回1行あたり約25秒。合成済みは保持され、2回目はほぼ待ちません。",
