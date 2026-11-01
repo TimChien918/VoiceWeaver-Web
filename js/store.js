@@ -4,7 +4,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInAnonymously, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, doc, getDoc, setDoc, deleteDoc, collection, addDoc, getDocs, query, orderBy, limit, where
+  getFirestore, doc, getDoc, setDoc, collection, addDoc, getDocs, query, orderBy, limit, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { t } from "./i18n.js?v=1.5.78";
 
@@ -280,6 +280,12 @@ export function driveToken(){ return _driveToken; }
 let _email = "";
 export function accountEmail(){ return _email; }
 
+// 開發者控制中心（admin.js）用：管理員判定要看 emailVerified 與登入方式，
+// accountEmail() 只有信箱字串不夠；寫入活動文件也要同一條 Firestore 連線。
+// 沒登入或純本機模式時都回 null。
+export function currentAuthUser(){ return _auth?.currentUser || null; }
+export function firestoreDb(){ return _db; }
+
 /** 換帳號：先登出，再開 Google 的帳號選擇畫面。 */
 export async function switchAccount(){
   await logout();
@@ -473,215 +479,9 @@ function pushLocalRehab(rec){
 }
 function getLocalRehab(){ try{ return JSON.parse(localStorage.getItem(LS+"_rehab")||"[]"); }catch{ return []; } }
 
-// ── 專屬發音（觸發詞 → 整句話）─────────────────────────
-//
-// 網頁版只管「文字設定」：哪幾個字要聽、聽到之後說哪一句。
-// **聲音的部分不在這裡做。** 比對是拿使用者本人的錄音跑 DTW 波形對齊，
-// 瀏覽器沒有那套實作，而且樣板是「認人」的——照顧者在電腦上錄自己的聲音
-// 對患者完全沒用。所以這裡建的項目要在手機上補錄過才會生效。
-//
-// 這樣切分的價值是：打字這件事在電腦上快得多，照顧者可以一次把二三十句
-// 設好，患者只要拿手機把每句錄幾次。
-
-const SHORTCUTS_LS = LS + "_shortcuts";
-
-function localShortcuts(){
-  try{ return JSON.parse(localStorage.getItem(SHORTCUTS_LS) || "[]"); }catch{ return []; }
-}
-function saveLocalShortcuts(list){
-  // 存不進去要讓呼叫端知道：專屬發音是使用者剛打進去的設定，
-  // 靜靜地丟掉的話他下次打開會發現東西不見了，卻沒有任何線索。
-  try{ localStorage.setItem(SHORTCUTS_LS, JSON.stringify(list)); }
-  catch(e){ throw new Error(t("set.shortcutSaveFail")); }
-}
-
 // Drive 用動態 import：drive.js 反過來要 store.js 的 driveToken，
 // 靜態互相 import 會踩到模組初始化順序。順便也讓沒用到 Drive 的人不必載這段。
 async function _drive(){ return import("./drive.js?v=1.5.78"); }
-
-/**
- * 兩個雲端來源都讀：Firestore（即時、免 Drive 授權）與使用者自己 Drive 的
- * `VoiceWeaver/AcousticModels/`。
- *
- * 為什麼要兩邊：Firestore 那份使用者看不到也拿不走；Drive 那份是他自己資料夾裡的
- * 檔案，備份得走、換帳號搬得動、也刪得掉。兩邊會不同步（匿名登入時沒有 Drive 權限），
- * 所以取回時合併、以觸發詞去重。
- *
- * 沒登入時也能編輯（存 localStorage），之後登入再一起推上去——
- * 不然照顧者得先處理帳號才能開始做事。
- */
-export async function listShortcuts(){
-  if(!(_db && state.uid && state.uid!=="local")) return localShortcuts();
-
-  let fromCloud = [];
-  try{
-    const snap = await getDocs(collection(_db,"users",state.uid,"acousticTemplates"));
-    fromCloud = snap.docs.map(d=>({
-      id: d.id,
-      keyword: d.data().keyword || "",
-      spokenPhrase: d.data().spokenPhrase || "",
-      // 手機錄過音才有。空的＝還沒錄，手機上不會生效。
-      hasRecording: !!(d.data().exemplarBlob || "").length,
-      createdAt: d.data().createdAt || 0,
-    }));
-  }catch(e){ fromCloud = localShortcuts(); }
-
-  let fromDrive = [];
-  try{
-    const d = await _drive();
-    if(d.driveReady()){
-      fromDrive = (await d.listAcoustic()).map(x=>({
-        id: String(x.id || ""),
-        keyword: x.keyword || "",
-        spokenPhrase: x.spokenPhrase || "",
-        hasRecording: !!(x.exemplarBlob || "").length,
-        createdAt: x.createdAt || 0,
-      }));
-    }
-  }catch(e){ /* 沒授權 Drive／token 過期都很正常，Firestore 那份還在 */ }
-
-  const d = await _drive();
-  return d.mergeShortcuts(fromDrive, fromCloud);
-}
-
-export async function saveShortcut({ id, keyword, spokenPhrase }){
-  keyword = (keyword||"").trim();
-  spokenPhrase = (spokenPhrase||"").trim();
-  // 少了任一個就沒有意義：不知道要聽什麼，或不知道要說什麼
-  if(!keyword || !spokenPhrase) throw new Error(t("set.shortcutBlank"));
-
-  // id 用時間戳：Android 端的 key 是資料庫的 Long id，字串化之後要能對得起來
-  const docId = id || String(Date.now());
-  const rec = {
-    label: keyword,
-    keyword,
-    spokenPhrase,
-    matchMode: "Keyword",
-    // 門檻留 0：真正的值要等手機錄音之後才算得出來（那是照那支麥克風校準的）。
-    // 寫一個假的進去會讓手機以為已經校準過。
-    rejectionThreshold: 0,
-    marginThreshold: 0.15,
-    createdAt: Number(docId),
-    updatedAt: Date.now(),
-  };
-
-  if(_db && state.uid && state.uid!=="local"){
-    // merge：手機那邊已經錄過音的話，exemplarBlob 不能被這裡的空值蓋掉
-    await setDoc(doc(_db,"users",state.uid,"acousticTemplates",docId), rec, { merge:true });
-    await _driveWrite(docId, rec);
-  }else{
-    const list = localShortcuts().filter(x=>x.id!==docId);
-    list.push({ id:docId, keyword, spokenPhrase, hasRecording:false, createdAt:rec.createdAt });
-    saveLocalShortcuts(list);
-  }
-  return docId;
-}
-
-/**
- * 順手在使用者自己的 Drive 留一份。失敗不擋存檔——Firestore 那份已經成功，
- * 功能是完整的；為了「備份沒寫成」而告訴使用者存檔失敗，只會讓他重打一次。
- *
- * 這裡刻意**不覆蓋 exemplarBlob**：Drive 上那筆可能是手機錄好音寫上去的，
- * 網頁只改了文字就把錄音清掉的話，使用者要重錄 5 次才能救回來。
- * category 同理：那是手機端從語句庫帶上來的，決定它在雲端放哪個資料夾，
- * 網頁沒有這個概念，不保留的話每改一次文字就被丟回 Custom。
- */
-async function _driveWrite(docId, rec){
-  try{
-    const d = await _drive();
-    if(!d.driveReady()) return;
-    const existing = await d.readAcoustic(docId);
-    await d.saveAcoustic({
-      ...rec,
-      id: docId,
-      exemplarBlob: (existing && existing.exemplarBlob) || "",
-      rejectionThreshold: existing ? existing.rejectionThreshold : rec.rejectionThreshold,
-      category: (existing && existing.category) || rec.category || "Custom",
-    });
-  }catch(e){ /* 沒授權／離線都很正常 */ }
-}
-
-/**
- * 取回**帶錄音**的樣板（給網頁端聲波比對用）。
- *
- * listShortcuts() 只回文字（觸發詞／要說的話），比對需要的是 exemplarBlob 本身。
- * 兩個來源都讀、以 id 合併，Drive 優先——Drive 那份是使用者自己資料夾裡的檔案，
- * 手機錄好音一定會寫在那裡；Firestore 那份在匿名登入或權限沒開時才是唯一來源。
- * 沒有 blob 的一律不回：那種樣板拿去比對永遠不會命中，只會讓「聽我說」看起來壞掉。
- */
-export async function listAcousticRecordings(){
-  if(!(_db && state.uid && state.uid!=="local")) return [];
-  const byId = new Map();
-
-  // Firestore 先放，Drive 後放蓋過去（同一筆以 Drive 為準）
-  try{
-    const snap = await getDocs(collection(_db,"users",state.uid,"acousticTemplates"));
-    for(const d of snap.docs){
-      const x = d.data() || {};
-      if(!(x.exemplarBlob||"").length) continue;
-      byId.set(String(d.id), { ...x, id: String(d.id) });
-    }
-  }catch(e){ /* 讀不到就靠 Drive */ }
-
-  try{
-    const d = await _drive();
-    if(d.driveReady()){
-      for(const x of await d.listAcoustic()){
-        if(!(x && (x.exemplarBlob||"").length)) continue;
-        byId.set(String(x.id||""), { ...x, id: String(x.id||"") });
-      }
-    }
-  }catch(e){ /* 沒授權／離線都很正常 */ }
-
-  return [...byId.values()].filter(x=>x.id);
-}
-
-/**
- * 把網頁上錄好的樣板寫回雲端，手機才拿得到（換裝置不必重錄五次）。
- *
- * 門檻是照**這支麥克風**校準出來的，所以一起寫上去；手機端 pull 時本來就
- * 只有在本機還沒有這個觸發詞時才會採用整筆，不會拿網頁的門檻去蓋手機自己的。
- */
-export async function saveAcousticRecording(id, { exemplarBlob, rejectionThreshold, marginThreshold }){
-  const docId = String(id);
-  const patch = {
-    exemplarBlob: exemplarBlob || "",
-    rejectionThreshold: Number(rejectionThreshold) || 0,
-    marginThreshold: Number(marginThreshold) || 0.15,
-    updatedAt: Date.now(),
-  };
-  if(!(_db && state.uid && state.uid!=="local")) return false;
-  let ok = false;
-  try{
-    await setDoc(doc(_db,"users",state.uid,"acousticTemplates",docId), patch, { merge:true });
-    ok = true;
-  }catch(e){ /* 下面還有 Drive 那條路 */ }
-  try{
-    const d = await _drive();
-    if(d.driveReady()){
-      // 讀回原本那筆，才不會把觸發詞／要說的話清成空字串
-      const existing = (await d.readAcoustic(docId)) || {};
-      await d.saveAcoustic({ ...existing, ...patch, id: docId,
-        category: existing.category || "Custom" });
-      ok = true;
-    }
-  }catch(e){ /* 同上 */ }
-  return ok;
-}
-
-export async function deleteShortcut(id){
-  if(_db && state.uid && state.uid!=="local"){
-    // 兩邊都要刪。少刪任何一邊，下次取回都會把使用者刻意刪掉的救回來——
-    // 而他刪掉多半正是因為那筆會誤觸發。
-    await deleteDoc(doc(_db,"users",state.uid,"acousticTemplates",String(id)));
-    try{
-      const d = await _drive();
-      if(d.driveReady()) await d.deleteAcoustic(id);
-    }catch(e){ /* 同上 */ }
-  }else{
-    saveLocalShortcuts(localShortcuts().filter(x=>String(x.id)!==String(id)));
-  }
-}
 
 /**
  * 專屬聲音（語音模型）清單，直接從 Drive 讀。

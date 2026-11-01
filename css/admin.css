@@ -1,0 +1,32 @@
+/* 開發者控制中心（js/admin.js）。只有管理員會載入這支（admin.js 動態插入 <link>），
+   一般使用者不必多下載一個檔。顏色一律沿用 style.css 的變數，深淺色與四種風格自動跟著走。 */
+.admin-card h4{ margin:18px 0 8px; font-size:1rem; }
+.admin-card h5{ margin:14px 0 6px; font-size:.9rem; color:var(--muted); }
+.adm-sec{ border-top:1px solid var(--line); margin-top:12px; padding-top:4px; }
+.adm-actions{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:10px 0 0; }
+.adm-actions .btn{ flex:0 1 auto; }
+.adm-check{ display:flex; align-items:center; gap:8px; margin:8px 0; }
+.adm-check input{ width:auto; }
+.adm-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:8px; }
+.adm-grid .lbl{ margin-top:4px; }
+.adm-status{ margin:4px 0; font-size:.88rem; }
+.adm-status.st-active{ color:var(--accent2); font-weight:600; }
+.adm-status.st-scheduled{ color:var(--accent); }
+.adm-status.st-ended, .adm-status.st-disabled, .adm-status.st-none{ color:var(--muted); }
+.adm-kind{ margin-top:10px; }
+.adm-kind-h{ display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:.88rem; margin-bottom:4px; }
+.adm-krow{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; border:1px solid var(--line);
+  border-radius:10px; padding:8px; margin-bottom:6px; }
+.adm-krow select{ flex:1 1 140px; }
+.adm-krow input{ flex:2 1 160px; min-width:0; }
+.adm-mask{ font-size:.8rem; padding:2px 6px; border-radius:6px; background:var(--bg); border:1px solid var(--line); }
+.adm-results{ margin:6px 0; }
+.adm-pick, .adm-item{ display:flex; align-items:center; justify-content:space-between; gap:8px;
+  padding:8px 0; border-bottom:1px solid var(--line); word-break:break-word; }
+.adm-item-act{ display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; flex:0 0 auto; }
+.adm-target{ font-weight:600; margin:8px 0 4px; }
+.admin-card .btn.tiny{ min-height:34px; padding:0 10px; font-size:.82rem; }
+@media (max-width:480px){
+  .adm-item{ flex-direction:column; align-items:flex-start; }
+  .adm-item-act{ justify-content:flex-start; }
+}

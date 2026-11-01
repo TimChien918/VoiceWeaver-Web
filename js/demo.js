@@ -1,38 +1,53 @@
-// 一鍵自動演示 ＋ 螢幕錄影（做簡報／報告用）。
+// 一鍵自動演示 ＋ 螢幕錄影（評審現場播放／錄影參賽用）。
+//
+// 敘事順序照設計書（2027 TEYI 世界青少年發明展作品摘要）：
+//   開場（拾語者是什麼、為誰）→ ① 語意織句引擎與情境感知補位 → ② 多模態無障礙介面
+//   → ③ AI 語音復健與復健軌跡 → ④ 語意防護與主動式危機介入 → ⑤ 擬真聲紋與情感語音 → 收尾。
+// 評審是照著設計書在看的，畫面順序跟書面一致，他們才對得上「這一頁在證明哪一項」。
 //
 // 設計上的三個硬性決定：
 //
-// ① **腳本化，不打任何外部請求。** 演示要能重播一百次都長一樣，而且不能在錄影
-//    途中被 LLM 逾時、金鑰過期、網路抖動毀掉。所以畫面用的是真的元件、真的版面，
-//    只有 AI 的回覆是預先寫好的樣本。更重要的是：緊急通報、危機介入這兩段**絕對
-//    不能真的送出去**——演示一次就吵到家人一次。危機那一段是照著真畫面重演的。
+// ① **腳本化，不打任何外部請求。** 演示要能重播一百次都長一樣，而且不能在評審面前
+//    被 LLM 逾時、金鑰過期、網路抖動毀掉。所以畫面用的是真的元件、真的版面，
+//    只有 AI 的回覆是預先寫好的樣本。更重要的是：緊急通報、危機介入**絕對不能真的
+//    送出去**——演示一次就吵到家人一次。危機那一段只照著真畫面重演，不呼叫 openCrisis()；
+//    就算哪裡漏了，extras.js 的 Telegram 出口在 window.__VW_DEMO__ 期間也一律攔下。
 // ② **不寫入任何資料。** 不呼叫 save()、不寫歷史、不碰 Firestore/Drive。
-//    只改記憶體裡的 state，結束時還原。
-// ③ **字幕與旁白一律英文**（報告用途）。旁白走電腦端 GPT-SoVITS；連不上才退回
+//    只改記憶體與 DOM，結束時還原（借用的節點整批搬走再搬回，事件監聽不會掉）。
+// ③ **字幕與旁白跟著介面語言（中／英／日／韓）。** 評審可能是任何一國人，按下去之前
+//    先把介面切成他的語言即可。旁白走電腦端 GPT-SoVITS 該語言的角色；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
 import { state } from "./store.js?v=1.5.78";
-import { speak } from "./speech.js?v=1.5.78";
-import { applyI18n, t } from "./i18n.js?v=1.5.78";
+import { t } from "./i18n.js?v=1.5.78";
 import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.78";
+import { startScan, stopScan } from "./a11yscan.js?v=1.5.78";
+import { bankFor } from "./clinical.js?v=1.5.78";
+import { drawTrajectory, loadReport } from "./report.js?v=1.5.78";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// 排練／自動測試用的加速倍率（window.__VW_DEMO_SPEED__ = 8 就是八倍速）。
+// 正式播放不設，等於 1。只縮短「等待」，不跳過任何一步——加速跑完沒卡住，原速就不會卡住。
+const speed = () => Math.max(1, +window.__VW_DEMO_SPEED__ || 1);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms / speed()));
 
-// 每一步的最短停留時間。沒有這個下限，動作做完就立刻跳下一步——
-// 十六個單元六十幾步會在一分鐘內衝完，觀眾連畫面變了什麼都看不清楚。
+// 每一步的最短停留時間。沒有這個下限，動作做完就立刻跳下一步，評審連畫面變了什麼都看不清楚。
 // 有旁白時通常是旁白比較長（下限很少生效）；純演示時它就是實際節奏。
 const MIN_STEP_NARRATED = 3200;
 const MIN_STEP_SILENT = 4200;
-// 旁白唸完之後畫面再多停一下才換。零間隔看起來像「話還沒講完就跳掉」——
-// 最後一個字的尾音、加上讀完字幕需要的一點時間，都落在這一段。
+// 旁白唸完之後畫面再多停一下才換。零間隔看起來像「話還沒講完就跳掉」。
 const TAIL_PAD = 900;
 
-// 演示進行中的旗標。extras.js 的 Telegram 出口會讀它擋下所有外送。
-export function demoRunning() { return !!window.__VW_DEMO__; }
+// 介面語言 → 演示語言（字幕、旁白、樣本句都跟著它）
+const LANG_TAG = { zh: "zh-TW", en: "en-US", ja: "ja-JP", ko: "ko-KR" };
+const LOCAL_LANG = { zh: "ZH", en: "EN", ja: "JA", ko: "KO" };
+function demoLang() {
+  const L = String(state.settings.lang || "en").split("-")[0];
+  return LANG_TAG[L] ? L : "en";
+}
 
-// 「同一時間只准一個聲音」。畫面動作與旁白是並行跑的（畫面才不會等旁白講完
-// 才動），但**聲音不能並行**——示範發聲會直接疊在旁白上，變成兩個人同時講話。
+// 「同一時間只准一個聲音」。畫面動作與旁白是並行跑的（畫面才不會等旁白講完才動），
+// 但**聲音不能並行**——示範發聲會直接疊在旁白上，變成兩個人同時講話。
 // 用一條 promise 鏈當發言權：後來的要等前一個放開。
 let _audioChain = Promise.resolve();
 function withAudioFloor(fn) {
@@ -41,170 +56,326 @@ function withAudioFloor(fn) {
   return next;
 }
 
-let _abort = false;          // 使用者按了 Stop
+let _abort = false;          // 使用者按了 Stop／Esc
 let _narrate = true;         // 旁白模式
-let _voice = null;           // 旁白用的 EN 角色語音 {name, lang}
-let _speakVoice = null;      // 示範發聲用的 EN 角色（花火），與旁白刻意不同
+let _lang = "en";            // 這一次演示的語言（開始時定下，途中不變）
+let _voice = null;           // 旁白用的角色語音 {name, lang}
+let _speakVoice = null;      // 「App 講話」用的角色，與旁白刻意不同
 let _rec = null, _chunks = [], _recStream = null;
-// 無聲版（同一次錄影的第二個輸出）
-let _recSilent = null, _chunksSilent = [];
+let _recSilent = null, _chunksSilent = [];   // 無聲版（同一次錄影的第二個輸出）
+
+// ── 樣本資料（各語言一份；AI 的回覆是預先寫好的，不打任何 API）──────────────
+function sample(L) {
+  return {
+    zh: {
+      fragments: "水  休息  現在",
+      place: "醫院復健科候診區", seen: "水杯、病床",
+      candidates: ["我想喝點水，然後休息一下。", "可以給我一杯水嗎？我現在想躺下來休息。", "我口渴了，喝完水想先睡一下。"],
+      medical: "我的頭很痛，需要吃止痛藥。",
+      kiosk: [["💧", "水"], ["🛏", "休息"], ["💊", "吃藥"]],
+      rehab: "我想喝一杯水。", heard: "我想喝一背水", wrong: ["杯"],
+      rehabFb: "節奏很清楚，「杯」的聲調再上揚一點會更好。",
+      crisis: "好累  不想活了",
+      crisisLog: ["📍 目前位置已傳給家人", "📹 視訊連結已傳給家人", "👪 家人：我馬上過去，先跟著圓圈慢慢呼吸。"],
+      crisisQuick: ["我好害怕", "請快來", "我現在安全"],
+      own: "謝謝你們一直陪著我，我好多了。",
+      emotions: ["😊 喜", "😠 怒", "😢 哀", "😄 樂"],
+      sim: "已通知家人（演示模擬，未實際送出）",
+    },
+    en: {
+      fragments: "water  rest  now",
+      place: "Rehab clinic waiting area", seen: "cup, hospital bed",
+      candidates: ["I'd like some water, then I need to rest.", "Could I have a glass of water? I want to lie down now.", "I'm thirsty — after some water I'd like a nap."],
+      medical: "My head really hurts. I need a painkiller.",
+      kiosk: [["💧", "water"], ["🛏", "rest"], ["💊", "medicine"]],
+      rehab: "I would like a glass of water.", heard: "I would like a grass of water", wrong: ["glass"],
+      rehabFb: "Clear rhythm. Watch the “l” in “glass” — try it a little slower.",
+      crisis: "tired  don't want  to live",
+      crisisLog: ["📍 Location sent to family", "📹 Video link sent to family", "👪 Family: I'm on my way. Breathe with the circle."],
+      crisisQuick: ["I'm scared", "Please come", "I'm safe now"],
+      own: "Thank you for staying with me. I feel much better.",
+      emotions: ["😊 Happy", "😠 Angry", "😢 Sad", "😄 Cheerful"],
+      sim: "Family notified (demo simulation — nothing sent)",
+    },
+    ja: {
+      fragments: "水  休む  今",
+      place: "リハビリ科の待合室", seen: "コップ、ベッド",
+      candidates: ["お水を飲んで、少し休みたいです。", "お水を一杯もらえますか？今すぐ横になりたいです。", "のどが渇きました。水を飲んだら少し眠りたいです。"],
+      medical: "頭がとても痛いです。痛み止めが必要です。",
+      kiosk: [["💧", "みず"], ["🛏", "やすむ"], ["💊", "くすり"]],
+      rehab: "お水を一杯ください。", heard: "お水を一敗ください", wrong: ["杯"],
+      rehabFb: "リズムはとても良いです。「一杯」をもう少しはっきり言ってみましょう。",
+      crisis: "つかれた  生きたくない",
+      crisisLog: ["📍 現在地を家族に送信しました", "📹 ビデオ通話のリンクを家族に送信しました", "👪 家族：すぐ行くよ。丸に合わせてゆっくり呼吸してね。"],
+      crisisQuick: ["こわい", "すぐ来て", "いまは大丈夫"],
+      own: "いつもそばにいてくれてありがとう。だいぶ良くなりました。",
+      emotions: ["😊 喜", "😠 怒", "😢 哀", "😄 楽"],
+      sim: "家族に通知しました（デモの再現・実際には送信していません）",
+    },
+    ko: {
+      fragments: "물  쉬다  지금",
+      place: "재활의학과 대기실", seen: "컵, 병상",
+      candidates: ["물 좀 마시고 잠깐 쉬고 싶어요.", "물 한 잔 주시겠어요? 지금 눕고 싶어요.", "목이 말라요. 물 마시고 좀 자고 싶어요."],
+      medical: "머리가 너무 아파요. 진통제가 필요해요.",
+      kiosk: [["💧", "물"], ["🛏", "쉬기"], ["💊", "약"]],
+      rehab: "물 한 잔 주세요.", heard: "물 한 장 주세요", wrong: ["잔"],
+      rehabFb: "리듬이 아주 좋아요. “잔”을 조금 더 또렷하게 말해 보세요.",
+      crisis: "지쳤어  살기 싫어",
+      crisisLog: ["📍 현재 위치를 가족에게 보냈습니다", "📹 영상 통화 링크를 가족에게 보냈습니다", "👪 가족: 지금 갈게. 원을 따라 천천히 숨 쉬어."],
+      crisisQuick: ["무서워요", "빨리 와 주세요", "지금은 괜찮아요"],
+      own: "늘 곁에 있어 줘서 고마워요. 많이 좋아졌어요.",
+      emotions: ["😊 기쁨", "😠 분노", "😢 슬픔", "😄 즐거움"],
+      sim: "가족에게 알렸습니다(데모 재현 · 실제로 보내지 않음)",
+    },
+  }[L];
+}
+
+// 品牌字一律「拾語者 Speak My Life」（標題卡）；旁白裡英文只唸 Speak My Life，
+// 因為英文語音引擎碰到漢字會整段跳過或唸成亂碼。
+const BRAND = "拾語者 Speak My Life";
 
 // ── 演示單元 ────────────────────────────────────────────────────────────
-// 每個單元是獨立的一段，使用者自己勾。step.cap＝字幕/旁白，step.act＝畫面動作。
-// est 是純演示（無旁白）的估計秒數；有旁白會更長，由語音長度決定。
-
-function UNITS() {
+// 每個單元是獨立的一段，使用者自己勾。step.cap＝字幕/旁白，step.act＝畫面動作，
+// step.focus＝這一步在講的元素（選擇器或回傳元素的函式），開講前會先捲出來並確認看得見。
+function UNITS(L = demoLang()) {
+  const c = (zh, en, ja, ko) => ({ zh, en, ja, ko })[L] ?? en;
+  const S = sample(L);
   return [
     {
-      id: "intro", icon: "🎬", title: "Title & overview", est: 12,
+      id: "intro", icon: "🎬", title: c("開場：拾語者是什麼", "Opening: what Speak My Life is", "オープニング：拾語者とは", "오프닝: Speak My Life란"),
       steps: [
-        { cap: "Aphasia damages the route from thought to speech, while the thought itself stays intact.", act: () => titleCard("Speak My Life", "How it works — browser build") },
-        { cap: "This is the browser build — no install, no account required, running entirely on this page.", act: () => titleSub("No install · runs in the browser") },
-        { cap: "Here is how each part of it works.", act: hideTitle },
+        { act: () => titleCard(BRAND, t("login.tagline")),
+          cap: c("全球每年約有一千兩百萬人新發生中風，其中約三成在急性期伴隨失語症。",
+                 "Every year about twelve million people have a stroke, and roughly a third of them develop aphasia in the acute phase.",
+                 "世界では毎年およそ1,200万人が脳卒中を発症し、その約3割が急性期に失語症を伴います。",
+                 "전 세계에서 해마다 약 1,200만 명이 뇌졸중을 겪고, 그중 약 3분의 1이 급성기에 실어증을 동반합니다.") },
+        { act: () => titleSub(c("失語症 · 言語失用症 · 吶語症", "Aphasia · Apraxia of speech · Dysarthria", "失語症 · 発語失行 · 構音障害", "실어증 · 말실행증 · 마비말장애")),
+          cap: c("失語症、言語失用症、吶語症——他們心裡很清楚想說什麼，卻說不出口。",
+                 "Aphasia, apraxia of speech, dysarthria — they know exactly what they want to say, but the words won't come out.",
+                 "失語症、発語失行、構音障害。言いたいことははっきりしているのに、言葉にできないのです。",
+                 "실어증, 말실행증, 마비말장애. 하고 싶은 말은 분명한데 입 밖으로 나오지 않습니다.") },
+        { act: () => titleSub(t("login.tagline")),
+          cap: c("拾語者 Speak My Life，是為中風失語者打造的 AI 溝通與居家復健系統。",
+                 "Speak My Life is an AI communication and home-rehabilitation system for stroke survivors with aphasia.",
+                 "拾語者 Speak My Life は、脳卒中後の失語症の方のための AI コミュニケーション・在宅リハビリシステムです。",
+                 "Speak My Life(拾語者)는 뇌졸중 실어증 환자를 위한 AI 의사소통·재택 재활 시스템입니다.") },
+        { cap: c("它把散落的碎詞拾起，重新組成自然、有溫度的句子，再由患者本人確認後說出口。",
+                 "It picks up scattered words and weaves them into natural, warm sentences — spoken only after the patient confirms them.",
+                 "ばらばらの言葉を拾い上げ、自然で温かい文に組み直し、ご本人が確認してから声にします。",
+                 "흩어진 단어를 주워 자연스럽고 따뜻한 문장으로 엮고, 환자 본인이 확인한 뒤에야 소리 내어 말합니다.") },
+        { act: hideTitle,
+          cap: c("接下來，依五大功能模組實際操作一遍。", "Let's walk through its five core modules.",
+                 "それでは、5つの主要モジュールを順にご覧ください。", "이제 다섯 가지 핵심 모듈을 차례로 보겠습니다.") },
       ],
     },
     {
-      id: "compose", icon: "💬", title: "Sentence reconstruction", est: 31,
+      id: "semantic", icon: "💬", title: c("① 語意織句引擎・情境感知補位", "① Semantic sentence engine & context", "① 意味織文エンジンと状況補完", "① 의미 문장 엔진과 상황 보완"),
       steps: [
-        { cap: "Input arrives as isolated content words, with the grammar missing.", act: () => goTab("compose"), focus: "#fragments" },
-        { cap: "Typing, dictation, or a photograph all feed the same buffer.", act: () => typeInto("#fragments", "water  rest  now"), focus: "#fragments" },
-        { cap: "A language model reconstructs the sentence, constrained by a defensive prompt.", act: async () => { await press("#btnCompose"); await reconstructWait(); }, focus: "#btnCompose" },
-        { cap: "Self-consistency sampling returns three candidates rather than one best guess.", act: showCandidates, hold: 1600, focus: "#altList" },
-        { cap: "Which candidate gets accepted is logged, and feeds the ranking of later phrasings.", act: pickCandidateDemo, hold: 1200, focus: "#altList" },
-        // 確認卡**不是**每一句都會出現：它只擋 classifyRisk() 的 "confirm" 等級
-        // （醫療／疼痛），而且可以在設定裡關掉（state.settings.confirmCard，預設開）。
-        // "normal" 的日常需求是直接唸出來的。這兩句原本寫成「沒有一句話未經確認就被唸出」
-        // ——那等於對外承諾每一句都要人工確認，實作並非如此。
-        // 註：showConfirm() 是演示強制叫出這張卡，樣本句本身其實是 "normal"。
-        { cap: "Medical or pain-related content raises a confirmation card before anything is spoken.", act: showConfirm, hold: 1600 },
-        { cap: "Confirming sends it to the synthesiser; everyday requests are spoken directly.", act: confirmYes, focus: "#result" },
+        { act: async () => { goTab("compose"); await typeInto("#fragments", S.fragments); }, focus: "#fragments",
+          cap: c("模組一，語意織句引擎。患者只要打出、說出或點出幾個碎詞，例如「水、休息、現在」。",
+                 "Module one: the semantic sentence engine. The patient only needs a few fragments — typed, spoken or tapped — like “water, rest, now”.",
+                 "モジュール1、意味織文エンジン。入力は、打つ・話す・タップするなどした断片的な言葉だけ。たとえば「水、休む、今」。",
+                 "모듈 1, 의미 문장 엔진. 환자는 “물, 쉬다, 지금”처럼 단어 몇 개만 입력하거나 말하거나 누르면 됩니다.") },
+        { act: async () => { await press("#btnLoc"); setCtx(`📍 ${S.place}`); }, focus: "#btnLoc",
+          cap: c("情境感知補位：GPS 判斷他正在醫院的復健科候診區，",
+                 "Context awareness fills in the gaps: GPS places him in a rehab clinic waiting area,",
+                 "状況認識が足りない部分を補います。GPSで、リハビリ科の待合室にいることがわかり、",
+                 "상황 인식이 빈칸을 채웁니다. GPS로 재활의학과 대기실에 있다는 것을 알고,") },
+        { act: async () => { await press("#btnCam"); setCtx(`📍 ${S.place} · 📷 ${S.seen}`); }, focus: "#btnCam",
+          cap: c("相機也辨識出眼前的水杯和病床。", "and the camera recognises the cup and the bed in front of him.",
+                 "カメラが目の前のコップとベッドを認識します。", "카메라는 눈앞의 컵과 병상을 알아봅니다.") },
+        { act: async () => { await press("#btnCompose"); await reconstructWait(); showCandidates(S.candidates); }, focus: "#btnCompose", hold: 800,
+          cap: c("大型語言模型把碎詞和情境織在一起，一次生成三個符合當下情境的候選句。",
+                 "A large language model weaves the fragments and context together into three candidate sentences that fit the moment.",
+                 "大規模言語モデルが言葉と状況を織り合わせ、その場に合った候補文を3つ生成します。",
+                 "대규모 언어 모델이 단어와 상황을 엮어, 지금 상황에 맞는 후보 문장 세 개를 만듭니다.") },
+        { act: () => pickCandidateDemo(S.candidates), focus: "#altList",
+          cap: c("這就是語意確認機制：點選候選句只是選定、不會發聲，選哪一句由患者自己決定。",
+                 "This is the semantic confirmation step: tapping a candidate only selects it — the patient decides which one is right.",
+                 "ここが意味確認の仕組みです。候補をタップしても選ぶだけで、声にはなりません。どれにするかはご本人が決めます。",
+                 "이것이 의미 확인 장치입니다. 후보를 눌러도 선택만 될 뿐 소리는 나지 않고, 어떤 문장인지는 환자가 직접 정합니다.") },
+        { act: async () => { await press("#btnSpeak"); await speakDemoSentence(S.candidates[0]); }, focus: "#btnSpeak",
+          cap: c("確認是這一句，按下朗讀，才真正說出口。", "Only when he confirms and presses Speak is the sentence said out loud.",
+                 "これだと確かめて「読み上げ」を押したときだけ、声に出します。", "이 문장이 맞다고 확인하고 읽기를 눌러야 비로소 소리로 나옵니다.") },
+        // 確認卡**不是**每一句都會出現：它擋的是 classifyRisk() 的 "confirm" 等級（醫療／疼痛），
+        // 設定裡可以關（state.settings.confirmCard，預設開）。所以這裡換一句真的會觸發它的樣本，
+        // 旁白也照實說「醫療或疼痛相關」，不對評審承諾每一句都要再確認一次。
+        { act: () => showConfirm(S.medical), focus: "#confirmDlg", hold: 600,
+          cap: c("跟醫療或疼痛有關的句子，還會再跳出大圖示確認卡，按「對」才唸出——把語言的選擇權還給患者。",
+                 "Anything about pain or medicine gets an extra large-print confirmation card. Nothing is said until he taps Yes — the choice of words stays with the patient.",
+                 "痛みや医療に関わる文には、大きな確認カードがもう一度出ます。「はい」を押すまで読み上げません。言葉を選ぶ権利は、ご本人に返します。",
+                 "통증이나 의료와 관련된 문장은 큰 확인 카드가 한 번 더 뜨고, “네”를 눌러야 읽어 줍니다. 말을 고르는 권리를 환자에게 돌려줍니다.") },
+        { act: () => confirmYes(S.medical), focus: "#confirmYes", cap: "" },
       ],
     },
     {
-      id: "aac", icon: "🖼", title: "Picture cards (AAC)", est: 24,
+      id: "a11y", icon: "♿", title: c("② 多模態無障礙介面", "② Multimodal accessible interface", "② マルチモーダル・アクセシブルUI", "② 멀티모달 접근성 인터페이스"),
       steps: [
-        { cap: "For users with no reliable text output, the board replaces the keyboard entirely.", act: () => goTab("aac") },
-        { cap: "Colours follow the Fitzgerald Key: yellow nouns, green verbs, blue adjectives.", hold: 1400, focus: "#aacCats" },
-        { cap: "Selections accumulate in a buffer instead of firing one word at a time.", act: aacPickDemo },
-        { cap: "The buffer can be spoken verbatim, or passed through the same reconstruction step.", hold: 1200, focus: "#aacCompose" },
-        { cap: "Card size has four steps; the grid drops to two columns, then one, as the type grows.", act: aacScaleDemo },
+        { act: async () => { goSetting("care"); await sevModeDemo(); }, focus: "#sevModes",
+          cap: c("模組二，多模態無障礙介面。中風常伴隨偏癱與視力退化，所以介面依輕、中、重度動態調整。",
+                 "Module two: a multimodal, adaptive interface. Strokes often bring paralysis and low vision, so the interface adapts to mild, moderate and severe needs.",
+                 "モジュール2、マルチモーダルな適応型インターフェース。脳卒中は片まひや視力低下を伴うことが多いため、軽度・中度・重度に合わせて画面が変わります。",
+                 "모듈 2, 멀티모달 적응형 인터페이스. 뇌졸중은 편마비나 시력 저하를 동반하는 경우가 많아, 경도·중등도·중증에 맞춰 화면이 바뀝니다.") },
+        { act: moderateDemo, focus: "#aacItems",
+          cap: c("中度：圖卡放大成特大字，複雜的設定先收起來。",
+                 "Moderate: picture cards grow to extra-large print, and complex settings are tucked away.",
+                 "中度：絵カードは特大サイズになり、複雑な設定は隠れます。",
+                 "중등도: 그림 카드가 아주 크게 바뀌고, 복잡한 설정은 숨겨집니다.") },
+        { act: () => kioskMock(S.kiosk[0]), hold: 1200,
+          cap: c("重度：全螢幕一次只出現一張大卡，自動逐張掃描，只要一個「是」的動作就能表達。",
+                 "Severe: one large card fills the screen and scans automatically — a single “yes” action is enough to communicate.",
+                 "重度：全画面に大きなカードが1枚ずつ表示され、自動で切り替わります。「はい」の動作ひとつで伝えられます。",
+                 "중증: 큰 카드가 한 장씩 전체 화면에 나타나 자동으로 넘어가고, “예” 동작 하나만으로 의사를 전할 수 있습니다.") },
+        { act: () => kioskTrail(S.kiosk), hold: 800,
+          cap: c("選過的卡留成一串線索，熟悉的家人一看就懂。",
+                 "Chosen cards stay as a trail of clues that family can read at a glance.",
+                 "選んだカードは手がかりとして並び、家族はひと目で理解できます。",
+                 "고른 카드는 단서처럼 남아 가족이 한눈에 알아볼 수 있습니다.") },
+        { act: async () => { kioskClose(); restoreSeverity(); goSetting("prefs"); await noseDemo(); },
+          focus: () => $("#s_head")?.closest("label"),
+          cap: c("手不方便時，前鏡頭追蹤鼻尖來移動游標，停留約一秒就自動點擊——鼻控加上停留點選。",
+                 "If the hands can't help, the front camera tracks the tip of the nose to move a cursor, and resting on a button for a second clicks it — nose control with dwell selection.",
+                 "手が使えなくても、前面カメラが鼻先を追ってカーソルを動かし、ボタンの上で約1秒止まると自動でクリックします。鼻操作と停留クリックです。",
+                 "손을 쓰기 어려우면 전면 카메라가 코끝을 따라 커서를 움직이고, 버튼 위에 1초쯤 머물면 자동으로 누릅니다. 코 조작과 머무름 선택입니다.") },
+        { act: () => { goSetting("a11y"); scanDemoStart(); }, focus: () => $("#s_scan")?.closest("label"), hold: 1200,
+          cap: c("連指標都無法移動的人，可以用掃描模式：畫面逐一高亮，按一下大開關就選取。",
+                 "For those who can't move a pointer at all, switch scanning highlights each item in turn; one press of a big switch selects it.",
+                 "ポインタも動かせない方には、スキャン操作。画面が順に強調表示され、大きなスイッチを一度押せば選べます。",
+                 "포인터조차 움직이기 어려운 분은 스캔 모드를 씁니다. 화면이 하나씩 강조되고, 큰 스위치를 한 번 누르면 선택됩니다.") },
+        { act: blinkMock, focus: "#scanBar", hold: 600,
+          cap: c("開關也可以是刻意的長眨眼，自然眨眼不會誤觸。",
+                 "The switch can even be a deliberate long blink — natural blinking won't trigger it.",
+                 "スイッチは意図的な長いまばたきでも構いません。自然なまばたきでは反応しません。",
+                 "스위치는 의도적인 긴 눈 깜빡임이어도 됩니다. 자연스러운 깜빡임에는 반응하지 않습니다.") },
+        { act: async () => { scanDemoStop(); goSetting("prefs"); await visionDemo(); }, focus: () => $("#s_contrast")?.closest("label"),
+          cap: c("再加上高對比與超大字，視力退化的長輩也看得清楚。",
+                 "Add high contrast and extra-large type, and even low vision is no barrier.",
+                 "さらに高コントラストと特大文字で、視力が落ちた方にも見やすくします。",
+                 "여기에 고대비와 큰 글씨를 더해 시력이 약한 분도 잘 볼 수 있습니다.") },
       ],
     },
     {
-      id: "customcards", icon: "📷", title: "Custom photo cards", est: 14,
+      id: "rehab", icon: "🏥", title: c("③ AI 語音復健・復健軌跡", "③ AI speech rehab & progress tracking", "③ AI音声リハビリと推移グラフ", "③ AI 언어 재활과 재활 추이"),
       steps: [
-        { cap: "Symbol sets are drawn for an average user, which is nobody in particular.", act: () => scrollTo("#ccList") },
-        { cap: "Photographs taken by the family become cards, downscaled and stored in the account.", act: () => typeInto("#ccWord", "my grandson"), focus: "#ccWord" },
-        { cap: "Recognition of familiar objects is what makes the board usable at all.", hold: 1400, focus: "#ccAdd" },
+        { act: () => { visionRestore(); goTab("rehab"); }, focus: "#rehabBank",
+          cap: c("模組三，AI 語音復健。內建中、英、日、韓四種語言的四級題庫，從名詞、動作到情境句，由淺入深。",
+                 "Module three: AI speech rehabilitation. A four-level exercise bank in Chinese, English, Japanese and Korean, from single nouns up to situational sentences.",
+                 "モジュール3、AI音声リハビリ。中国語・英語・日本語・韓国語の4言語・4段階の問題集を内蔵し、名詞から場面の文まで段階的に練習できます。",
+                 "모듈 3, AI 언어 재활. 중국어·영어·일본어·한국어 4개 언어, 4단계 문제은행이 들어 있어 명사부터 상황 문장까지 단계적으로 연습합니다.") },
+        { act: showBanks, focus: "#demoBanks", hold: 800,
+          cap: c("切換語言，題目和語音辨識也跟著換，沒有網路也能練。",
+                 "Switch the language and both the items and speech recognition follow — and it all works offline.",
+                 "言語を切り替えると、問題も音声認識も切り替わります。オフラインでも練習できます。",
+                 "언어를 바꾸면 문항과 음성 인식도 함께 바뀌고, 인터넷 없이도 연습할 수 있습니다.") },
+        { act: () => rehabDemo(S.rehab), focus: "#rehabTargetDisplay",
+          cap: c("患者先聽示範，再跟著唸一次。", "The patient listens to the model sentence, then repeats it.",
+                 "お手本を聞いてから、まねして言います。", "환자는 시범 문장을 듣고 따라 말합니다.") },
+        { act: () => rehabScore(S), focus: "#rehabScore", hold: 1200,
+          cap: c("AI 即時回饋語意、流暢度與語調三項分數，標出說錯的字，並記下開口前停頓了幾秒。",
+                 "AI feedback arrives instantly: scores for meaning, fluency and intonation, the mispronounced word highlighted, and how long he paused before speaking.",
+                 "AIがすぐにフィードバック。意味・流暢さ・抑揚の3項目を採点し、言い間違えた語を示し、話し始めるまでの時間も記録します。",
+                 "AI가 바로 피드백합니다. 의미·유창성·억양 세 항목 점수와 잘못 말한 단어, 말하기 전 멈춘 시간까지 기록합니다.") },
+        { focus: '#rehabPractice [data-i18n="rehab.privacyNote"]',
+          cap: c("跟讀的錄音評分完立即刪除，只留下文字與分數。",
+                 "The recording is discarded right after scoring; only text and scores are kept.",
+                 "音声は採点後すぐに破棄され、残るのは文字と点数だけです。",
+                 "녹음은 채점 직후 바로 삭제되고, 글자와 점수만 남습니다.") },
+        { act: reportDemo, focus: "#trajReaction", hold: 800,
+          cap: c("每一次的反應時間與命中率，會自動轉成復健軌跡趨勢圖。",
+                 "Every response time and hit rate is turned automatically into a rehabilitation trajectory chart.",
+                 "毎回の反応時間と正答率は、自動でリハビリ推移グラフになります。",
+                 "매번의 반응 시간과 적중률은 자동으로 재활 추이 그래프가 됩니다.") },
+        { act: async () => { spotSel("#trajHit"); await sleep(1600); spotSel("#reportCsv"); }, focus: "#trajHit",
+          cap: c("語言治療師看得出進步的趨勢，也能匯出 CSV、PDF，或推送給家人。",
+                 "Speech therapists can follow the trend, export it as CSV or PDF, or send it to the family.",
+                 "言語聴覚士は改善の傾向を確認でき、CSVやPDFへの書き出し、家族への送信もできます。",
+                 "언어치료사는 변화 추세를 확인하고 CSV·PDF로 내보내거나 가족에게 보낼 수 있습니다.") },
       ],
     },
     {
-      id: "voice", icon: "🗣", title: "Personal voice (GPT-SoVITS)", est: 22,
+      id: "crisis", icon: "🆘", title: c("④ 語意防護・危機介入", "④ Semantic safeguard & crisis intervention", "④ 意味ガードと危機介入", "④ 의미 보호와 위기 개입"),
       steps: [
-        { cap: "Voice identity is usually lost along with speech, and rarely addressed.", act: () => goSetting("voice") },
-        { cap: "A GPT-SoVITS model is trained from a few minutes of audio recorded before onset.", act: () => captionOnly() },
-        { cap: "Weights live in the user's own Google Drive; synthesis runs on their own computer.", act: () => captionOnly() },
-        // 這一段整段都在講「這是他自己的聲音」，所以一定要真的用 GPT-SoVITS 唸一句。
-        // 用旁白的角色等於自己打自己的臉，用瀏覽器機器音更糟——那是在示範這個功能不存在。
-        { cap: "Emotion is selected per sentence by choosing a matching reference clip.", act: () => speakInOwnVoice(SAMPLE.candidates[0]), hold: 1200 },
+        { act: async () => { goTab("compose"); hideResult(); await typeInto("#fragments", S.crisis); }, focus: "#fragments",
+          cap: c("模組四，語意防護。每一句話在說出口之前，都會先檢查語意。",
+                 "Module four: the semantic safeguard. Every sentence is checked for meaning before it is spoken.",
+                 "モジュール4、意味ガード。すべての文は、声にする前に意味をチェックします。",
+                 "모듈 4, 의미 보호. 모든 문장은 말하기 전에 의미를 먼저 검사합니다.") },
+        { act: async () => { await press("#btnCompose"); showLock(); }, focus: "#lockDlg .modal-card", hold: 600,
+          cap: c("偵測到求救或自傷的語意時，不會唸出來，而是立刻啟動危機介入。",
+                 "When it detects a cry for help or self-harm, it does not speak — it starts crisis intervention instead.",
+                 "助けを求める言葉や自傷の意図を検知すると、読み上げずに危機介入を始めます。",
+                 "도움 요청이나 자해 의도를 감지하면 읽지 않고 즉시 위기 개입을 시작합니다.") },
+        { act: () => crisisMock(S), focus: "#crisisOrb", hold: 1400,
+          cap: c("系統自動把 GPS 定位傳給指定的家人、開啟視訊連結，畫面換成跟著圓圈呼吸的引導。",
+                 "It automatically sends the GPS location to the designated family member, opens a video link, and switches to a calming breathing guide.",
+                 "指定した家族にGPSの位置を自動で送り、ビデオ通話のリンクを開き、画面は呼吸ガイドに切り替わります。",
+                 "지정된 가족에게 GPS 위치를 자동으로 보내고 영상 통화 링크를 열며, 화면은 호흡 안내로 바뀝니다.") },
+        { focus: () => $("#crisisHotlineEmergency")?.parentElement, hold: 1000,
+          cap: c("下方可以一鍵直撥 119 和 1925 安心專線；這個畫面要家人確認後才會關閉。",
+                 "Below, one tap dials emergency services or a crisis line — 119 and 1925 in Taiwan. The screen closes only after the family responds.",
+                 "下のボタンで救急や相談窓口にワンタップで電話できます（台湾では119と1925）。この画面は家族が確認するまで閉じません。",
+                 "아래 버튼으로 응급 번호와 위기 상담 전화에 바로 걸 수 있습니다(대만은 119와 1925). 이 화면은 가족이 확인해야 닫힙니다.") },
+        { act: () => { crisisClose(); goTab("compose"); }, focus: "#quickSos",
+          cap: c("平常在任何頁面右上角都有求救鈕，重組頁最上方也有一鍵發聲。演示中的通報都已攔截，不會真的送出。",
+                 "The help button sits at the top of every screen, with one-tap emergency phrases on the compose page. In this demo every alert is intercepted — nothing is actually sent.",
+                 "ふだんもすべての画面の右上にSOSボタンがあり、再構成ページの上部にはワンタップの緊急フレーズがあります。このデモでは通報はすべて止めてあり、実際には送信されません。",
+                 "평소에도 모든 화면 오른쪽 위에 SOS 버튼이 있고, 재구성 화면 맨 위에는 한 번에 말하는 긴급 문구가 있습니다. 이 데모의 알림은 모두 차단되어 실제로 보내지지 않습니다.") },
       ],
     },
     {
-      id: "rehab", icon: "🏥", title: "Speech rehabilitation", est: 22,
+      id: "voice", icon: "🗣", title: c("⑤ 擬真聲紋・情感語音", "⑤ Personal voice & emotional speech", "⑤ 本人の声と感情音声", "⑤ 실제 같은 목소리와 감정 음성"),
       steps: [
-        { cap: "Alongside communication, the same data supports structured rehabilitation.", act: () => goTab("rehab") },
-        { cap: "The phrase bank is bundled, so practice works with no network and no key.", hold: 1400, focus: "#rehabBank" },
-        { cap: "The target is spoken, repeated back, and compared.", act: rehabDemo, hold: 1200 },
-        // 評分不是逐音節比對——那正是這個專案刻意不做的（llm.js 的 AI 評分看的是
-        // 語意／流暢／語氣，字元重疊率只是沒金鑰時的退路）。高亮錯字才是真的。
-        { cap: "Scoring is on meaning, fluency and tone, with mis-pronounced characters highlighted.", act: rehabScore, hold: 1800 },
+        { act: () => goSetting("voice"), focus: '[data-setkey="voice"] h3',
+          cap: c("模組五，擬真聲紋。失去語言的同時，很多人也失去了自己的聲音。",
+                 "Module five: a voice that sounds like you. Losing speech often means losing one's own voice, too.",
+                 "モジュール5、本人そっくりの声。言葉を失うと、自分の声も失ってしまうことが多いのです。",
+                 "모듈 5, 실제 같은 목소리. 말을 잃으면 자기 목소리도 함께 잃는 경우가 많습니다.") },
+        { focus: "#voiceList",
+          cap: c("拾語者用 GPT-SoVITS，從病發前的錄音或家人的聲音，複製出專屬聲音模型，存在使用者自己的 Google Drive。",
+                 "Speak My Life uses GPT-SoVITS to clone a personal voice from recordings made before the stroke, or from a family member, and keeps it in the user's own Google Drive.",
+                 "GPT-SoVITSで、発症前の録音や家族の声から専用の音声モデルを作り、ご本人のGoogleドライブに保存します。",
+                 "GPT-SoVITS로 발병 전 녹음이나 가족의 목소리에서 전용 음성 모델을 만들어 사용자 본인의 Google 드라이브에 저장합니다.") },
+        { act: consentMock, focus: () => $("#vcAgreeChk")?.closest("label"), hold: 800,
+          cap: c("但聲紋一定要先經過本人或法定代理人同意；隨時可以撤回，撤回後立刻停用。",
+                 "But a voiceprint is used only with consent from its owner or a legal guardian — and consent can be withdrawn at any time, taking effect immediately.",
+                 "ただし声紋は、本人または法定代理人の同意があって初めて使えます。同意はいつでも撤回でき、撤回すればすぐに停止します。",
+                 "단, 성문은 본인이나 법정대리인의 동의가 있어야만 쓸 수 있고, 언제든 철회할 수 있으며 철회하면 즉시 사용이 중지됩니다.") },
+        { act: async () => { consentClose(); await emotionDemo(S); }, focus: "#demoEmotions", hold: 600,
+          cap: c("說出口時，還會依句子的情緒，切換喜、怒、哀、樂的語氣。",
+                 "And when it speaks, the tone follows the feeling of each sentence — happy, angry, sad or cheerful.",
+                 "話すときは、文の感情に合わせて喜怒哀楽の口調を切り替えます。",
+                 "말할 때는 문장의 감정에 맞춰 기쁨, 분노, 슬픔, 즐거움의 어조를 바꿉니다.") },
       ],
     },
     {
-      id: "story", icon: "📖", title: "Picture storytelling", est: 16,
+      id: "outro", icon: "🏁", title: c("收尾", "Closing", "エンディング", "마무리"),
       steps: [
-        { cap: "Repetition tasks plateau quickly for milder presentations.", act: () => scrollTo("#storyFrames") },
-        { cap: "Sequenced picture description requires the user to build the discourse themselves.", hold: 1400, focus: "#storyFrames" },
-        { cap: "Feedback is graded on content, order and causality rather than on wording.", act: storyFeedback, hold: 1800 },
-      ],
-    },
-    {
-      id: "report", icon: "📊", title: "Progress report", est: 20,
-      steps: [
-        { cap: "All of the above is instrumented, without asking the user to record anything.", act: () => goTab("report") },
-        { cap: "Session count, mean score, streak, and proportion of positive vocabulary.", hold: 1600, focus: ".stats" },
-        { cap: "Reaction time, first-candidate acceptance and undo rate act as coping indicators.", act: () => scrollTo("#bmReaction"), hold: 1600 },
-        { cap: "Exports as CSV or PDF for the treating clinician.", hold: 1400, focus: "#reportCsv" },
-      ],
-    },
-    {
-      id: "history", icon: "🕘", title: "History", est: 10,
-      steps: [
-        { cap: "Every produced sentence is retained with its context and confidence.", act: () => goTab("history") },
-        { cap: "Frequently reused sentences are promoted to one-tap shortcuts.", act: () => captionOnly(), hold: 1400 },
-      ],
-    },
-    {
-      id: "crisis", icon: "🆘", title: "Crisis intervention", est: 22,
-      steps: [
-        { cap: "Post-stroke depression is common, and language loss is an independent risk factor.", act: () => goTab("compose") },
-        { cap: "Every candidate sentence passes a risk classifier before synthesis.", act: () => captionOnly() },
-        { cap: "A positive result blocks output — but blocking alone would leave the user stranded.", act: crisisMock, hold: 1800 },
-        { cap: "So the interface changes: paced breathing, minimal controls, family contacted automatically.", hold: 2000, focus: "#crisisOrb" },
-        { cap: "Dismissal requires the contact to respond.", act: crisisClose, hold: 1200 },
-      ],
-    },
-    {
-      id: "kiosk", icon: "🔒", title: "Severe mode (locked board)", est: 18,
-      steps: [
-        { cap: "At the severe end, even a grid presents too many simultaneous choices.", act: () => goTab("aac") },
-        { cap: "Single-card scanning reduces the task to one yes-or-no decision at a time.", act: kioskMock, hold: 2600 },
-        { cap: "Accepted cards accumulate as a trail, which a familiar listener can interpret.", act: kioskTrail, hold: 1800 },
-        { cap: "Exit is PIN-gated so the device cannot be navigated away from accidentally.", act: kioskPin, hold: 1800 },
-        { cap: "", act: kioskClose },
-      ],
-    },
-    {
-      id: "sos", icon: "🚨", title: "Emergency SOS", est: 14,
-      steps: [
-        { cap: "Composition latency is unacceptable in an emergency.", act: () => goTab("compose"), focus: "#quickSos" },
-        { cap: "Fixed phrases are therefore pinned above every screen, independent of the current tab.", hold: 1600, focus: "#quickSos" },
-        { cap: "The alert carries a location link.", hold: 1600, focus: "#btnSos" },
-      ],
-    },
-    {
-      id: "a11y", icon: "♿", title: "Accessibility & languages", est: 24,
-      steps: [
-        { cap: "Hemianopia and age-related low vision are common comorbidities after stroke.", act: () => goTab("settings") },
-        { cap: "Type scales across the entire interface, including dialogs and settings.", act: fontScaleDemo, hold: 1400 },
-        { cap: "Layouts reflow rather than clip, verified at the largest scale.", hold: 1200 },
-        { cap: "The interface ships in Traditional Chinese, English, Japanese and Korean.", act: () => langDemo("ja-JP"), hold: 1800 },
-        { cap: "Synthesis follows the interface language, using the same speaker across all four.", act: () => langDemo("ko-KR"), hold: 1800 },
-        { cap: "", act: () => langDemo(null) },
-      ],
-    },
-    {
-      id: "learning", icon: "🧠", title: "It learns this person", est: 22,
-      steps: [
-        { cap: "Aphasia presentation varies widely, so static defaults serve almost nobody well.", act: () => goTab("aac") },
-        { cap: "Card ranking combines frequency, time decay, and situational context.", act: () => spotSel("#aacFeedWrap") || spotSel("#aacCats"), hold: 1600 },
-        { cap: "Accepted candidates feed back into phrasing preference over time.", hold: 1400 },
-        { cap: "Acoustic templates, card set and voice model all remain specific to one user.", hold: 1400 },
-      ],
-    },
-    {
-      id: "cloud", icon: "☁️", title: "Cloud sync", est: 14,
-      steps: [
-        { cap: "Phone, browser and desktop share a single account.", act: () => goSetting("cloud") },
-        { cap: "Voice models are stored in the user's own Drive; there is no developer-side storage.", act: () => captionOnly() },
-        { cap: "No user content is transmitted to any server operated by this project.", act: () => captionOnly() },
-      ],
-    },
-    {
-      id: "outro", icon: "🏁", title: "Closing card", est: 8,
-      steps: [
-        { cap: "Aphasia damages language. It does not damage the person underneath it.", act: () => titleCard("Speak My Life", "Aphasia communication · rehabilitation · safety") },
-        { cap: "", act: hideTitle },
+        { act: () => titleCard(BRAND, c("從發聲走向語意重建 · AI 協助，由患者決定 · 介面隨能力調整",
+                                          "Beyond pronunciation, to meaning · AI assists, the patient decides · Adapts to each ability",
+                                          "発声から意味の再構築へ · AIが手助けし、本人が決める · 能力に合わせて変わる画面",
+                                          "발성을 넘어 의미로 · AI는 돕고 결정은 환자가 · 능력에 맞춰 바뀌는 화면")),
+          cap: c("拾語者：從發聲走向語意重建；AI 協助，但由患者決定；介面隨能力調整；",
+                 "Speak My Life goes beyond pronunciation to rebuilding meaning. AI assists, but the patient decides. The interface adapts to each ability.",
+                 "発声練習から意味の再構築へ。AIは手助けし、決めるのはご本人。画面は能力に合わせて変わります。",
+                 "발성을 넘어 의미를 다시 세우고, AI는 돕되 결정은 환자가 하며, 화면은 능력에 맞춰 바뀝니다.") },
+        { act: () => titleSub(c("跨裝置持續復健 · 復健歷程可追蹤 · 兼顧安全與隱私",
+                                "Rehab across devices · Progress you can track · Safety and privacy built in",
+                                "端末をまたいで続くリハビリ · 経過を追える · 安全とプライバシー",
+                                "기기를 넘나드는 재활 · 추적 가능한 과정 · 안전과 개인정보 보호")),
+          cap: c("跨裝置持續復健；復健歷程可追蹤；兼顧安全與隱私——聲紋需經同意、錄音評分後刪除、危機訊息只傳給指定家人。",
+                 "Rehab continues across devices. Progress is tracked over time. And safety and privacy come first: voiceprints need consent, recordings are deleted after scoring, and crisis alerts go only to chosen family.",
+                 "端末をまたいでリハビリを継続し、経過を記録し、安全とプライバシーを守ります。声紋は同意制、録音は採点後に削除、危機の通知は指定した家族だけに届きます。",
+                 "기기를 넘나들며 재활을 이어 가고, 과정을 기록하며, 안전과 개인정보를 지킵니다. 성문은 동의가 필요하고, 녹음은 채점 후 삭제되며, 위기 알림은 지정한 가족에게만 갑니다.") },
+        { act: () => titleSub(c("讓失語症患者即使無法說話，也能被世界聽見",
+                                "Even without speech, heard by the world",
+                                "話せなくても、世界に声が届くように",
+                                "말할 수 없어도 세상에 들리도록")),
+          hold: 1200,
+          cap: c("讓失語症患者即使無法說話，也能被世界聽見。拾語者 Speak My Life。",
+                 "So that people with aphasia, even when they cannot speak, can still be heard by the world. Speak My Life.",
+                 "失語症の方が、たとえ話せなくても、世界に声を届けられるように。拾語者 Speak My Life。",
+                 "실어증 환자가 말할 수 없어도 세상에 들릴 수 있도록. Speak My Life.") },
+        { act: hideTitle, cap: "" },
       ],
     },
   ];
@@ -235,8 +406,6 @@ function buildOverlay() {
     </div>
     <div id="demoCaption" class="demo-caption hidden"></div>`;
   document.body.appendChild(el);
-  $("#demoPrepTitle").textContent = t("demo.prep");
-  $("#demoStop").textContent = t("demo.stop");
   $("#demoStop").addEventListener("click", () => { _abort = true; });
   // 錄影時畫面上沒有 Stop 鈕 → Esc 當中止出口（看不見，但隨時按得到）
   document.addEventListener("keydown", (e) => {
@@ -247,21 +416,18 @@ function buildOverlay() {
 function caption(text) {
   const c = $("#demoCaption");
   if (!c) return;
-  // 純演示模式不出字幕（使用者要的「另一種只演示」），但進度仍留著，
-  // 否則畫面看起來像卡住。
+  // 純演示模式不出字幕，但進度仍留著，否則畫面看起來像卡住。
   if (!_narrate || !text) { c.classList.add("hidden"); c.textContent = ""; return; }
   c.textContent = text;
   c.classList.remove("hidden");
 }
-function captionOnly() { /* 這一步只有字幕，沒有畫面動作 */ }
 
 function progress(txt) { const p = $("#demoProgress"); if (p) p.textContent = txt; }
 
 function titleCard(main, sub) {
-  const c = $("#demoTitleCard");
   $("#demoTitleMain").textContent = main;
   $("#demoTitleSub").textContent = sub || "";
-  c.classList.remove("hidden");
+  $("#demoTitleCard").classList.remove("hidden");
 }
 function titleSub(sub) { $("#demoTitleSub").textContent = sub; }
 function hideTitle() { $("#demoTitleCard")?.classList.add("hidden"); }
@@ -276,7 +442,6 @@ function spot(el) {
   }
 }
 function spotSel(sel) { spot($(sel)); }
-function scrollTo(sel) { $(sel)?.scrollIntoView({ behavior: "smooth", block: "center" }); }
 function clearSpot() { spot(null); }
 
 // 按鈕「被按下去」的視覺回饋。**不觸發真的 click**——演示不做任何有副作用的事。
@@ -285,7 +450,7 @@ async function press(sel) {
   if (!el) return;
   spot(el);
   el.classList.add("demo-press");
-  await sleep(220);
+  await sleep(260);
   el.classList.remove("demo-press");
 }
 
@@ -295,43 +460,39 @@ async function typeInto(sel, text) {
   if (!el) return;
   spot(el);              // spot() 會 scrollIntoView，輸入框一定看得到
   await sleep(400);      // 但捲動是 smooth 的，不等它停的話前幾個字是在滑動中打的
-  el.focus?.();
   el.value = "";
   for (const ch of text) {
     if (_abort) return;
     el.value += ch;
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-    await sleep(55);
+    await sleep(70);
   }
 }
 
 /**
  * 錄影池：保證「這一步在講的東西」真的在畫面上。
  *
- * 以前是每發現一次「旁白在講某個東西、畫面上卻沒有它」就補一次 scrollTo——
- * 補到第三次就該把它變成規則。每一步用 focus 宣告自己在講哪個元素，
- * 開講之前捲出來、亮一下，捲完再量一次位置；真的不在畫面上就留一筆警告，
- * 不要靜靜地錄完一支對不上的影片。
+ * 每一步用 focus 宣告自己在講哪個元素，開講之前捲出來、亮一下，捲完再量一次位置；
+ * 真的不在畫面上就留一筆警告，不要靜靜地錄完一支對不上的影片。
+ * focus 可以是選擇器，或回傳元素的函式（勾選框本身太小，要亮的是它外面那一行 label）。
  */
-async function ensureVisible(sel, cap) {
-  if (!sel) return;                       // 片頭、純解說沒有特定對象
-  const el = $(sel);
-  if (!el) { console.warn(`[demo] 錄影池：找不到「${sel}」 — 「${(cap||"").slice(0,48)}」`); return; }
+async function ensureVisible(focus, cap) {
+  if (!focus) return;                     // 片頭、純解說沒有特定對象
+  const el = typeof focus === "function" ? focus() : $(focus);
+  const name = typeof focus === "function" ? "(fn)" : focus;
+  if (!el) { console.warn(`[demo] 錄影池：找不到「${name}」 — 「${(cap || "").slice(0, 48)}」`); return; }
   spot(el);                               // spot() 會 scrollIntoView({block:"center"})
   await sleep(FOCUS_SETTLE);              // 等 smooth 捲動停下來再量，否則會誤報
   const r = el.getBoundingClientRect();
   const vh = window.innerHeight || document.documentElement.clientHeight;
   const vw = window.innerWidth || document.documentElement.clientWidth;
-  const visible = r.bottom > 0 && r.top < vh && r.right > 0 && r.left < vw &&
-                  r.width > 0 && r.height > 0;
+  const visible = r.bottom > 0 && r.top < vh && r.right > 0 && r.left < vw && r.width > 0 && r.height > 0;
   if (!visible) {
-    console.warn(`[demo] 錄影池：「${sel}」不在畫面上 — 「${(cap||"").slice(0,48)}」`,
+    console.warn(`[demo] 錄影池：「${name}」不在畫面上 — 「${(cap || "").slice(0, 48)}」`,
                  { top: Math.round(r.top), bottom: Math.round(r.bottom), viewportH: vh });
   }
 }
 
-// 捲動動畫跑完要一點時間。不等就開始講，觀眾看到的是「畫面還在滑」而旁白
-// 已經在講那個東西了；而且太早量位置也會誤報。
+// 捲動動畫跑完要一點時間。不等就開始講，觀眾看到的是「畫面還在滑」而旁白已經在講那個東西了。
 const FOCUS_SETTLE = 650;
 
 function goTab(name) {
@@ -341,36 +502,43 @@ function goTab(name) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-// 設定分頁的子選單：走到某一張卡。key 對應卡片標題裡的關鍵字。
+// 設定分頁的子頁：用卡片上的 data-setkey 找（buildSettingsIndex 會把它帶到索引列上）。
+// 不拿標題文字比關鍵字：介面一換成英文/日文/韓文就一個都對不上，而且會靜靜地開錯卡。
 function goSetting(key) {
   goTab("settings");
-  // 用卡片上的 data-setkey 找，不要拿標題文字比中文關鍵字：介面切成
-  // 英文/日文/韓文之後一個都對不上，而且會靜靜地退回第一張卡——
-  // 旁白講發音模型，畫面卻開著文字供應商設定。
-  // cloud 指到「我的專屬聲音」，因為那張卡就是 Drive 曲庫，正是接下來兩句在講的東西。
-  const want = { voice: "voice", cloud: "voice" }[key] || key;   // acoustic 那張卡已從網頁移除
-  const rows = $$("#settingsIndex .setrow");
-  const hit = rows.find((r) => r.dataset.setkey === want);
+  const hit = $$("#settingsIndex .setrow").find((r) => r.dataset.setkey === key);
   if (!hit) { console.warn("[demo] 找不到設定卡", key); return; }
-  hit.click(); spot(hit);
+  hit.click();
 }
 
-// ── 各單元的腳本內容（樣本資料，不打任何 API）──────────────────────────
+// 借用畫面上既有的容器時，把原本的子節點整批搬走、結束時搬回來。
+// 不用 innerHTML 存字串再還原：那樣還原回來的按鈕身上已經沒有事件監聽，
+// 演示結束後使用者點下去會沒有反應。
+const _stashed = new Map();
+function stash(el) {
+  if (!el || _stashed.has(el)) return;
+  const frag = document.createDocumentFragment();
+  while (el.firstChild) frag.appendChild(el.firstChild);
+  _stashed.set(el, frag);
+}
+function unstashAll() {
+  for (const [el, frag] of _stashed) { el.textContent = ""; el.appendChild(frag); }
+  _stashed.clear();
+}
 
-const SAMPLE = {
-  candidates: ["I would like some water, and I need to rest now.",
-               "Can I have water? I want to lie down.",
-               "Water please. I am tired."],
-  aac: ["💧 water", "🍚 eat", "🛏 rest"],
-  rehab: "I would like a glass of water.",
-  story: "The AI teacher: good sequence and clear cause and effect. Try to add who the man was speaking to.",
-};
+// ── ① 語意織句 ──────────────────────────────────────────────────────────
 
-// 按下重組之後真的要轉。候選句本身仍是固定樣本（錄影途中被 LLM 逾時或
-// 網路一抖毀掉整支影片是不能接受的），但**等待不能假**：用的是真的那顆
-// 按鈕的 disabled ＋「重組中…」文字，轉的是真實長度。直接跳出結果會讓
-// 觀眾以為這個 App 是即時的。
-const RECONSTRUCT_WAIT = 4500;
+function setCtx(text) {
+  const el = $("#ctx");
+  if (!el) return;
+  stash(el);
+  el.textContent = text;
+}
+
+// 按下重組之後真的要轉。候選句本身是固定樣本（在評審面前被 LLM 逾時毀掉是不能接受的），
+// 但**等待不能假**：用的是真的那顆按鈕的 disabled ＋「重組中…」文字，轉的是真實長度。
+// 直接跳出結果會讓觀眾以為這個 App 是即時的。
+const RECONSTRUCT_WAIT = 3500;
 
 async function reconstructWait() {
   const btn = $("#btnCompose");
@@ -381,174 +549,124 @@ async function reconstructWait() {
   finally { btn.disabled = false; btn.textContent = label; }
 }
 
-function showCandidates() {
+// 與 renderAltList() 同一份 markup（.alt-opt、◉／○、aria-pressed），畫面才會和真的一模一樣
+function altHtml(cands, on) {
+  const esc = (s) => String(s).replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+  return cands.map((s, i) => `<button class="btn ghost block alt-opt${i === on ? " on" : ""}" type="button" aria-pressed="${i === on}">${i === on ? "◉" : "○"}　${esc(s)}</button>`).join("");
+}
+
+function showCandidates(cands) {
   const res = $("#result"), txt = $("#resultText"), pick = $("#altPick"), list = $("#altList");
   if (!res) return;
+  stash(txt); stash(list);
   res.classList.remove("hidden");
-  if (txt) txt.textContent = SAMPLE.candidates[0];
-  // 用跟 renderAlts() 一樣的 class，模擬畫面才會和真的長得一模一樣
-  if (list) list.innerHTML = SAMPLE.candidates
-    .map((s, i) => `<button class="btn ghost block alt-opt${i === 0 ? " on" : ""}" type="button">${s}</button>`).join("");
+  if (txt) txt.textContent = cands[0];
+  if (list) list.innerHTML = altHtml(cands, 0);
   pick?.classList.remove("hidden");
   spot(res);
 }
 
-function showConfirm() {
-  const dlg = $("#confirmDlg");
-  if (!dlg) return;
-  $("#confirmEmoji").textContent = "💧";
-  $("#confirmText").textContent = SAMPLE.candidates[0];
-  dlg.classList.remove("hidden");
-  clearSpot();
-}
-async function confirmYes() {
-  await press("#confirmYes");
-  $("#confirmDlg")?.classList.add("hidden");
-  // **一定要 await。** 不等的話這一句只是被排進發言權佇列，等它真的輪到、
-  // 播出來的時候畫面早就換到下一段字幕了——看起來就是「字幕跟講的話對不上」。
-  // 等它講完，這一步才算結束。
-  await speakDemoSentence(SAMPLE.candidates[0]);
-}
-
 /** 在三個候選之間切換給人看，最後回到第一個。 */
-async function pickCandidateDemo() {
-  const opts = $$("#altList .alt-opt");
-  const txt = $("#resultText");
+async function pickCandidateDemo(cands) {
+  const list = $("#altList"), txt = $("#resultText");
   for (const i of [1, 2, 0]) {
     if (_abort) return;
-    opts.forEach((o, j) => o.classList.toggle("on", j === i));
-    if (txt && SAMPLE.candidates[i]) txt.textContent = SAMPLE.candidates[i];
-    spot(opts[i] || null);
+    if (list) list.innerHTML = altHtml(cands, i);
+    if (txt) txt.textContent = cands[i];
+    spot(list?.children[i] || null);
     await sleep(1300);
   }
 }
 
-async function aacPickDemo() {
-  const combo = $("#aacCombo");
-  if (!combo) return;
-  combo.innerHTML = "";
-  for (const w of SAMPLE.aac) {
-    if (_abort) return;
-    const chip = document.createElement("span");
-    chip.className = "chip";
-    chip.textContent = w;
-    combo.appendChild(chip);
-    await sleep(650);
-  }
-  spot(combo);
+function hideResult() {
+  $("#result")?.classList.add("hidden");
+  $("#confirmDlg")?.classList.add("hidden");
 }
 
-// 字級是靠 #aacItems 的 aac-s2/3/4 class 換版（s3 兩欄、s4 一欄），不是 CSS 變數。
-// 這裡直接換 class，不按真的 chip——按下去會 save() 把字級寫進使用者設定。
-async function aacScaleDemo() {
-  const grid = $("#aacItems"), chips = $$(".aac-scale-chip");
-  const base = _restore.aacGridCls ?? grid?.className;
-  for (const s of [2, 4]) {
-    if (_abort) break;
-    const c = chips.find((x) => +x.dataset.s === s);
-    chips.forEach((x) => x.classList.toggle("on", x === c));
-    if (grid) grid.className = "cards-grid aac-s" + s;
-    if (c) spot(c);
-    await sleep(1000);
-  }
-  await sleep(300);
-  if (grid && base) grid.className = base;
-  chips.forEach((x) => x.classList.toggle("on", +x.dataset.s === (+state.settings.aacScale || 1)));
-}
-
-async function rehabDemo() {
-  const card = $("#rehabPractice");
-  if (!card) return;
-  card.classList.remove("hidden");
-  const disp = $("#rehabTargetDisplay");
-  if (disp) disp.textContent = SAMPLE.rehab;
-  const chips = $("#rehabChips");
-  if (chips) chips.innerHTML = SAMPLE.rehab.split(" ")
-    .map((w) => `<span class="chip">${w}</span>`).join("");
-  spot(card);
-  await speakDemoSentence(SAMPLE.rehab);   // 同樣要等講完才前進
-}
-function rehabScore() {
-  const box = $("#rehabScore");
-  if (!box) return;
-  box.innerHTML = `<div class="scorebox good">
-    <div class="score-num">86</div>
-    <div class="score-info">
-      <div class="score-head">🎉 Well done</div>
-      <div class="score-fb">💬 Clear rhythm. “glass” came out soft — try it a little slower.</div>
-      <div class="tiny muted">Heard: I would like a glass of water</div>
-    </div></div>`;
-  spot(box);
-}
-
-function storyFeedback() {
-  const box = $("#storyFeedback");
-  if (!box) return;
-  box.classList.remove("hidden");
-  const txt = $("#storyFeedbackText");
-  if (txt) txt.textContent = SAMPLE.story;
-  const sc = $("#storyScore");
-  if (sc) sc.textContent = "Score 78 / 100";
-  spot(box);
-}
-
-// 危機介入：**照著真畫面重演，絕不呼叫 openCrisis()**——那一支會立刻發 Telegram
-// 給家人並開鏡頭拍照。演示只把同一個 DOM 填成通報成功的樣子。
-function crisisMock() {
-  const dlg = $("#crisisDlg");
-  if (!dlg) return;
+// 確認卡平常住在結果卡裡，但從圖卡頁組句時 app.js 會把它搬到 #aacResult。
+// 演示把它搬回結果卡，結束時再放回原處（搬節點不會掉事件監聽）。
+function showConfirm(text) {
+  const dlg = $("#confirmDlg"), host = $("#result");
+  if (!dlg || !host) return;
+  if (dlg.parentElement !== host) host.appendChild(dlg);
+  stash($("#confirmEmoji")); stash($("#confirmText"));
+  $("#confirmEmoji").textContent = "🤕💊";
+  $("#confirmText").textContent = text;
+  $("#confirmWarn")?.classList.remove("hidden");
+  $("#confirmReject")?.classList.add("hidden");
   dlg.classList.remove("hidden");
-  const st = $("#crisisStatus");
-  if (st) st.textContent = "Family notified · (simulated)";
-  const log = $("#crisisLog");
-  if (log) log.innerHTML = `
-    <div class="crisis-msg">Your family has been notified.</div>
-    <div class="crisis-msg">You can start a video call at any time.</div>
-    <div class="crisis-msg family">👪 I am on my way. Stay with me.</div>`;
-  const quick = $("#crisisQuick");
-  if (quick) quick.innerHTML = ["I am scared", "Please come", "I am safe"]
-    .map((s) => `<span class="chip">${s}</span>`).join("");
-  clearSpot();
 }
-function crisisClose() {
-  $("#crisisDlg")?.classList.add("hidden");
-  const st = $("#crisisStatus"); if (st) st.textContent = "";
-  const log = $("#crisisLog"); if (log) log.innerHTML = "";
-  const quick = $("#crisisQuick"); if (quick) quick.innerHTML = "";
+async function confirmYes(text) {
+  await press("#confirmYes");
+  // **一定要 await。** 不等的話這一句只是被排進發言權佇列，等它真的播出來時
+  // 畫面早就換到下一段了——看起來就是「字幕跟講的話對不上」。
+  await speakDemoSentence(text);
+  $("#confirmDlg")?.classList.add("hidden");
+  $("#confirmWarn")?.classList.add("hidden");
 }
 
-// 重度模式：不呼叫 enterKiosk()（它會要全螢幕與 wake lock，錄影時切全螢幕會讓
-// 畫面跳掉）。直接顯示同一塊板子。
-function kioskMock() {
+// ── ② 無障礙 ────────────────────────────────────────────────────────────
+
+// 三段模式只換外觀，不呼叫 applySeverity()——那一支會 save()，選到重度還會要全螢幕。
+async function sevModeDemo() {
+  const rows = $$("#sevModes .sevmode");
+  for (const m of ["mild", "moderate", "severe"]) {
+    if (_abort) return;
+    rows.forEach((r) => r.classList.toggle("on", r.dataset.m === m));
+    await sleep(900);
+  }
+}
+function restoreSevRows() {
+  const cur = state.settings.severityMode || "mild";
+  $$("#sevModes .sevmode").forEach((r) => r.classList.toggle("on", r.dataset.m === cur));
+}
+
+// 中度＝body.sev-moderate（隱藏複雜項目）＋圖卡特大（#aacItems 的 aac-s3，兩欄）
+function moderateDemo() {
+  goTab("aac");
+  document.body.classList.add("sev-moderate");
+  const grid = $("#aacItems");
+  if (grid) grid.className = "cards-grid aac-s3";
+  $$(".aac-scale-chip").forEach((x) => x.classList.toggle("on", +x.dataset.s === 3));
+}
+function restoreSeverity() {
+  const mode = state.settings.severityMode || "mild";
+  document.body.classList.toggle("sev-moderate", mode === "moderate");
+  document.body.classList.toggle("sev-severe", mode === "severe");
+  const grid = $("#aacItems"); if (grid && _restore.aacGridCls) grid.className = _restore.aacGridCls;
+  $$(".aac-scale-chip").forEach((x) => x.classList.toggle("on", +x.dataset.s === (+state.settings.aacScale || 1)));
+  restoreSevRows();
+}
+
+// 重度模式：不呼叫 enterKiosk()（它會要全螢幕與 wake lock，錄影時切全螢幕會讓畫面跳掉）。
+// 直接顯示同一塊板子，markup 與 renderScanCard() 相同（.kcard/.kemoji/.kword＋scanpulse）。
+function kioskMock([emoji, word]) {
   const k = $("#kiosk");
   if (!k) return;
   k.classList.remove("hidden");
   document.body.classList.add("kiosk-on");
-  scanCard("💧", "water");
+  scanCard(emoji, word);
   const trail = $("#kioskTrail");
   if (trail) trail.innerHTML = "";
 }
-// 與 renderScanCard() 同一份 markup（.kcard/.kemoji/.kword＋scanpulse 動畫），
-// 這樣演示看到的就是真的那塊板子，不是仿的。
 function scanCard(emoji, word) {
   const box = $("#kioskCards");
   if (!box) return;
   box.dataset.n = 1;
   box.innerHTML = `<div class="kcard kscan scanpulse"><span class="kemoji">${emoji}</span><span class="kword">${word}</span></div>`;
 }
-async function kioskTrail() {
+async function kioskTrail(cards) {
   const trail = $("#kioskTrail");
   const seen = [];
-  for (const [emo, word] of [["🛏", "rest"], ["💊", "medicine"]]) {
+  for (const [emo, word] of cards) {
     if (_abort) return;
     scanCard(emo, word);
     seen.push(`<div class="ktrail-item">${emo} ${word}</div>`);
     if (trail) trail.innerHTML =
       `<button class="ktrail-ctl" type="button">▶</button><button class="ktrail-ctl" type="button">✕</button>` + seen.join("");
-    await sleep(1100);
+    await sleep(1000);
   }
 }
-function kioskPin() { $("#kioskPin")?.classList.remove("hidden"); }
 function kioskClose() {
   $("#kioskPin")?.classList.add("hidden");
   $("#kiosk")?.classList.add("hidden");
@@ -557,74 +675,293 @@ function kioskClose() {
   const cards = $("#kioskCards"); if (cards) cards.innerHTML = "";
 }
 
-// 全域字級是 documentElement 的 --font（rem）。直接改變數即可，不動 state，
-// 這樣不會 save()，也不必擔心演示中斷時把使用者的字級留在 1.6。
-async function fontScaleDemo() {
-  goTab("settings");
+// 鼻控：不開相機（演示不碰任何裝置權限），畫一個與 #headCursor 同樣的游標，
+// 從卡片左上滑到「重新置中」鈕上停住，進度環走滿一圈＝停留點選觸發（只做按下的樣子）。
+let _nose = null;
+function noseEl() {
+  if (_nose) return _nose;
+  _nose = document.createElement("div");
+  _nose.id = "demoNose";
+  _nose.style.cssText = "position:fixed;left:0;top:0;width:44px;height:44px;margin:-22px 0 0 -22px;pointer-events:none;z-index:9999;";
+  _nose.innerHTML = `<svg viewBox="0 0 36 36" style="width:100%;height:100%;transform:rotate(-90deg)">
+      <circle cx="18" cy="18" r="16" fill="none" stroke="rgba(0,0,0,.18)" stroke-width="3"/>
+      <circle class="r" cx="18" cy="18" r="16" fill="none" stroke="var(--accent, #0a84ff)" stroke-width="3" stroke-dasharray="100.5" stroke-dashoffset="100.5"/></svg>
+    <i style="position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:var(--accent, #0a84ff);box-shadow:0 0 0 2px #fff"></i>`;
+  document.body.appendChild(_nose);
+  return _nose;
+}
+function noseRemove() { _nose?.remove(); _nose = null; }
+
+async function noseDemo() {
+  await sleep(FOCUS_SETTLE + 200);
+  const target = $("#s_headRecenter"), from = $("#s_head")?.closest("label");
+  if (!target || !from) return;
+  const a = from.getBoundingClientRect(), b = target.getBoundingClientRect();
+  const x0 = a.left + 20, y0 = a.top + 10, x1 = b.left + b.width / 2, y1 = b.top + b.height / 2;
+  const el = noseEl(), ring = el.querySelector(".r");
+  const N = 30;
+  for (let i = 0; i <= N && !_abort; i++) {
+    const k = i / N, e = k * k * (3 - 2 * k);           // smoothstep：頭的移動不會是等速直線
+    const jitter = Math.sin(i * 1.7) * 3 * (1 - k);       // 頭控本來就會微微晃，完全筆直反而假
+    el.style.transform = `translate(${x0 + (x1 - x0) * e + jitter}px, ${y0 + (y1 - y0) * e}px)`;
+    await sleep(40);
+  }
+  target.classList.add("head-hover");
+  for (let p = 0; p <= 20 && !_abort; p++) {
+    ring?.setAttribute("stroke-dashoffset", String(100.5 * (1 - p / 20)));
+    await sleep(50);
+  }
+  target.classList.remove("head-hover");
+  target.classList.add("demo-press");
+  await sleep(240);
+  target.classList.remove("demo-press");
+  await sleep(500);
+  noseRemove();
+}
+
+// 掃描模式：用真的那一套（a11yscan.js 的 startScan），畫面上的高亮就是實際行為。
+// 不勾設定裡的勾選框——那會 save()。結束時照使用者原本的狀態還原。
+function scanDemoStart() { if (!document.body.classList.contains("scan-on")) startScan(); }
+function scanDemoStop() { if (!_restore.scanOn) stopScan(); }
+// 眨眼：不開相機，只把浮動列換成「眨眼中」的樣子（👁＋長眨眼的提示）。
+function blinkMock() {
+  $("#scanEye")?.classList.remove("hidden");
+  const hint = $("#scanHint"); if (hint) hint.textContent = t("scan.hintBlink");
+}
+
+// 高對比＋超大字：直接改 <html> 的屬性與 --font，不動 state（不會 save）。
+async function visionDemo() {
+  await sleep(600);
+  document.documentElement.setAttribute("data-contrast", "high");
   const root = document.documentElement;
-  for (const v of [1.4, 1.8, 2.2]) {
+  for (const v of [1.3, 1.6]) {
     if (_abort) break;
     root.style.setProperty("--font", v + "rem");
-    await sleep(1000);
+    await sleep(900);
   }
-  await sleep(600);
-  root.style.setProperty("--font", (_restore.font || 1) + "rem");
+}
+function visionRestore() {
+  const el = document.documentElement;
+  if (state.settings.highContrast) el.setAttribute("data-contrast", "high");
+  else el.removeAttribute("data-contrast");
+  el.style.setProperty("--font", (state.settings.font || 1) + "rem");
 }
 
-function langDemo(lang) {
-  state.settings.lang = lang || _restore.lang;   // null＝還原
-  applyI18n();
+// ── ③ 復健 ──────────────────────────────────────────────────────────────
+
+// 四語四級：在題庫下面另開一塊，依序列出四種語言各級的第一題（bankFor 是真的題庫）。
+// 原本的題庫先藏起來、不改它——它身上綁著點一下開始練的事件。
+function showBanks() {
+  const bank = $("#rehabBank");
+  if (!bank) return;
+  $("#demoBanks")?.remove();
+  const box = document.createElement("div");
+  box.id = "demoBanks";
+  const flag = { zh: "🇹🇼 中文", en: "🇺🇸 English", ja: "🇯🇵 日本語", ko: "🇰🇷 한국어" };
+  const esc = (s) => String(s).replace(/[&<>]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[ch]));
+  box.innerHTML = Object.keys(LANG_TAG).map((L) => {
+    const groups = bankFor(LANG_TAG[L]);
+    return `<div style="margin-top:8px"><div class="tiny muted">${flag[L]}</div>
+      <div class="chips" style="margin-top:4px">${groups.map((g) =>
+        `<span class="chip" title="${esc(t(g.levelKey))}">${esc(t(g.levelKey))} · ${esc(g.items[0] || "")}</span>`).join("")}</div></div>`;
+  }).join("");
+  bank.style.display = "none";
+  bank.after(box);
+}
+function hideBanks() {
+  $("#demoBanks")?.remove();
+  const bank = $("#rehabBank"); if (bank) bank.style.display = "";
 }
 
-// ── 旁白 ────────────────────────────────────────────────────────────────
+// 與 rehab.js 的 makeChips 同一套切法：拉丁詞一張、中日韓每兩個字一張
+function makeChips(sentence) {
+  return sentence.replace(/[，。！？、,.!?；;：:\s]+/g, "|").split("|").filter(Boolean)
+    .flatMap((p) => {
+      if (/[A-Za-z0-9]/.test(p)) return [p];
+      const out = []; for (let i = 0; i < p.length; i += 2) out.push(p.slice(i, i + 2)); return out;
+    });
+}
 
-// 演示裡「App 講出來的話」（不是旁白）。有預先合成就走混音軌——那條才錄得到；
-// 沒有（沒接電腦端）才退回一般 TTS，至少現場聽得到。
-// 演示裡「App 把句子唸出來」那一下：**固定用瀏覽器內建（Google）語音**，
-// 不用 GPT-SoVITS。理由與 App 端相同——那條路要現場合成，CPU 上一句十幾秒，
-// 畫面早就跳走了，聲音才姍姍來遲蓋在別的段落上。瀏覽器語音是即時的。
-// 而且要等它真的唸完才回來，並且和旁白共用同一個發言權，不會互相疊。
-// 專屬聲音「合成」的停頓。音檔是預錄好的，所以其實不必等，但真的按下去
-// 是要等電腦跑 10～30 秒的——瞬間出聲會讓觀眾以為這個 App 是即時的。
-// 停的長度是縮短的，但「要等」這件事本身不是演的。
-const VOICE_SYNTH_DELAY = 2000;
+async function rehabDemo(sentence) {
+  hideBanks();
+  const card = $("#rehabPractice");
+  if (!card) return;
+  card.classList.remove("hidden");
+  const disp = $("#rehabTargetDisplay"), chips = $("#rehabChips"), score = $("#rehabScore");
+  stash(disp); stash(chips); stash(score);
+  if (disp) disp.textContent = sentence;
+  if (chips) chips.innerHTML = makeChips(sentence).map((w) => `<span class="chip" data-c="${w}">${w}</span>`).join("");
+  await speakDemoSentence(sentence);   // 等講完才前進
+}
+
+// 與 rehab.js doScore() 同一份 markup（scorebox＋subscores 三條細項）
+function rehabScore(S) {
+  const box = $("#rehabScore");
+  if (!box) return;
+  $$("#rehabChips .chip").forEach((chip) =>
+    chip.classList.toggle("wrong", S.wrong.some((w) => (chip.dataset.c || "").includes(w))));
+  const bar = (k, v) => `<div class="subscore"><span class="tiny">${t(k)}</span>
+      <span class="subbar"><i class="${v >= 80 ? "good" : v >= 50 ? "mid" : "low"}" style="width:${v}%"></i></span><b class="tiny">${v}</b></div>`;
+  box.innerHTML = `<div class="scorebox good">
+    <div class="score-num">84</div>
+    <div class="score-info">
+      <div class="score-head">🎉 ${t("rehab.great")}</div>
+      <div class="score-fb">💬 ${S.rehabFb}</div>
+      <div class="tiny" style="color:var(--danger)">${t("rehab.focus")}${S.wrong.join("、")}</div>
+      <div class="tiny muted">${t("rehab.recognizedLabel")}${S.heard}</div>
+      <div class="tiny muted">${t("rehab.latency").replace("{s}", "1.8")}</div>
+    </div></div>
+    <div class="subscores">${bar("rehab.subSemantic", 92)}${bar("rehab.subFluency", 81)}${bar("rehab.subProsody", 76)}</div>`;
+}
+
+// 復健軌跡：兩週的示範資料（反應時間變短、命中率變高，中間有沒練習的斷點）。
+// 只畫在畫面上，不寫進任何紀錄；結束時 loadReport() 重畫回使用者真實的資料。
+function sampleTrajectory() {
+  const labels = [], reaction = [], rehabLatency = [], pickHit = [], rehabHit = [];
+  const d = new Date(); d.setDate(d.getDate() - 13);
+  for (let i = 0; i < 14; i++, d.setDate(d.getDate() + 1)) {
+    labels.push(`${d.getMonth() + 1}/${d.getDate()}`);
+    const gap = i === 4 || i === 9;                       // 沒練習的日子是斷點，不是 0
+    const k = i / 13;
+    reaction.push(gap ? null : +(6.4 - 3.6 * k + Math.sin(i) * 0.35).toFixed(2));
+    rehabLatency.push(gap ? null : +(4.8 - 2.9 * k + Math.cos(i) * 0.3).toFixed(2));
+    pickHit.push(gap ? null : Math.round(42 + 44 * k + Math.sin(i * 1.3) * 5));
+    rehabHit.push(gap ? null : Math.round(30 + 48 * k + Math.cos(i * 1.1) * 6));
+  }
+  return { buckets: labels, labels, reaction, rehabLatency, pickHit, rehabHit };
+}
+let _reportDrawn = false;
+async function reportDemo() {
+  goTab("report");
+  // 切到報表時 app.js 會自己跑一次 loadReport()。先等它畫完，否則示範圖會被真資料蓋掉。
+  try { await loadReport(); } catch {}
+  _reportDrawn = true;
+  const tr = sampleTrajectory();
+  drawTrajectory($("#trajReaction"), tr, "reaction");
+  drawTrajectory($("#trajHit"), tr, "hit");
+  const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
+  set("#statSessions", "26"); set("#statAvg", "78"); set("#statStreak", "🔥6"); set("#statPositive", "41");
+  set("#bmReaction", "2.9s"); set("#bmPick", "81%"); set("#bmEdit", "7"); set("#bmCard", "38%");
+  set("#trajRange", t("traj.byDay"));
+}
+
+// ── ④ 危機 ──────────────────────────────────────────────────────────────
+
+// 語音鎖定畫面：照真的 showLock() 的樣子填，不呼叫它（它會接著真的開危機視窗）。
+function showLock() {
+  const dlg = $("#lockDlg");
+  if (!dlg) return;
+  stash($("#lockBody"));
+  $("#lockBody").textContent = t("safety.lockedCrisis");
+  $("#lockBody").style.whiteSpace = "pre-line";
+  dlg.classList.remove("hidden");
+}
+function hideLock() { $("#lockDlg")?.classList.add("hidden"); }
+
+// 危機介入：**照著真畫面重演，絕不呼叫 openCrisis()**——那一支會立刻發 Telegram
+// 給家人並開鏡頭拍照。演示只把同一個 DOM 填成通報成功的樣子。
+let _breath = 0;
+function crisisMock(S) {
+  hideLock();
+  const dlg = $("#crisisDlg");
+  if (!dlg) return;
+  dlg.classList.remove("hidden");
+  const st = $("#crisisStatus"); if (st) st.textContent = S.sim;
+  const log = $("#crisisLog");
+  if (log) log.innerHTML = S.crisisLog.map((m, i) =>
+    `<div class="crisis-msg${i === S.crisisLog.length - 1 ? " family" : ""}">${m}</div>`).join("");
+  const quick = $("#crisisQuick");
+  if (quick) quick.innerHTML = S.crisisQuick.map((s) => `<span class="chip">${s}</span>`).join("");
+  $("#crisisChipVideo")?.classList.remove("hidden");
+  $("#crisisChipPhoto")?.classList.remove("hidden");
+  // 呼吸引導：吸 4 秒、吐 4 秒，與 crisis.js 的 startBreathing() 同一個節奏
+  const orb = $("#crisisOrb"), lbl = $("#crisisBreath");
+  let inhale = true;
+  const tick = () => {
+    if (orb) orb.style.transform = inhale ? "scale(1)" : "scale(0.72)";
+    if (lbl) lbl.textContent = t(inhale ? "crisis.inhale" : "crisis.exhale");
+    inhale = !inhale;
+  };
+  clearInterval(_breath); tick();
+  _breath = setInterval(tick, 4000 / speed());
+}
+function crisisClose() {
+  clearInterval(_breath); _breath = 0;
+  hideLock();
+  $("#crisisDlg")?.classList.add("hidden");
+  const st = $("#crisisStatus"); if (st) st.textContent = "";
+  const log = $("#crisisLog"); if (log) log.innerHTML = "";
+  const quick = $("#crisisQuick"); if (quick) quick.innerHTML = "";
+  const lbl = $("#crisisBreath"); if (lbl) lbl.textContent = "";
+  const orb = $("#crisisOrb"); if (orb) orb.style.transform = "";
+  $("#crisisChipVideo")?.classList.add("hidden");
+  $("#crisisChipPhoto")?.classList.add("hidden");
+}
+
+// ── ⑤ 聲紋 ──────────────────────────────────────────────────────────────
+
+// 同意書：打開真的那一張、勾起「我是本人或已取得同意」，但**不按同意**——
+// 按下去會把同意紀錄寫進使用者設定。
+function consentMock() {
+  const dlg = $("#voiceConsentDlg");
+  if (!dlg) return;
+  dlg.classList.remove("hidden");
+  setTimeout(() => {
+    const chk = $("#vcAgreeChk"), btn = $("#vcAgree");
+    if (chk) chk.checked = true;
+    if (btn) btn.disabled = false;
+  }, 1400 / speed());
+}
+function consentClose() {
+  $("#voiceConsentDlg")?.classList.add("hidden");
+  const chk = $("#vcAgreeChk"), btn = $("#vcAgree");
+  if (chk) chk.checked = false;
+  if (btn) btn.disabled = true;
+}
+
+// 喜怒哀樂四種語氣：在聲音卡裡掛一排標籤，唸的時候亮「樂」那一個。
+async function emotionDemo(S) {
+  $("#demoEmotions")?.remove();
+  const list = $("#voiceList");
+  if (!list) return;
+  const box = document.createElement("div");
+  box.id = "demoEmotions";
+  box.className = "chips";
+  box.style.marginTop = "8px";
+  box.innerHTML = S.emotions.map((e) => `<span class="chip">${e}</span>`).join("");
+  list.after(box);
+  await sleep(700);
+  const chips = [...box.children];
+  for (const i of [0, 2, 3]) {
+    if (_abort) return;
+    chips.forEach((c, j) => c.classList.toggle("on", j === i));
+    await sleep(500);
+  }
+  await speakInOwnVoice(S.own);
+}
+
+// ── 「App 講話」的聲音 ─────────────────────────────────────────────────
+
+// 專屬聲音「合成」的停頓。音檔是預錄好的，所以其實不必等，但真的按下去是要等電腦跑
+// 10～30 秒的——瞬間出聲會讓觀眾以為這個 App 是即時的。停的長度是縮短的，但「要等」不是演的。
+const VOICE_SYNTH_DELAY = 1600;
 
 /**
- * 演示裡「App 把句子唸出來」那一下：亮出合成指示 → 停 2 秒 → 播預錄好的那一段。
- *
- * **用的角色和旁白不同**（見 pickNarrationVoice：旁白用花火 EN，這裡取別的）。共用旁白角色的話，
- * 這句話聽起來就變成旁白在唸它，而不是 App 在講話——觀眾分不出哪一句是解說。
- *
- * 那 2 秒是給「合成需要時間」用的：真的按下去要等電腦跑 10～30 秒，
- * 瞬間出聲會讓觀眾以為這個 App 是即時的。音檔是預錄的，所以停的是 2 秒不是 30 秒。
+ * 演示裡「App 把句子唸出來」那一下：亮出合成指示 → 停一下 → 播預錄好的那一段。
+ * **用的角色和旁白不同**（見 pickNarrationVoice），觀眾才分得出哪一句是解說、哪一句是 App 在講話。
+ * 預錄不到才退回瀏覽器語音（那條聲音錄影收不到，但現場至少聽得到）。
  */
-/**
- * 用**專屬聲音**（GPT-SoVITS 預錄檔）唸一句。給「我的專屬聲音」那一段用。
- *
- * 角色刻意不是旁白那個（見 pickNarrationVoice），觀眾才聽得出這是
- * 「他自己的聲音」，而不是旁白又講了一句。合不出來才退回瀏覽器語音。
- */
-function speakInOwnVoice(text) {
-  return withAudioFloor(async () => {
-    const tag = showSynthesizing();
-    try { await sleep(VOICE_SYNTH_DELAY); } finally { tag?.remove(); }
-    const clip = _speakClips.get(text);
-    if (clip) await playClip(clip, 1.0);
-    else await browserNarrate(text);
-  });
-}
-
 function speakDemoSentence(text) {
   return withAudioFloor(async () => {
     const tag = showSynthesizing();
     try { await sleep(VOICE_SYNTH_DELAY); } finally { tag?.remove(); }
     const clip = _speakClips.get(text);
-    // 不加速：旁白拉到 1.22 倍是為了不拖節奏，但這一句是「App 正在講話」，
-    // 加速會讓它聽起來像趕時間，也和真的按下去聽到的不一樣。
+    // 不加速：這一句是「App 正在講話」，加速會讓它聽起來像趕時間，也和真的按下去聽到的不一樣
     if (clip) await playClip(clip, 1.0);
-    else await browserNarrate(text);      // 連不到電腦端就退回瀏覽器語音（影片會沒這一句）
+    else await browserNarrate(text);
   });
 }
+const speakInOwnVoice = speakDemoSentence;
 
 /** 在結果卡下面掛一行「合成中…」，回傳那個節點讓呼叫端收掉。 */
 function showSynthesizing() {
@@ -638,14 +975,10 @@ function showSynthesizing() {
   return el;
 }
 
-function demoSpeak(text) {
-  // 排進同一條發言權：前面的旁白一定先講完，才輪到這一句；
-  // 這一句講完放開之後，下一句旁白才拿得到發言權。回傳 promise 讓呼叫端 await。
-  return withAudioFloor(() => browserNarrate(text));
-}
+// ── 旁白 ────────────────────────────────────────────────────────────────
 
-// 旁白固定用這個角色：整支影片同一個聲音，換台電腦、換個曲庫順序都一樣。
-// 不指名的話「取第一個英文角色」會隨曲庫內容變動，每次錄出來的旁白都可能不同。
+// 中文旁白優先用這個角色：整支影片同一個聲音，換台電腦、換個曲庫順序都一樣。
+// 其他語言沒有指定角色時取該語言的第一個。
 const NARRATION_VOICE_NAME = "花火";
 
 async function pickNarrationVoice() {
@@ -653,25 +986,23 @@ async function pickNarrationVoice() {
   _speakVoice = null;
   try {
     if (!(await detectLocalTts(2000))) return;
-    const vs = await localVoices();
-    const en = vs.filter((v) => (v.lang || "").toUpperCase() === "EN");
-    const narr = en.find((v) => (v.name || "").includes(NARRATION_VOICE_NAME)) || en[0];
-    if (narr) _voice = { name: narr.name, lang: "EN" };
-    // 「App 把句子唸出來」那一下要用**別的**角色。同一個聲音的話，那句話聽起來
-    // 就像旁白在唸它，觀眾分不出哪一句是解說、哪一句是這個 App 講出來的。
-    // 只有一個英文角色時就只好共用（總比沒有聲音好）。
-    const sp = en.find((v) => v.name !== narr?.name) || narr;
-    if (sp) _speakVoice = { name: sp.name, lang: "EN" };
+    const want = LOCAL_LANG[_lang];
+    const vs = (await localVoices()).filter((v) => (v.lang || "").toUpperCase() === want);
+    const narr = vs.find((v) => (v.name || "").includes(NARRATION_VOICE_NAME)) || vs[0];
+    if (narr) _voice = { name: narr.name, lang: want };
+    // 「App 講話」要用**別的**角色；只有一個角色時就只好共用（總比沒有聲音好）。
+    const sp = vs.find((v) => v.name !== narr?.name) || narr;
+    if (sp) _speakVoice = { name: sp.name, lang: want };
   } catch { /* 連不上就退瀏覽器語音 */ }
 }
 
-// 旁白播放速度。GPT-SoVITS 的英文原速偏慢，聽起來像在唸稿。
+// 旁白播放速度。GPT-SoVITS 原速偏慢，聽起來像在唸稿。
 // 用 <audio> 的 playbackRate ＋ preservesPitch 加速——不會變成花栗鼠音。
-const NARRATION_RATE = 1.22;
+const NARRATION_RATE = 1.15;
 
 // ── 預錄旁白的存放 ───────────────────────────────────────────────────────
-// 存 IndexedDB，不是只放記憶體。放記憶體的話重新整理一次就全沒了，
-// 等於每次開頁面都要重新合成一輪（CPU 上每句 25 秒）——那就不叫預錄了。
+// 存 IndexedDB，不是只放記憶體：重新整理一次就全沒了的話，每次開頁面都要重新合成一輪
+// （CPU 上每句 25 秒）——那就不叫預錄了。到評審現場前在家先跑一次，現場就不用等。
 const DB_NAME = "vw_demo_narration";
 const STORE = "clips";
 let _db = null;
@@ -689,7 +1020,6 @@ function openDb() {
     req.onerror = () => resolve(null);   // 無痕模式等情況拿不到 → 退回只用記憶體
   });
 }
-
 function dbGet(key) {
   return openDb().then((db) => db && new Promise((resolve) => {
     const r = db.transaction(STORE).objectStore(STORE).get(key);
@@ -706,17 +1036,13 @@ function dbPut(key, blob) {
 }
 
 // 快取鍵要帶角色名：換了旁白角色就該重新合成，不然會播到上一個聲音。
-function clipKey(text, voiceName) { return `${voiceName || _voice?.name || "browser"}|${text}`; }
+function clipKey(text, voiceName) { return `${voiceName || "browser"}|${text}`; }
 
 // 記憶體層（同一次執行內免走 IndexedDB）：句子文字 → Blob。
-//
-// 存 AudioBuffer 而不是 <audio> 的網址，是為了能把聲音**直接混進錄影**：
-// getDisplayMedia 的音訊要使用者自己記得勾「分享分頁音訊」才有，忘了就錄成默片；
-// 而用麥克風收喇叭又會把房間的雜音一起錄進去。走 WebAudio 就沒有這兩個問題——
-// 同一份聲音同時送去喇叭和錄影軌，錄到的是乾淨的原始音訊。
+// 聲音走 WebAudio **直接混進錄影**：getDisplayMedia 的音訊要使用者自己記得勾「分享分頁音訊」，
+// 忘了就錄成默片；用麥克風收喇叭又會把房間雜音錄進去。走 WebAudio 兩個問題都沒有。
 const _clips = new Map();
-/** 示範發聲（花火 EN）的預錄快取，和旁白那份分開放。 */
-const _speakClips = new Map();
+const _speakClips = new Map();   // 「App 講話」那幾句，和旁白分開放（角色不同）
 
 let _ac = null;          // AudioContext（全程共用；每次 new 會被瀏覽器限制數量）
 let _mixDest = null;     // 錄影用的音訊匯流點
@@ -731,19 +1057,16 @@ function mixDest() {
   return _mixDest;
 }
 
-/** 把選到的單元裡所有旁白先合成好（先問 IndexedDB，缺的才合成）。回成功句數。 */
+/** 把選到的單元裡所有旁白與示範句先合成好（先問 IndexedDB，缺的才合成）。回成功句數。 */
 async function prepareNarration(units, onProgress) {
-  // 兩批、兩個角色：
-  //  ① 旁白 → _voice
-  //  ② 「App 把句子唸出來」的示範句 → _speakVoice（花火 EN）
-  // 分角色是為了讓觀眾分得出哪一句是解說、哪一句是這個 App 講出來的。
   // 示範句也一定要預錄：瀏覽器自己的 TTS 繞過 WebAudio，錄影的音軌收不到，
   // 影片裡會變成「畫面在唸但沒有聲音」。
-  const spoken = [SAMPLE.candidates[0], SAMPLE.rehab];
+  const S = sample(_lang);
+  const spoken = [S.candidates[0], S.medical, S.rehab, S.own];
   const jobs = [
     ...[...new Set(units.flatMap((u) => u.steps.map((s) => s.cap)).filter(Boolean))]
       .map((text) => ({ text, voice: _voice, store: _clips })),
-    ..._speakVoice ? spoken.map((text) => ({ text, voice: _speakVoice, store: _speakClips })) : [],
+    ...(_speakVoice ? spoken.map((text) => ({ text, voice: _speakVoice, store: _speakClips })) : []),
   ].filter((j) => j.voice);
 
   // 先把上次存下來的撈回來——這一步是「為什麼第二次不用等」的關鍵。
@@ -759,8 +1082,8 @@ async function prepareNarration(units, onProgress) {
     onProgress(i, todo.length);
     if (await synthJob(todo[i])) ok++;
   }
-  // 補漏輪：整批跑完再收一次還缺的。走 Tailscale／ngrok(Colab) 時，最容易掉的
-  // 是隧道剛拉起來的頭幾句；跑到這裡連線通常已經穩了，這一輪常常就補回來。
+  // 補漏輪：走 Tailscale／ngrok(Colab) 時最容易掉的是隧道剛拉起來的頭幾句；
+  // 跑到這裡連線通常已經穩了，這一輪常常就補回來。
   const missed = todo.filter((j) => !j.store.has(j.text));
   for (let i = 0; i < missed.length && !_abort; i++) {
     onProgress(i, missed.length);
@@ -771,8 +1094,7 @@ async function prepareNarration(units, onProgress) {
 }
 
 // 一句話合成幾次都不成才放棄。**不重試的代價不是「少一句」**——那一句會退回
-// 瀏覽器機器音，於是簡報影片播到一半突然換了個聲音，而且錄完才會發現。
-// 掉包的原因多半是暫時的（隧道冷啟動、換 DERP 中繼），值得再試。
+// 瀏覽器機器音，影片播到一半突然換了個聲音，而且錄完才會發現。
 const PREWARM_ATTEMPTS = 3;
 const PREWARM_BACKOFF_MS = 1500;
 
@@ -780,7 +1102,7 @@ async function synthJob(j) {
   for (let attempt = 0; attempt < PREWARM_ATTEMPTS; attempt++) {
     if (_abort) return false;
     try {
-      const blob = await localSynth(j.text, { name: j.voice.name, lang: "EN", emotion: "中立" });
+      const blob = await localSynth(j.text, { name: j.voice.name, lang: j.voice.lang, emotion: "中立" });
       if (blob) {
         j.store.set(j.text, blob);
         await dbPut(clipKey(j.text, j.voice.name), blob);   // 存起來，下次開頁面直接用
@@ -790,19 +1112,15 @@ async function synthJob(j) {
       // 落到下面的退避重試
     }
     // 剛掉包的下一秒通常還是掉包，立刻重打只是把三次機會一次用完。
-    if (attempt < PREWARM_ATTEMPTS - 1) {
-      await sleep(PREWARM_BACKOFF_MS * (attempt + 1));
-    }
+    if (attempt < PREWARM_ATTEMPTS - 1) await sleep(PREWARM_BACKOFF_MS * (attempt + 1));
   }
   return false;
 }
 
 /**
- * 播一段預錄好的旁白：同時送喇叭與錄影軌，等真的播完才 resolve。
- *
+ * 播一段預錄好的音檔：同時送喇叭與錄影軌，等真的播完才 resolve。
  * 用 <audio> 而不是 AudioBufferSource，是為了 preservesPitch——
- * BufferSource 的 playbackRate 是直接改取樣率，加速會連音高一起拉高（花栗鼠）。
- * 走 media element 才有瀏覽器的變速不變調。
+ * BufferSource 的 playbackRate 是直接改取樣率，加速會連音高一起拉高。
  */
 function playClip(blob, rate = NARRATION_RATE) {
   return new Promise((resolve) => {
@@ -816,7 +1134,7 @@ function playClip(blob, rate = NARRATION_RATE) {
     let src = null;
     try {
       src = ac.createMediaElementSource(el);
-      src.connect(ac.destination);   // 使用者聽得到
+      src.connect(ac.destination);   // 現場聽得到
       src.connect(mixDest());        // 錄影錄得到
     } catch {
       /* 接不上 WebAudio 就直接播，至少現場聽得到（影片會沒這一句） */
@@ -842,32 +1160,35 @@ async function narrate(text) {
   await withAudioFloor(() => browserNarrate(text));   // 沒預錄成功的那幾句
 }
 
+// 一句話大約要講幾毫秒（估時與防卡死共用）。中日韓按字數、英文按字詞數。
+function speechMs(text, L = _lang) {
+  const s = String(text || "");
+  if (L === "en") return s.split(/\s+/).filter(Boolean).length / 2.6 * 1000;
+  const n = (s.match(/[぀-ヿ㐀-鿿가-힯]/g) || []).length;
+  return n / ({ zh: 4.2, ja: 6.5, ko: 5.5 }[L] || 4.5) * 1000;
+}
+
 function browserNarrate(text) {
   return new Promise((resolve) => {
     try {
       const u = new SpeechSynthesisUtterance(text);
-      u.lang = "en-US";
+      u.lang = LANG_TAG[_lang];
       u.rate = 0.95;
       let done = false;
       const fin = () => { if (!done) { done = true; resolve(); } };
       u.onend = u.onerror = fin;
       speechSynthesis.cancel();
       speechSynthesis.speak(u);
-      // 保險：有些瀏覽器 onend 不會觸發。但這個時限**必須遠大於**實際唸完的時間，
-      // 否則它會反過來把還在唸的句子切斷——那正是「音檔沒播完就跳下一步」。
-      // 英文約每分鐘 160 字，抓三倍再加 5 秒當上限，只用來防卡死。
-      const words = text.split(/\s+/).filter(Boolean).length;
-      setTimeout(fin, 5000 + words / 160 * 60 * 1000 * 3);
+      // 保險：有些瀏覽器 onend 不會觸發。這個時限**必須遠大於**實際唸完的時間，
+      // 否則會反過來把還在唸的句子切斷。抓三倍再加 5 秒，只用來防卡死。
+      setTimeout(fin, (5000 + speechMs(text) * 3) / speed());
     } catch { resolve(); }
   });
 }
 
 // ── 讓螢幕不要睡著 ──────────────────────────────────────────────────────
-//
-// 演示要跑好幾分鐘（加上旁白預錄可能更久），使用者多半按下去就走開。
-// 螢幕一暗，錄下來就是半段黑畫面——而且分頁被系統休眠後畫面也不再更新。
-// Screen Wake Lock 只在分頁可見時有效，切走再切回來要自己重新取得，
-// 所以掛一個 visibilitychange 監聽補回來。
+// 演示要跑好幾分鐘，螢幕一暗，錄下來就是半段黑畫面。Screen Wake Lock 只在分頁可見時有效，
+// 切走再切回來要自己重新取得，所以掛一個 visibilitychange 監聽補回來。
 let _wake = null;
 
 async function keepAwake() {
@@ -880,21 +1201,15 @@ function releaseAwake() {
   _wake = null;
 }
 // ── 黑畫面防護 ─────────────────────────────────────────────────────────
-//
-// 分頁擷取在分頁被切走／最小化時，瀏覽器會停止繪製那個分頁——錄下來就是
-// 一段全黑或凍住的畫面，而且是在錄完之後才會發現。Wake Lock 也只在分頁
-// 可見時有效，切走就被系統收走了。
-//
-// 擋不住使用者切分頁（那是他的自由），但可以做到兩件事：
-//   ① 切回來立刻把 Wake Lock 補上，別讓螢幕接著睡著；
-//   ② 記下「這支影片中間有黑掉過」，錄完直接告訴他，不要讓他事後才發現。
+// 分頁被切走時瀏覽器會停止繪製——錄下來就是一段全黑，而且錄完才會發現。
+// 擋不住使用者切分頁，但可以：① 切回來立刻補上 Wake Lock；② 錄完直接告訴他中間黑掉過。
 let _wentHidden = false;
 
 document.addEventListener("visibilitychange", () => {
   if (!window.__VW_DEMO__) return;
   if (document.visibilityState === "hidden") {
-    _wentHidden = true;          // 這段時間的畫面多半是黑的
-    releaseAwake();              // 反正系統已經收走了，把狀態對齊
+    _wentHidden = true;
+    releaseAwake();
   } else if (!_wake) {
     keepAwake();
   }
@@ -907,20 +1222,13 @@ function recSupported() {
 }
 
 async function startRecording() {
-  // 只錄「這一個分頁」，不要整個 Chrome。
-  //
-  // preferCurrentTab 會讓瀏覽器的分享視窗直接只給「目前分頁」一個選項——
-  // 使用者不必在「整個螢幕／視窗／分頁」之間挑，也就不會不小心選到整個桌面。
-  // 錄到的內容只有頁面本身：沒有網址列、沒有分頁列、沒有書籤列，也沒有其他視窗。
-  // selfBrowserSurface:"include" 是允許擷取自己這個分頁（預設會排除）；
-  // surfaceSwitching:"exclude" 拿掉錄影中那顆「改分享別的分頁」按鈕，
-  // 免得演示到一半被切走。systemAudio:"exclude" 是因為旁白已經自己混進去了。
-  //
-  // 這些參數舊版瀏覽器不認得會直接忽略，不會報錯；真的不支援時使用者還是
-  // 會看到原本的三選一，選「這個分頁」結果一樣。
+  // 只錄「這一個分頁」：preferCurrentTab 讓分享視窗直接只給目前分頁，不會不小心選到整個桌面；
+  // 錄到的只有頁面本身（沒有網址列、分頁列、其他視窗）。surfaceSwitching:"exclude" 拿掉錄影中
+  // 「改分享別的分頁」那顆鈕；systemAudio:"exclude" 是因為旁白已經自己混進去了。
+  // 舊版瀏覽器不認得這些參數會直接忽略，不會報錯。
   const wanted = {
     video: { frameRate: 30, displaySurface: "browser" },
-    audio: false,              // 聲音不靠分頁音訊，改用下面的 WebAudio 混音軌
+    audio: false,              // 聲音不靠分頁音訊，改用 WebAudio 混音軌
     preferCurrentTab: true,
     selfBrowserSurface: "include",
     surfaceSwitching: "exclude",
@@ -934,8 +1242,6 @@ async function startRecording() {
     if (e && (e.name === "NotAllowedError" || e.name === "AbortError")) throw e;
     screen = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 30 }, audio: false });
   }
-  // 影像來自螢幕分享、聲音來自旁白的混音匯流點 → 使用者不必記得勾「分享分頁音訊」，
-  // 也不會錄到房間的雜音。旁白播出去的同時就已經進了這條軌。
   const stream = new MediaStream([
     ...screen.getVideoTracks(),
     ...mixDest().stream.getAudioTracks(),
@@ -948,17 +1254,13 @@ async function startRecording() {
   _rec = new MediaRecorder(stream, mime ? { mimeType: mime, videoBitsPerSecond: 4_000_000 } : undefined);
   _rec.ondataavailable = (e) => { if (e.data && e.data.size) _chunks.push(e.data); };
 
-  // 第二份：同一條影像軌，不接旁白那條音軌 → 一次錄，兩個版本。
-  // （簡報時想自己口頭講解就用這一份，不必再跑一次演示、也不必再等一次預錄。）
-  // 影像軌是同一個 MediaStreamTrack，兩個 MediaRecorder 讀同一個來源，
-  // 所以兩支影片的畫面內容與時間軸完全一致。
+  // 第二份：同一條影像軌、不接旁白 → 一次錄，兩個版本（現場想自己口頭講解就用這一份）。
   // 建不起來就只出一份——為了第二份讓整次錄影失敗是本末倒置。
   _recSilent = null;
   try {
     const silentMime = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"]
       .find((m) => MediaRecorder.isTypeSupported(m)) || "";
-    const silentStream = new MediaStream(screen.getVideoTracks());
-    _recSilent = new MediaRecorder(silentStream,
+    _recSilent = new MediaRecorder(new MediaStream(screen.getVideoTracks()),
       silentMime ? { mimeType: silentMime, videoBitsPerSecond: 4_000_000 } : undefined);
     _recSilent.ondataavailable = (e) => { if (e.data && e.data.size) _chunksSilent.push(e.data); };
   } catch (e) {
@@ -985,7 +1287,7 @@ function stopRecording() {
   // 兩個都停完才收掉螢幕分享——先停軌的話後面那個 recorder 會拿到半截檔案
   return Promise.all([stopOne(a, _chunks), stopOne(b, _chunksSilent)])
     .then(([narrated, silent]) => {
-      try { _recStream?.getTracks().forEach((t) => t.stop()); } catch {}
+      try { _recStream?.getTracks().forEach((tr) => tr.stop()); } catch {}
       _recStream = null;
       return { narrated, silent };
     });
@@ -1008,17 +1310,18 @@ function download(blob, suffix = "") {
 let _restore = {};
 
 function snapshot() {
+  const dlg = $("#confirmDlg");
   _restore = {
-    lang: state.settings.lang,
-    font: state.settings.font || 1,
     tab: document.querySelector(".tab.active")?.dataset.tab || "compose",
     fragments: $("#fragments")?.value || "",
-    ccWord: $("#ccWord")?.value || "",
     resultHidden: $("#result")?.classList.contains("hidden") ?? true,
-    aacGridCls: $("#aacItems")?.className || "cards-grid",
     altHidden: $("#altPick")?.classList.contains("hidden") ?? true,
-    altHtml: $("#altList")?.innerHTML || "",
-    comboHtml: $("#aacCombo")?.innerHTML || "",
+    confirmParent: dlg?.parentElement || null,
+    confirmHidden: dlg?.classList.contains("hidden") ?? true,
+    confirmWarnHidden: $("#confirmWarn")?.classList.contains("hidden") ?? true,
+    practiceHidden: $("#rehabPractice")?.classList.contains("hidden") ?? true,
+    aacGridCls: $("#aacItems")?.className || "cards-grid",
+    scanOn: document.body.classList.contains("scan-on"),
   };
 }
 
@@ -1027,27 +1330,37 @@ function restore() {
   hideTitle();
   crisisClose();
   kioskClose();
-  $("#confirmDlg")?.classList.add("hidden");
+  consentClose();
+  noseRemove();
+  hideBanks();
+  $("#demoEmotions")?.remove();
+  if (!_restore.scanOn && document.body.classList.contains("scan-on")) stopScan();
+  else if (_restore.scanOn) $("#scanEye")?.classList.add("hidden");
+  restoreSeverity();
+  visionRestore();
+  unstashAll();
+  const lb = $("#lockBody"); if (lb) lb.style.whiteSpace = "";
   const f = $("#fragments"); if (f) f.value = _restore.fragments;
-  const w = $("#ccWord"); if (w) w.value = _restore.ccWord;
-  if (_restore.resultHidden) $("#result")?.classList.add("hidden");
-  const alt = $("#altList"); if (alt) alt.innerHTML = _restore.altHtml;
-  if (_restore.altHidden) $("#altPick")?.classList.add("hidden");
-  const combo = $("#aacCombo"); if (combo) combo.innerHTML = _restore.comboHtml;
-  const grid = $("#aacItems"); if (grid && _restore.aacGridCls) grid.className = _restore.aacGridCls;
-  $$(".aac-scale-chip").forEach((x) => x.classList.toggle("on", +x.dataset.s === (+state.settings.aacScale || 1)));
-  const sc = $("#rehabScore"); if (sc) sc.innerHTML = "";
-  $("#rehabPractice")?.classList.add("hidden");
-  $("#storyFeedback")?.classList.add("hidden");
-  document.documentElement.style.setProperty("--font", (_restore.font || 1) + "rem");
-  if (state.settings.lang !== _restore.lang) { state.settings.lang = _restore.lang; applyI18n(); }
+  $("#result")?.classList.toggle("hidden", _restore.resultHidden);
+  $("#altPick")?.classList.toggle("hidden", _restore.altHidden);
+  const dlg = $("#confirmDlg");
+  if (dlg && _restore.confirmParent && dlg.parentElement !== _restore.confirmParent) _restore.confirmParent.appendChild(dlg);
+  dlg?.classList.toggle("hidden", _restore.confirmHidden);
+  $("#confirmWarn")?.classList.toggle("hidden", _restore.confirmWarnHidden);
+  $$("#rehabChips .chip").forEach((c) => c.classList.remove("wrong"));
+  $("#rehabPractice")?.classList.toggle("hidden", _restore.practiceHidden);
+  // 設定頁停在某張子頁的話回到索引（不然下次點「設定」看到的是演示最後開的那張卡）
+  const back = $("#btnSettingsBack");
+  if (back && !back.classList.contains("hidden")) back.click();
   document.querySelector(`.tab[data-tab="${_restore.tab}"]`)?.click();
+  // 報表上畫的是示範資料 → 重畫回使用者真實的資料（只讀，不寫）
+  if (_reportDrawn) { _reportDrawn = false; loadReport().catch(() => {}); }
   try { speechSynthesis.cancel(); } catch {}
 }
 
 async function run(ids, opts) {
-  const all = UNITS();
-  const units = all.filter((u) => ids.includes(u.id));
+  _lang = demoLang();
+  const units = UNITS(_lang).filter((u) => ids.includes(u.id));
   if (!units.length) return;
 
   _abort = false;
@@ -1055,6 +1368,8 @@ async function run(ids, opts) {
   window.__VW_DEMO__ = true;
   keepAwake();                 // 預錄那一段最久，也最容易讓人走開 → 從這裡就開始
   buildOverlay();
+  $("#demoPrepTitle").textContent = t("demo.prep");
+  $("#demoStop").textContent = t("demo.stop");
   snapshot();
   ui().classList.remove("hidden");
 
@@ -1085,21 +1400,18 @@ async function run(ids, opts) {
   let recording = false;
   if (opts.record) {
     try { await startRecording(); recording = true; }
-    catch (e) { alert("Screen recording was not started: " + (e?.message || e) + "\nThe demo will run without recording."); }
+    catch (e) { alert(t("demo.recFail") + (e?.message || e)); }
   }
 
   _wentHidden = false;
   if (recording) {
-    // 錄影時把 HUD 收起來：進度膠囊與紅色 Stop 是給操作者看的，不是影片內容，
-    // 錄進去就是「18/67」和一顆紅鈕壓在畫面上。中止改用 Esc（見下面的監聽）。
+    // 錄影時把 HUD 收起來：進度膠囊與紅色 Stop 是給操作者看的，不是影片內容。中止改用 Esc。
     $("#demoHud")?.classList.add("hidden");
-    // 游標藏起來，並給一秒鐘把滑鼠移開畫面——分享畫面時游標一定會入鏡，
-    // 停在某個按鈕上整支影片都跟著那顆按鈕發亮。
+    // 游標藏起來，並給一秒鐘把滑鼠移開畫面——停在某個按鈕上整支影片都跟著那顆按鈕發亮。
     document.body.classList.add("demo-nocursor");
-    const tip = $("#demoPrepNote");
     $("#demoPrep")?.classList.remove("hidden");
     $("#demoPrepTitle").textContent = t("demo.getReady");
-    if (tip) tip.textContent = "1";
+    const tip = $("#demoPrepNote"); if (tip) tip.textContent = "1";
     await sleep(1000);
     $("#demoPrep")?.classList.add("hidden");
   }
@@ -1115,22 +1427,20 @@ async function run(ids, opts) {
         progress(`${u.icon} ${u.title} · ${done}/${total}`);
         caption(s.cap);
         const t0 = Date.now();
-        // 動作與旁白同時跑：先讓畫面動起來，旁白在講的同時使用者已經看到變化。
-        const acting = Promise.resolve().then(() => s.act?.()).catch(() => {});
-        // ── 錄影池 ──
-        // 旁白開始講之前，先把這一步要講的地方露出來並確認它真的看得見。
-        //
-        // **一定要在 acting 之後**：切分頁是寫在 act 裡的（goTab），先檢查的話
-        // 量到的是上一個分頁的畫面，會誤報而且捲錯地方。goTab 是同步的，
-        // 所以 acting 這個 microtask 一排下去分頁就換好了。
+        // 動作與旁白同時跑：先讓畫面動起來，旁白在講的同時觀眾已經看到變化。
+        const acting = Promise.resolve().then(() => s.act?.())
+          .catch((e) => console.warn("[demo] 動作失敗", u.id, e));
+        // 錄影池：旁白開始講之前，先把這一步要講的地方露出來並確認它真的看得見。
+        // **一定要在 acting 之後**：切分頁是寫在 act 裡的，先檢查的話量到的是上一個分頁。
+        // goTab／goSetting 是同步的，所以 acting 這個 microtask 一排下去分頁就換好了。
         await ensureVisible(s.focus, s.cap);
         await Promise.all([acting, narrate(s.cap)]);
         if (_narrate && s.cap) await sleep(TAIL_PAD);   // 講完再讓畫面多停一下
         await sleep(s.hold ?? 0);
         // 補到最短停留。旁白比下限長時這裡是 0，不會拖慢。
         const floor = _narrate ? MIN_STEP_NARRATED : MIN_STEP_SILENT;
-        const left = floor - (Date.now() - t0);
-        if (left > 0) await sleep(left);
+        const left = floor / speed() - (Date.now() - t0);
+        if (left > 0) await new Promise((r) => setTimeout(r, left));
       }
       clearSpot();
     }
@@ -1143,11 +1453,9 @@ async function run(ids, opts) {
     window.__VW_DEMO__ = false;
     if (recording) {
       const out = await stopRecording();
-      // 一次錄影兩份：有旁白的、以及同一段畫面但沒有聲音的。
-      // 只出得來一份時就只下載那一份，不要跳出「下載失敗」嚇使用者。
+      // 一次錄影兩份：有旁白的、以及同一段畫面但沒有聲音的。只出得來一份時就只下載那一份。
       download(out.narrated, out.silent ? "-narrated" : "");
       download(out.silent, "-silent");
-      // 錄完才發現中間黑掉一段，等於白錄一次。直接講。
       if (_wentHidden) alert(t("demo.wentHidden"));
     }
   }
@@ -1158,11 +1466,14 @@ async function run(ids, opts) {
 const PICK_KEY = "vw_demo_units";
 
 function loadPicked() {
+  const ids = UNITS().map((u) => u.id);
   try {
     const v = JSON.parse(localStorage.getItem(PICK_KEY) || "null");
-    if (Array.isArray(v) && v.length) return v;
+    // 舊版的單元代號（compose、kiosk…）已經不存在：有任何一個對不上就當作沒存過、預設全選，
+    // 不然使用者會只剩下碰巧同名的一兩段，還以為演示被刪短了。
+    if (Array.isArray(v) && v.length && v.every((id) => ids.includes(id))) return v;
   } catch {}
-  return UNITS().map((u) => u.id);          // 預設全選
+  return ids;          // 預設全選
 }
 function savePicked(ids) {
   try { localStorage.setItem(PICK_KEY, JSON.stringify(ids)); } catch {}
@@ -1171,43 +1482,47 @@ function savePicked(ids) {
 export function setupDemo() {
   const box = $("#demoUnits");
   if (!box) return;
-  const picked = new Set(loadPicked());
-
-  box.innerHTML = UNITS().map((u) => `
-    <label class="demo-unit">
-      <input type="checkbox" data-id="${u.id}"${picked.has(u.id) ? " checked" : ""} />
-      <span class="demo-unit-ico">${u.icon}</span>
-      <span class="demo-unit-txt">
-        <span class="demo-unit-title">${u.title}</span>
-        <span class="demo-unit-note">~${u.est}s${u.note ? " · " + u.note : ""}</span>
-      </span>
-    </label>`).join("");
 
   const boxes = () => $$("#demoUnits input[type=checkbox]");
   const chosen = () => boxes().filter((b) => b.checked).map((b) => b.dataset.id);
 
-  // 估時直接從步數算，不用手寫的 est——手寫值與實際節奏一定會漂移，
-  // 而使用者是靠這個數字決定要不要錄的。
-  const stepMs = (cap, narrated) => {
-    if (!narrated) return MIN_STEP_SILENT;
-    const words = String(cap || "").split(/\s+/).filter(Boolean).length;
-    return Math.max(MIN_STEP_NARRATED, (words / (2.6 * NARRATION_RATE)) * 1000) + TAIL_PAD;
+  // 估時直接從步數與旁白長度算，不用手寫秒數——手寫值與實際節奏一定會漂移，
+  // 而使用者是靠這個數字決定要選哪幾段的。
+  const stepMs = (st, narrated) => {
+    const base = narrated
+      ? Math.max(MIN_STEP_NARRATED, speechMs(st.cap, demoLang()) / NARRATION_RATE) + (st.cap ? TAIL_PAD : 0)
+      : MIN_STEP_SILENT;
+    return base + (st.hold ?? 0) + (st.focus ? FOCUS_SETTLE : 0);
+  };
+  const unitMs = (u, narrated) => u.steps.reduce((n, st) => n + stepMs(st, narrated), 0);
+  const fmt = (ms) => { const s = Math.round(ms / 1000); return `${Math.floor(s / 60)}m ${s % 60}s`; };
+
+  // 單元名稱跟著介面語言 → 切語言時整排重畫（保留勾選狀態）
+  const render = () => {
+    const picked = new Set(box.children.length ? chosen() : loadPicked());
+    const narrated = !!$("#demoNarrate")?.checked;
+    box.innerHTML = UNITS().map((u) => `
+      <label class="demo-unit">
+        <input type="checkbox" data-id="${u.id}"${picked.has(u.id) ? " checked" : ""} />
+        <span class="demo-unit-ico">${u.icon}</span>
+        <span class="demo-unit-txt">
+          <span class="demo-unit-title">${u.title}</span>
+          <span class="demo-unit-note">~${fmt(unitMs(u, narrated))}</span>
+        </span>
+      </label>`).join("");
+    est();
   };
   const est = () => {
     const ids = new Set(chosen());
     const narrated = !!$("#demoNarrate")?.checked;
-    const ms = UNITS().filter((u) => ids.has(u.id))
-      .flatMap((u) => u.steps)
-      .reduce((n, st) => n + stepMs(st.cap, narrated) + (st.hold ?? 0), 0);
-    const total = Math.round(ms / 1000);
-    $("#demoEst").textContent = `${ids.size} ${t("demo.unitsN")} · ${t("demo.about")} ${Math.floor(total / 60)}m ${total % 60}s`;
+    const ms = UNITS().filter((u) => ids.has(u.id)).reduce((n, u) => n + unitMs(u, narrated), 0);
+    $("#demoEst").textContent = `${ids.size} ${t("demo.unitsN")} · ${t("demo.about")} ${fmt(ms)}`;
   };
 
   box.addEventListener("change", () => { savePicked(chosen()); est(); });
-  $("#demoNarrate")?.addEventListener("change", est);
-  // 估時那一行是自己組出來的字串，不吃 data-i18n → 換語言時要重算一次，
-  // 否則會留在上一個語言（「2 個單元」跟旁邊的英文介面併排）。
-  $("#s_lang")?.addEventListener("change", () => setTimeout(est, 0));
+  $("#demoNarrate")?.addEventListener("change", render);
+  // 切語言：app.js 的處理先跑完（state.settings.lang 才是新的），再重畫
+  $("#s_lang")?.addEventListener("change", () => setTimeout(render, 0));
   $("#demoAll")?.addEventListener("click", () => { boxes().forEach((b) => b.checked = true); savePicked(chosen()); est(); });
   $("#demoNone")?.addEventListener("click", () => { boxes().forEach((b) => b.checked = false); savePicked(chosen()); est(); });
 
@@ -1227,5 +1542,5 @@ export function setupDemo() {
     });
   });
 
-  est();
+  render();
 }

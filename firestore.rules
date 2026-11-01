@@ -1,23 +1,55 @@
-// VoiceWeaver 網頁版的 Firestore 安全規則（完整版）。
+// 拾語者 Speak My Life 網頁版的 Firestore 安全規則（完整版）。
 //
-// **這份要整份貼到 Firebase Console → Firestore Database → 規則 → 發布。**
+// **這份要整份貼到 Firebase Console → Firestore Database → 規則 → 發布**
+// （或在有 firebase.json 的資料夾執行 `firebase deploy --only firestore:rules`）。
 // 規則不會跟著 GitHub Pages 自動部署，改程式不會改到它，所以它是唯一需要
 // 手動同步的東西。貼片段會出事：Firestore 是「整份取代」，少貼哪一段，
 // 對應的功能就會靜靜地停掉（前端多半只是 console 一行警告）。
 //
-// 這份涵蓋 app 實際會碰到的每一個路徑，逐一對應到 js/store.js：
+// 這份涵蓋 app 實際會碰到的每一個路徑，逐一對應到 js/store.js 與 js/admin.js：
 //   users/{uid}/**        個人資料、歷史、復健紀錄、聲學樣板、每日用量計數
 //   shared/apiKeys        全站活動的共用金鑰
 //   grants/{uid}          單獨發給某個人的活動
+//   directory/{uid}       帳號名冊（開發者控制中心的「帳號管理」用）
 //   cloudbridge/{配對碼}   ngrok 授權碼，給 Colab 用配對碼取用
 //
-// 管理工具（vw_admin.py）用服務帳戶連線，**繞過所有規則**，所以下面把
-// 活動相關的 write 全部關掉——網頁端永遠不需要寫，關掉就少一條被濫用的路。
+// 活動相關的寫入只開給開發者帳號（isAdmin），由網頁版的「開發者控制中心」寫。
+// 以前是用本機的 vw_admin.py ＋服務帳戶私鑰寫（繞過所有規則）；那把私鑰等於
+// 整個專案的最高權限，現在不再需要它了。
 
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ── 開發者帳號 ─────────────────────────────────────
+    // **要換管理員改兩處**：這裡的清單，以及 js/admin.js 的 ADMIN_EMAILS。
+    // 前端那份只決定畫不畫出控制中心，真正擋得住的是這裡。
+    //
+    // 為什麼除了 email 還要 email_verified 與 sign_in_provider：若日後開了
+    // email／密碼登入，任何人都能拿開發者的信箱註冊一個「未驗證」帳號；
+    // 只認 Google 登入且已驗證的信箱，就沒有這條路。
+    function isAdmin() {
+      return request.auth != null
+          && request.auth.token.email_verified == true
+          && request.auth.token.firebase.sign_in_provider == 'google.com'
+          && request.auth.token.email in ["timchien918@gmail.com"];
+    }
+
+    // 活動文件（全站與個人共用）的基本形狀。
+    // 起訖**必須是 timestamp**：下面讀取規則拿 request.time 跟它們比，
+    // 存成 ISO 字串的話比較永遠不成立，活動就變成「設了但沒人讀得到」。
+    // 驗的是寫入後的整份文件，所以 merge 寫入（只改 enabled）也會一起檢查。
+    function validCampaign(d) {
+      return d.enabled is bool
+          && d.activeFrom is timestamp
+          && d.activeUntil is timestamp
+          && d.activeUntil > d.activeFrom
+          && (!('dailyLimit' in d) || (d.dailyLimit is number && d.dailyLimit > 0))
+          && (!('llmApis'   in d) || d.llmApis   is list)
+          && (!('imageApis' in d) || d.imageApis is list)
+          && (!('ttsApis'   in d) || d.ttsApis   is list);
+    }
 
     // ── 使用者自己的資料 ───────────────────────────────
     // 包含 users/{uid} 本身與底下所有子集合：
@@ -27,6 +59,14 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
+    // 每日用量計數：開發者額外可以讀（控制中心「帳號管理」顯示今天用了幾次）。
+    // Firestore 規則是「任何一條允許就允許」，所以這條跟上面的萬用規則疊加：
+    // 本人照舊可讀寫，開發者多了 get，其餘人仍然什麼都碰不到。
+    // 只開 get 不開 list、不開 write：看用量不需要列舉，更不需要改。
+    match /users/{uid}/usage/{day} {
+      allow get: if isAdmin();
+    }
+
     // ── 全站活動的共用金鑰 ─────────────────────────────
     // 登入者（含匿名「直接開始」）才讀得到，而且要文件自己說「現在是活動期間」。
     // 期間寫在文件欄位裡，所以調整期間＝改資料，規則不必重發。
@@ -34,14 +74,17 @@ service cloud.firestore {
     // **到期日是這整個機制唯一真正擋得住的東西**：金鑰進了瀏覽器就等於交出去了，
     // 使用者可以複製走；但期限一過，資料庫這一層就直接拒絕發放。
     //
+    // 開發者不受期間限制：控制中心要看得到已停用／已過期／還沒開始的那份才能改。
     // 用 get 不用 read：read 同時給了 list，那會讓人能列舉 /shared 底下的文件。
     match /shared/apiKeys {
-      allow get: if request.auth != null
-                 && resource.data.enabled == true
-                 && request.time >= resource.data.activeFrom
-                 && request.time <  resource.data.activeUntil;
+      allow get: if isAdmin()
+                 || (request.auth != null
+                     && resource.data.enabled == true
+                     && request.time >= resource.data.activeFrom
+                     && request.time <  resource.data.activeUntil);
       allow list: if false;
-      allow write: if false;   // 只有管理工具（服務帳戶）寫得動
+      allow create, update: if isAdmin() && validCampaign(request.resource.data);
+      allow delete: if isAdmin();
     }
 
     // ── 單獨發給某個人的活動 ───────────────────────────
@@ -49,14 +92,39 @@ service cloud.firestore {
     //
     // **為什麼不放在 users/{uid} 底下**：上面那條規則是「本人可讀寫自己的資料」，
     // 本人永遠讀得到——期限就形同虛設。獨立一個 collection 才管得住時間。
+    //
+    // 開發者可以 list（控制中心列出所有發放）與寫入。
     match /grants/{uid} {
-      allow get: if request.auth != null
-                 && request.auth.uid == uid
-                 && resource.data.enabled == true
-                 && request.time >= resource.data.activeFrom
-                 && request.time <  resource.data.activeUntil;
-      allow list: if false;
-      allow write: if false;   // 同上，只有管理工具寫得動
+      allow get: if isAdmin()
+                 || (request.auth != null
+                     && request.auth.uid == uid
+                     && resource.data.enabled == true
+                     && request.time >= resource.data.activeFrom
+                     && request.time <  resource.data.activeUntil);
+      allow list: if isAdmin();
+      allow create, update: if isAdmin() && validCampaign(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // ── 帳號名冊 ───────────────────────────────────────
+    // 瀏覽器沒有 Admin SDK，列不出 Firebase Auth 裡有誰，所以由每個 Google 使用者
+    // 登入時自己登記一筆（store.js → admin.js 的 touchDirectory，一天一次）。
+    //
+    // 寫入的限制都是為了「只能登記自己、不能冒充別人」：
+    //   · 只能寫自己 uid 那一份；匿名帳號沒有信箱，不登記。
+    //   · email 必須等於登入憑證裡的 email——不能填別人的信箱混進名冊。
+    //   · 只能有這幾個欄位，不能拿名冊當自己的雜物櫃。
+    // 讀取、列出、刪除只有開發者：名冊上是別人的信箱，一般使用者沒理由看到。
+    match /directory/{uid} {
+      allow create, update: if request.auth != null
+                            && request.auth.uid == uid
+                            && request.auth.token.firebase.sign_in_provider != 'anonymous'
+                            && request.resource.data.email == request.auth.token.email
+                            && request.resource.data.keys().hasOnly(['email', 'name', 'photo', 'lastSeen'])
+                            && (!('name'  in request.resource.data) || request.resource.data.name  is string)
+                            && (!('photo' in request.resource.data) || request.resource.data.photo is string)
+                            && request.resource.data.lastSeen is timestamp;
+      allow get, list, delete: if isAdmin();
     }
 
     // ── ngrok 配對（讓 Colab 用配對碼取用授權碼）────────

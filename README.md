@@ -260,7 +260,8 @@ service cloud.firestore {
 ```
 
 > **完整版在 [`firestore.rules`](firestore.rules)。** 上面只是最小的登入同步規則；
-> 用到限時活動、單獨發放、ngrok 配對的話，請把 `firestore.rules` **整份**貼上去。
+> 用到限時活動、單獨發放、開發者控制中心（帳號名冊）、ngrok 配對的話，請把 `firestore.rules` **整份**貼上去
+> （或 `firebase deploy --only firestore:rules`）。
 > Firestore 是整份取代，貼片段會讓沒貼到的那些功能靜靜地停掉。
 
 4. **專案設定 → 一般 → 你的應用程式 → Web** → 複製 `firebaseConfig`。
@@ -305,47 +306,74 @@ GitHub repo → **Settings → Pages → Source: main / (root) → Save**。
 活動期間讓**任何人**（含匿名「直接開始」）不必自備金鑰就能用完整 AI。
 自己已經填了金鑰的人不受影響——永遠優先用他自己的。
 
-**規則只設定一次**，之後開啟／關閉／改期間都用管理工具改資料，不必再碰規則：
+**管理全部在網頁版的「設定 → 🛠 開發者控制中心」**，而且**只有開發者帳號**
+（Google 登入的 `timchien918@gmail.com`）看得到、寫得動。開啟／關閉／改期間／換金鑰
+都是在那一頁改資料，不必再碰規則。
 
-（下面這段只是說明它怎麼運作；要貼的是 [`firestore.rules`](firestore.rules) 整份。）
+> ⚠️ **第一次使用前，必須把新版 [`firestore.rules`](firestore.rules) 整份部署上去**，
+> 否則控制中心的每一個按鈕都會被拒絕（畫面會提示「被 Firestore 規則拒絕」）：
+> - 貼到 **Firebase Console → Firestore Database → 規則 → 發布**；或
+> - 在有 `firebase.json` 的資料夾執行 `firebase deploy --only firestore:rules`。
+>
+> 規則不會跟著 GitHub Pages 自動部署。Firestore 是整份取代，只貼片段會讓沒貼到的功能靜靜停掉。
+
+控制中心有三個區塊：
+
+| 區塊 | 能做什麼 |
+| --- | --- |
+| 📢 全站活動 | 看 `shared/apiKeys` 現況（狀態、期間、每日次數、各類金鑰數；金鑰只露前 6 後 4）；改啟用、開始日、結束日、每人每日次數、文字／生圖／語音金鑰；「📥 從我的設定匯入金鑰」一鍵帶入自己設定頁的金鑰；「⛔ 立即停用」 |
+| 🎁 單獨發放 | 從名冊搜尋帳號（email／名字），設定期間、每日次數、金鑰（可勾「沿用全站那份的金鑰」，儲存當下複製一份）；列出現有發放、收回（改成停用）或刪除 |
+| 👥 帳號管理 | 名冊列表（email、名字、最後上線）、每個人今天借用幾次、有沒有單獨發放 |
+
+每個寫入都有二次確認；寫入前會先檢查欄位（結束日不能早於開始日、啟用時至少要有一把金鑰、
+每日次數是正整數……），規則那一層也會再驗一次型別。
+
+規則怎麼擋（摘要；要部署的是整份 `firestore.rules`）：
 
 ```
+function isAdmin() {          // Google 登入、信箱已驗證、在清單內
+  return request.auth != null
+      && request.auth.token.email_verified == true
+      && request.auth.token.firebase.sign_in_provider == 'google.com'
+      && request.auth.token.email in ["timchien918@gmail.com"];
+}
 match /shared/apiKeys {
-  // 登入者（含匿名）才讀得到，而且要文件自己說「現在是活動期間」。
-  // 期間寫在文件的欄位裡，所以調整期間＝改資料，規則不用重發。
-  allow read: if request.auth != null
-              && resource.data.enabled == true
-              && request.time >= resource.data.activeFrom
-              && request.time <  resource.data.activeUntil;
-  allow write: if false;   // 只有管理工具（服務帳戶）寫得動，網頁端永遠不寫
+  // 一般人：登入（含匿名）且在活動期間才讀得到；開發者永遠讀得到（要能看已停用／過期的那份）
+  allow get: if isAdmin() || (request.auth != null && resource.data.enabled == true
+             && request.time >= resource.data.activeFrom && request.time < resource.data.activeUntil);
+  allow list: if false;
+  allow create, update: if isAdmin() && validCampaign(request.resource.data);
+  allow delete: if isAdmin();
 }
 ```
 
-文件 `shared/apiKeys` 的欄位：
+文件 `shared/apiKeys` 的欄位（控制中心寫入的就是這個形狀，`js/shared.js` 照這個讀）：
 
 | 欄位 | 型別 | 說明 |
 | --- | --- | --- |
 | `enabled` | boolean | 總開關，關掉就立刻結束 |
-| `activeFrom` / `activeUntil` | timestamp | 活動起訖（`activeUntil` 存的是最後一天的隔天 00:00） |
-| `llmApis` / `imageApis` / `ttsApis` | array of map | 要借出的金鑰，每筆 `{provider, key, model}`，可多把（使用者隨機抽一把分散負載） |
+| `activeFrom` / `activeUntil` | **timestamp** | 活動起訖（`activeUntil` 存的是最後一天的隔天 00:00，以瀏覽器本地時間解讀，跟活動標記的顯示一致）。**一定要是 timestamp**——規則拿 `request.time` 跟它比，ISO 字串會讓比較永遠不成立，規則也會拒絕寫入字串 |
+| `dailyLimit` | number | 每人每日次數，不填就是 50 |
+| `llmApis` / `imageApis` / `ttsApis` | array of map | 要借出的金鑰，每筆 `{provider, key, model}`（Cloudflare 另有 `account`），可多把（依 uid 分配一把，失敗自動換下一把） |
+| `updatedAt` / `updatedBy` | timestamp / string | 控制中心記錄誰、何時改的（讀取端不用） |
 
-每人每天 50 次生成，計數存在 `users/{uid}/usage/{YYYY-MM-DD}`（沿用既有的
-「只有本人讀寫自己資料」規則，不必另外加）。用完會自動退回免金鑰的保底供應商，
-不會變成不能用。
+每日次數的計數存在 `users/{uid}/usage/{YYYY-MM-DD}`（UTC 切日）。本人讀寫自己的，
+開發者另外可以 get（控制中心顯示用量）。用完會自動退回免金鑰的保底供應商，不會變成不能用。
 
 ### 3.6（選用）單獨發活動給某一個人
 
 有時要開的不是全站，而是**只給某個人**——他的用量比較大，或全站活動已經結束
-但這個人還需要。這種放在 `grants/{uid}`：
+但這個人還需要。這種放在 `grants/{uid}`，同樣在控制中心的「🎁 單獨發放」管理。
 
 ```
 match /grants/{uid} {
   // 只有本人讀得到，而且一樣要在期間內——期限由規則強制，改前端沒有用。
-  allow read: if request.auth != null && request.auth.uid == uid
-              && resource.data.enabled == true
-              && request.time >= resource.data.activeFrom
-              && request.time <  resource.data.activeUntil;
-  allow write: if false;
+  allow get: if isAdmin() || (request.auth != null && request.auth.uid == uid
+             && resource.data.enabled == true
+             && request.time >= resource.data.activeFrom && request.time < resource.data.activeUntil);
+  allow list: if isAdmin();
+  allow create, update: if isAdmin() && validCampaign(request.resource.data);
+  allow delete: if isAdmin();
 }
 ```
 
@@ -353,20 +381,35 @@ match /grants/{uid} {
 「本人可讀寫自己的資料」，本人永遠讀得到——期限會形同虛設。放在 `grants` 才能
 跟 `shared/apiKeys` 一樣，由 `request.time` 真的擋住。
 
-欄位跟 `shared/apiKeys` 相同，另外多一個選用的 `dailyLimit`（不填就是 50）。
-兩份都存在時，**專屬的優先**：會單獨發給某個人，通常就是因為他需要特別處理，
-被全站那份蓋掉的話這個特別處理等於沒有發生。
+欄位跟 `shared/apiKeys` 相同（另附 `email`／`name` 方便辨認）。兩份同時生效時
+**每日次數相加、金鑰兩邊都能用（個人那份先用）**——單獨發放通常就是要「加碼」，
+被全站那份蓋掉的話加碼等於沒發生。
 
-**管理工具（`vw_admin.py`）不在這個 repo 裡**——它要用 Firebase 服務帳戶私鑰，
-而那把私鑰繞過所有安全規則、等於整個專案與全部使用者資料的最高權限。
-它只能待在你自己的電腦上，所以已列入 `.gitignore`。
+**帳號名冊 `directory/{uid}`：** 瀏覽器沒有 Admin SDK，列不出 Firebase Auth 裡有誰，
+所以每個 Google 登入的使用者會在背景登記自己（`email`、`name`、`photo`、`lastSeen`，
+一天最多寫一次）。規則只准本人寫自己那份、`email` 必須等於登入憑證裡的信箱、
+只能有這幾個欄位；讀取、列出、刪除只有開發者。匿名使用者不登記，
+所以要單獨發放給某人，請他先用 Google 登入一次。
+
+**管理工具：`vw_admin.py` 與服務帳戶私鑰不再需要。** 以前活動文件只能由本機的
+`vw_admin.py` 用服務帳戶私鑰寫入（那把私鑰繞過所有規則、等於整個專案的最高權限）；
+現在改由開發者用自己的 Google 帳號在網頁上寫，權限由規則的 `isAdmin()` 把關。
+舊的私鑰建議到 Google Cloud Console → IAM → 服務帳戶 → 金鑰 刪掉。
+（`.gitignore` 裡那幾行保留，避免有人又把私鑰放回 repo。）
+
+**要更換或新增管理員，兩處都要改：**
+1. [`js/admin.js`](js/admin.js) 的 `ADMIN_EMAILS`（決定誰看得到控制中心）；
+2. [`firestore.rules`](firestore.rules) 的 `isAdmin()` 清單（決定誰寫得動），改完**重新部署規則**。
+
+只改前端只會得到一頁「按了全部被拒絕」的介面；只改規則則看不到入口。
 
 > **這個機制擋得住什麼、擋不住什麼——請務必看懂再開：**
 >
 > **金鑰一旦送進瀏覽器就等於交出去了。** 使用者可以打開 devtools 複製走，
 > 然後直接呼叫 Google，完全繞過每日次數。所以：
 > - ✅ **期間與開關是真的擋得住的**：由 Firestore 規則比對文件欄位，改前端沒用。
-> - ⚠️ **每日 50 次是防呆，不是防護**：擋得住一般使用者，擋不住刻意的人；
+> - ✅ **誰能改活動是真的擋得住的**：寫入只開給規則裡的開發者信箱（Google 登入且已驗證）。
+> - ⚠️ **每日次數是防呆，不是防護**：擋得住一般使用者，擋不住刻意的人；
 >   匿名使用者清掉瀏覽器資料就換一個身分重新計數。
 > - ⚠️ **活動結束後請把那幾把金鑰換掉**。關掉之後雖然沒有人再借得到，
 >   但活動期間流出去的金鑰仍然有效。
@@ -418,12 +461,15 @@ match /grants/{uid} {
 ```text
 index.html              主介面（重組、復健、報表、圖卡、歷史、設定六個分頁 + 求救／鎖定彈窗）
 style.css               深/淺色主題、響應式樣式、四種視覺風格
+css/admin.css           開發者控制中心的樣式（只有管理員會載入）
 config.example.js    →  另存 config.js 填入 Firebase 設定
 s2t_map.txt / s2t_phrases.txt   簡轉繁字元／詞組對照表（zhconv.js 用）
 js/
 ├── app.js              主邏輯（分頁、重組、AAC、最愛、多語朗讀、雲端曲庫清單渲染、防呆模式切換）
 ├── i18n.js             四語介面字串（繁中／英／日／韓）與產品名
 ├── store.js            Firebase 登入 + Firestore 同步（無 Firebase 退 localStorage）
+├── admin.js            開發者控制中心（限時活動／單獨發放／帳號名冊；只有開發者帳號看得到）
+├── i18n-admin.js       控制中心的四語字串
 ├── safety.js            關鍵字攔截、風險分級（normal/confirm/lock）、輸出消毒
 ├── crisis.js            危機介入視窗（現場快照、家人指令、語音訊息、呼吸引導、專線）
 ├── hotlines.js          依國別選擇緊急／心理支持專線號碼
