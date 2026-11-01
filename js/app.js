@@ -24,6 +24,9 @@ import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.78";
 import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled, localHas } from "./localtts.js?v=1.5.78";
 import "./i18n-sml.js?v=1.5.78";
 import "./i18n-admin.js?v=1.5.78";
+import "./i18n-ui.js?v=1.5.78";
+// 版面互動與動畫（首頁、導覽指示器、載入動畫…）。只讀 DOM、不碰狀態，拿掉也不影響功能。
+import "./ui.js?v=1.5.78";
 import { applyI18n, t } from "./i18n.js?v=1.5.78";
 import { mountAdminCenter, renderAdminCenter, refreshAdmin, touchDirectory } from "./admin.js?v=1.5.78";
 import { setupVoiceConsent, renderVoiceConsent, requestVoiceConsent, hasVoiceConsent, onVoiceConsentChange } from "./consent.js?v=1.5.78";
@@ -1409,13 +1412,13 @@ function setupActions(){
   // 麥克風
   let mic=null;
   $("#btnMic").addEventListener("click", ()=>{
-    if(mic){ mic.stop(); mic=null; $("#btnMic").textContent=t("btn.mic"); return; }
+    if(mic){ mic.stop(); mic=null; $("#btnMic").textContent=t("btn.mic"); $("#btnMic").classList.remove("recording"); return; }
     if(!sttSupported()){ toast(t("toast.sttUnsupported")); return; }
-    $("#btnMic").textContent=t("mic.recording");
+    $("#btnMic").textContent=t("mic.recording"); $("#btnMic").classList.add("recording");
     mic = listen({
       onResult:(t)=>{ $("#fragments").value = t; },
-      onEnd:()=>{ mic=null; $("#btnMic").textContent=t("btn.mic"); },
-      onError:(e)=>{ toast(t("toast.sttPrefix")+e); mic=null; $("#btnMic").textContent=t("btn.mic"); }
+      onEnd:()=>{ mic=null; $("#btnMic").textContent=t("btn.mic"); $("#btnMic").classList.remove("recording"); },
+      onError:(e)=>{ toast(t("toast.sttPrefix")+e); mic=null; $("#btnMic").textContent=t("btn.mic"); $("#btnMic").classList.remove("recording"); }
     });
   });
   $("#btnLogout").addEventListener("click", logout);

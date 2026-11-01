@@ -17,11 +17,11 @@
   --gold-600:#c98a1b; --gold-500:#f2b84b; --gold-300:#ffd27a; --gold-100:#fff3d6;
 
   /* ── 語意色（各風格只需要覆寫這一組）── */
-  --bg:#f6f4ee;            /* 米白紙感底：比純白柔和，長時間看不刺眼 */
-  --card:#ffffff;
+  --bg:#f7f1e6;            /* 暖米色紙感底：比灰底溫暖、比純白柔和，長時間看不刺眼 */
+  --card:#fffdf8;          /* 暖白卡片 */
   --fg:#1c2925;
   --muted:#58665f;         /* 對白底 5.9:1，小字也讀得清 */
-  --line:#e2ddd1;
+  --line:#e6dccb;
   --accent:#2f6f5e;        /* 填色用（主要按鈕、選取中分頁） */
   --accent-ink:#2a6553;    /* 當「文字」用的主色：要對 --bg / --card 都過 4.5:1 */
   --on-accent:#ffffff;     /* 主色上面的字 */
@@ -38,9 +38,11 @@
   --surface-2: color-mix(in srgb, var(--fg) 4.5%, var(--card));   /* 輸入框、次要面 */
   --accent-soft: color-mix(in srgb, var(--accent) 11%, var(--card));
   --accent-glow: color-mix(in srgb, var(--accent) 24%, transparent);
+  --tint: color-mix(in srgb, var(--accent) 7%, var(--card));       /* 次要按鈕、清單列的淡綠底 */
+  --hero-a: var(--brand-600); --hero-b: var(--brand-900);          /* 品牌深綠漸層（問候卡、開場） */
 
   /* ── 圓角 ── */
-  --r-sm:10px; --r-md:14px; --r-lg:20px; --r-xl:28px; --r-pill:999px;
+  --r-sm:10px; --r-md:16px; --r-lg:24px; --r-xl:32px; --r-pill:999px;
   --radius:var(--r-lg);
 
   /* ── 間距（4 的倍數）── */
@@ -84,10 +86,10 @@ html:lang(ko){ --font-sans: "Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR"
     --bg:#0d1512; --card:#15201c; --fg:#e8efeb; --muted:#9fb0a8; --line:#25332d;
     --accent:#2f7d67; --accent-ink:#7fcdb3; --on-accent:#fff; --accent2:#3cc08a; --danger:#e5483c;
     --gold:#f2c063; --pick-bg:#f2c063; --pick-fg:#2e2104;
-    --shadow-rgb: 0 0 0; --shadow-k: 2.6; }
+    --shadow-rgb: 0 0 0; --shadow-k: 2.6; --hero-a:#24604f; --hero-b:#0f2a22; }
 }
 html[data-theme="light"]{ color-scheme: light;
-  --bg:#f6f4ee; --card:#fff; --fg:#1c2925; --muted:#58665f; --line:#e2ddd1;
+  --bg:#f7f1e6; --card:#fffdf8; --fg:#1c2925; --muted:#58665f; --line:#e6dccb;
   --accent:#2f6f5e; --accent-ink:#2a6553; --on-accent:#fff; --accent2:#2a9a6c; --danger:#d33a2f;
   --gold:#f2b84b; --pick-bg:#f6c560; --pick-fg:#3b2a06;
   --shadow-rgb: 22 58 48; --shadow-k: 1; }
@@ -95,7 +97,8 @@ html[data-theme="dark"]{ color-scheme: dark;
   --bg:#0d1512; --card:#15201c; --fg:#e8efeb; --muted:#9fb0a8; --line:#25332d;
   --accent:#2f7d67; --accent-ink:#7fcdb3; --on-accent:#fff; --accent2:#3cc08a; --danger:#e5483c;
   --gold:#f2c063; --pick-bg:#f2c063; --pick-fg:#2e2104;
-  --shadow-rgb: 0 0 0; --shadow-k: 2.6; }
+  --shadow-rgb: 0 0 0; --shadow-k: 2.6; --hero-a:#24604f; --hero-b:#0f2a22; }
+html[data-theme="light"]{ --hero-a:#2f6f5e; --hero-b:#163a30; }
 
 /* ── 視覺風格（與 App 的 AppPalette 同色值）──
    預設＝「拾語者」品牌風，深淺交給上面的 prefers-color-scheme 與 data-theme 決定
@@ -108,19 +111,19 @@ html[data-style="cute"]{    /* 可愛風（兒童）：奶油粉底 + 玫瑰粉 
   --bg:#fff5f7; --card:#fff; --fg:#4a2e3a; --muted:#8f6b7b; --line:#f2dfe5;
   --accent:#ff5c8a; --accent-ink:#c7335f; --on-accent:#fff; --accent2:#2fb57d; --danger:#e5383b;
   --gold:#ffc46b; --pick-bg:#ffd1de; --pick-fg:#5a1f33; --ring:#c7335f;
-  --shadow-rgb: 140 40 80; --shadow-k: .9; }
+  --shadow-rgb: 140 40 80; --shadow-k: .9; --hero-a:#ff7aa0; --hero-b:#d63f6e; }
 html[data-style="anime"]{   /* 動漫風（青少年）：深紫黑 + 櫻粉 */
   color-scheme: dark;
   --bg:#0d0b1a; --card:#1c1830; --fg:#f6f2ff; --muted:#b6a6d6; --line:#2b2445;
   --accent:#ff6fb5; --accent-ink:#ff8cc4; --on-accent:#2a0b1c; --accent2:#3de0a0; --danger:#ff453a;
   --gold:#ffd27a; --pick-bg:#3de0a0; --pick-fg:#062a1c; --ring:#ff8cc4;
-  --shadow-rgb: 0 0 0; --shadow-k: 2.6; }
+  --shadow-rgb: 0 0 0; --shadow-k: 2.6; --hero-a:#4a2f7a; --hero-b:#1a1233; }
 html[data-style="minimal"]{ /* 簡約風：iOS 淺色系統色，高對比低干擾 */
   color-scheme: light;
   --bg:#f2f2f7; --card:#fff; --fg:#1c1c1e; --muted:#6c6c70; --line:#e2e2e7;
   --accent:#007aff; --accent-ink:#0062cc; --on-accent:#fff; --accent2:#34c759; --danger:#ff3b30;
   --gold:#ffcc00; --pick-bg:#34c759; --pick-fg:#fff; --ring:#0062cc;
-  --shadow-rgb: 0 0 0; --shadow-k: .7; }
+  --shadow-rgb: 0 0 0; --shadow-k: .7; --hero-a:#1c84ff; --hero-b:#0050b8; }
 
 /* 高對比（無障礙）：純黑底＋最高彩度文字，給視力弱、低視能使用者。
    放在最後並用 !important——它必須壓過任何風格，這是無障礙保底。 */
@@ -131,7 +134,7 @@ html[data-contrast="high"]{
   --accent:#ffe600 !important; --accent-ink:#ffe600 !important; --on-accent:#000 !important;
   --accent2:#00ff66 !important; --danger:#ff3b30 !important; --gold:#ffe600 !important;
   --pick-bg:#ffe600 !important; --pick-fg:#000 !important; --ring:#fff !important;
-  --surface-2:#000 !important; --accent-soft:#000 !important; --accent-glow:transparent !important;
+  --surface-2:#000 !important; --accent-soft:#000 !important; --accent-glow:transparent !important; --tint:#000 !important;
   --shadow-1:none !important; --shadow-2:none !important; --shadow-3:none !important; }
 html[data-contrast="high"] .card,
 html[data-contrast="high"] .btn.ghost,
@@ -139,23 +142,29 @@ html[data-contrast="high"] textarea,
 html[data-contrast="high"] input,
 html[data-contrast="high"] select,
 html[data-contrast="high"] .chip{ border-width:2px; }
+html[data-contrast="high"] .btn.ghost{ border-color:#fff; }
 html[data-contrast="high"] .btn.primary,
 html[data-contrast="high"] .tab.active{ font-weight:800; }
 html[data-contrast="high"] body{ background:#000; }
 html[data-contrast="high"] .topbar,
 html[data-contrast="high"] .tabs{ background:#000; backdrop-filter:none; -webkit-backdrop-filter:none; border-color:#fff; }
 html[data-contrast="high"] .tab-ink{ background:#ffe600; box-shadow:none; }
+html[data-contrast="high"] nav.tabs{ border-top:2px solid #fff; }
 html[data-contrast="high"] .btn.primary{ background:#ffe600; }
 html[data-contrast="high"] .toast{ background:#fff; color:#000; border:2px solid #000; }
 
 /* ═══════════════ 基礎 ═══════════════ */
 *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+html{ -webkit-text-size-adjust:100%; text-size-adjust:100%;
+  /* 捲動定位時避開黏在頂端的列與底部導覽，不然被帶到的東西會躲在它們後面 */
+  scroll-padding-top:calc(var(--topbar-h) + 12px); scroll-padding-bottom:calc(100px + env(safe-area-inset-bottom)); }
+@media (min-width: 960px){ html{ scroll-padding-bottom:24px; } }
 body{ margin:0; font-family:var(--font-sans);
   background:var(--bg); color:var(--fg); font-size:var(--font); line-height:1.55;
   -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
   /* 頂端一圈很淡的主色光暈：讓畫面有「品牌的空氣」，又不會干擾內容 */
-  background-image:radial-gradient(900px 360px at 50% -160px, color-mix(in srgb, var(--accent) 9%, transparent), transparent 70%);
+  background-image:radial-gradient(1000px 420px at 100% -180px, color-mix(in srgb, var(--gold) 16%, transparent), transparent 70%),
+                   radial-gradient(800px 380px at -10% -120px, color-mix(in srgb, var(--accent) 10%, transparent), transparent 70%);
   background-repeat:no-repeat; overflow-x:hidden; }
 h1,h2,h3{ line-height:1.3; letter-spacing:.01em; }
 .hidden{ display:none !important; }
@@ -169,93 +178,242 @@ code{ font-size:.88em; padding:1px 6px; border-radius:6px; background:var(--surf
 :focus-visible{ outline:3px solid var(--ring); outline-offset:3px; }
 .btn:focus-visible, .chip:focus-visible, .tab:focus-visible, .setrow:focus-visible{ outline-offset:3px; }
 
-/* ═══════════════ 登入 ═══════════════ */
-.login{ min-height:100dvh; display:flex; align-items:center; justify-content:center; padding:20px;
+/* ═══════════════ 登入＝品牌開場 ═══════════════
+   深綠底上漂著幾個「碎詞」，一條暖黃絲線穿過畫面；中間一張暖白卡片放入口。
+   不管淺色深色都用品牌深綠：這是產品的「封面」，第一眼就要認得出是拾語者。 */
+.login{ position:relative; min-height:100dvh; display:flex; align-items:center; justify-content:center;
+  padding:28px 18px; overflow:hidden; color:#fff;
   background:
-    radial-gradient(600px 420px at 10% -10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
-    radial-gradient(520px 420px at 110% 110%, color-mix(in srgb, var(--gold) 22%, transparent), transparent 70%),
-    var(--bg); }
-.login-card{ background:var(--card); border:1px solid var(--line); border-radius:var(--r-xl);
-  padding:36px 24px 28px; width:100%; max-width:380px; text-align:center; box-shadow:var(--shadow-3);
+    radial-gradient(700px 520px at 100% 110%, rgb(242 184 75 / .30), transparent 62%),
+    radial-gradient(600px 480px at -10% -10%, rgb(255 255 255 / .10), transparent 60%),
+    linear-gradient(160deg, var(--hero-a), var(--hero-b)); }
+.login-deco{ position:absolute; inset:0; pointer-events:none; }
+.ld-word{ position:absolute; left:var(--x); top:var(--y); padding:6px 14px; border-radius:var(--r-pill);
+  background:rgb(255 253 246 / .12); border:1px solid rgb(255 253 246 / .22); color:rgb(255 253 246 / .75);
+  font-weight:700; font-size:clamp(.85rem, 2.6vw, 1.05rem); letter-spacing:.06em;
+  animation:drift 9s var(--ease-in-out) infinite; animation-delay:var(--d); }
+.ld-thread{ position:absolute; inset:0; width:100%; height:100%; }
+.ld-thread path{ fill:none; stroke:var(--gold-300); stroke-width:3; stroke-linecap:round; opacity:.7;
+  stroke-dasharray:1; vector-effect:non-scaling-stroke; animation:thread-draw 2.4s var(--ease-out) .3s backwards; }
+.login-wrap{ position:relative; width:100%; max-width:1040px; display:flex; flex-direction:column; align-items:center; gap:22px; }
+.login-hero{ text-align:center; max-width:520px; }
+.login-eyebrow{ margin:0 0 6px; font-size:.8rem; font-weight:800; letter-spacing:.32em; text-transform:uppercase; color:var(--gold-300); }
+.login-motto{ margin:0; font-size:clamp(1.5rem, 6.6vw, 2.9rem); font-weight:800; line-height:1.3; white-space:pre-line;
+  letter-spacing:.02em; text-wrap:balance; animation:rise-in var(--dur-4) var(--ease-out) .1s backwards; }
+.login-points{ list-style:none; margin:22px 0 0; padding:0; display:none; flex-direction:column; gap:12px; }
+.login-points li{ display:flex; align-items:center; gap:12px; font-size:1.05rem; font-weight:500; color:rgb(255 255 255 / .9);
   animation:rise-in var(--dur-4) var(--ease-out) backwards; }
-.login-card h1{ margin:16px 0 4px; font-size:clamp(1.45rem, 6.4vw, 1.85rem); font-weight:800; text-wrap:balance; }
-.login-card > p.muted{ margin:0 0 20px; font-size:1rem; text-wrap:balance; }
+.login-points li:nth-child(2){ animation-delay:.12s; } .login-points li:nth-child(3){ animation-delay:.24s; }
+.lp-ico{ width:40px; height:40px; flex:0 0 auto; display:grid; place-items:center; border-radius:14px;
+  background:rgb(255 253 246 / .14); font-size:1.2rem; }
+.login-card{ position:relative; background:var(--card); color:var(--fg); border-radius:var(--r-xl);
+  padding:32px 24px 24px; width:100%; max-width:400px; text-align:center;
+  box-shadow:0 30px 80px -24px rgb(0 0 0 / .55), 0 0 0 1px rgb(255 255 255 / .06);
+  animation:rise-in var(--dur-4) var(--ease-out) .2s backwards; }
+.login-card h1{ margin:14px 0 4px; font-size:clamp(1.4rem, 6vw, 1.75rem); font-weight:800; text-wrap:balance; }
+.login-card > p.muted{ margin:0 0 18px; font-size:1rem; text-wrap:balance; }
 .login-card .btn{ width:100%; }
 .login-card .btn.ghost{ margin-top:10px; }
-.login-card .tiny{ line-height:1.6; margin-top:16px; }
+.login-card .tiny{ line-height:1.6; margin-top:14px; }
 .logo{ display:flex; justify-content:center; }
 /* logo：載入時三個「碎詞」點依序浮現、絲線織進來；之後整顆輕輕呼吸 */
-.logo-mark{ width:76px; height:76px; display:block; border-radius:20px;
-  box-shadow:0 10px 28px -8px rgb(22 58 48 / .55);
-  animation:logo-breathe 5.2s var(--ease-in-out) 1.4s infinite; }
+.logo-mark{ width:80px; height:80px; display:block; border-radius:22px;
+  box-shadow:0 12px 30px -10px rgb(22 58 48 / .6);
+  animation:logo-breathe 5.2s var(--ease-in-out) 1.6s infinite; }
 .logo-mark .lm-dot{ transform-box:fill-box; transform-origin:center;
   animation:dot-pop .5s var(--ease-spring) backwards; }
-.logo-mark .lm-dot:nth-of-type(1){ animation-delay:.25s; }
-.logo-mark .lm-dot:nth-of-type(2){ animation-delay:.4s; }
-.logo-mark .lm-dot:nth-of-type(3){ animation-delay:.55s; }
-.logo-mark .lm-thread{ stroke-dasharray:1; stroke-dashoffset:0; animation:thread-draw .9s var(--ease-out) .7s backwards; }
+.logo-mark .lm-dot:nth-of-type(1){ animation-delay:.45s; }
+.logo-mark .lm-dot:nth-of-type(2){ animation-delay:.6s; }
+.logo-mark .lm-dot:nth-of-type(3){ animation-delay:.75s; }
+.logo-mark .lm-thread{ stroke-dasharray:1; stroke-dashoffset:0; animation:thread-draw .9s var(--ease-out) .95s backwards; }
+@media (min-width: 900px){
+  .login-wrap{ flex-direction:row; justify-content:space-between; gap:56px; padding:0 24px; }
+  .login-hero{ text-align:left; flex:1; }
+  .login-points{ display:flex; }
+  .login-card{ flex:0 0 400px; padding:40px 32px 30px; }
+}
+html[data-contrast="high"] .login{ background:#000; }
+html[data-contrast="high"] .ld-word{ display:none; }
+html[data-contrast="high"] .login-card{ border:2px solid #fff; }
 
-/* ═══════════════ 主框 ═══════════════ */
+/* ═══════════════ 版面骨架 ═══════════════
+   手機：頂端列（品牌＋歷史／設定＋求救）＋內容＋固定在底部的大圖示導覽（拇指搆得到）。
+   寬螢幕（≥960px）：頂端列橫跨，左側欄導覽＋右側內容的雙欄版面（見檔尾的響應式）。 */
 .topbar{ display:flex; align-items:center; gap:8px; padding:0 16px; height:var(--topbar-h);
-  border-bottom:1px solid color-mix(in srgb, var(--line) 70%, transparent);
-  position:sticky; top:0; z-index:5;
-  background:color-mix(in srgb, var(--bg) 86%, transparent);
-  backdrop-filter:saturate(1.4) blur(14px); -webkit-backdrop-filter:saturate(1.4) blur(14px); }
+  position:sticky; top:0; z-index:20;
+  background:color-mix(in srgb, var(--bg) 88%, transparent);
+  border-bottom:1px solid color-mix(in srgb, var(--line) 60%, transparent);
+  backdrop-filter:saturate(1.3) blur(14px); -webkit-backdrop-filter:saturate(1.3) blur(14px); }
 /* 品牌小圖示：與登入頁 logo 同一張圖（CSS 背景，免得 i18n 改標題文字時把它洗掉） */
-.brand-mark{ width:34px; height:34px; border-radius:10px; flex:0 0 auto;
+.brand-mark{ width:36px; height:36px; border-radius:11px; flex:0 0 auto;
   background:center/cover no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232f6f5e'/%3E%3Cpath d='M16 9h32a6 6 0 0 1 6 6v12a6 6 0 0 1-6 6H34l-7 6v-6H16a6 6 0 0 1-6-6V15a6 6 0 0 1 6-6z' fill='%23fff'/%3E%3Ccircle cx='22' cy='21' r='3' fill='%232f6f5e'/%3E%3Ccircle cx='32' cy='21' r='3' fill='%232f6f5e'/%3E%3Ccircle cx='42' cy='21' r='3' fill='%232f6f5e'/%3E%3Cpath d='M9 43c5 14 41 14 46 0' fill='none' stroke='%23ffd27a' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E");
-  box-shadow:0 3px 10px -3px rgb(22 58 48 / .5); }
-.title{ font-weight:800; font-size:1.15rem; letter-spacing:.04em; color:var(--fg); white-space:nowrap; }
-/* topbar 的東西預設都不會縮，窄螢幕時最右邊的「登出」會被擠出畫面外——
-   按不到就等於登不出來，換帳號的照護者會卡住。所以：
-     · 按鈕與標題不縮（本來就該完整），
-     · 帳號名稱可以縮、超過就省略號（"Anonymous user" 在英文介面特別長）。 */
+  box-shadow:0 4px 12px -4px rgb(22 58 48 / .55); }
+.title{ font-weight:800; font-size:1.2rem; letter-spacing:.06em; color:var(--fg); white-space:nowrap;
+  flex:0 1 auto !important; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+/* topbar 的按鈕不縮（按不到就等於沒有），只有標題可以縮成省略號。 */
 .topbar > *{ flex:0 0 auto; }
 .topbar .spacer{ flex:1 1 auto; }
-.topbar #who{ flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
-/* 六個分頁等分排滿、永遠全部看得到（對齊 App 的底部導覽）。
-   選取指示器（.tab-ink，由 js/motion.js 插入）是一顆會滑過去的膠囊，
-   讓使用者「看到」自己從哪裡移到哪裡，而不是整排突然換色。 */
-.tabs{ display:flex; gap:4px; padding:8px 12px; position:sticky; top:var(--topbar-h); z-index:4;
-  border-bottom:1px solid color-mix(in srgb, var(--line) 70%, transparent);
-  background:color-mix(in srgb, var(--bg) 86%, transparent);
-  backdrop-filter:saturate(1.4) blur(14px); -webkit-backdrop-filter:saturate(1.4) blur(14px); }
-.tab{ position:relative; z-index:1; border:0; background:transparent; color:var(--muted);
-  min-height:44px; padding:6px 2px; border-radius:var(--r-pill);
-  white-space:nowrap; cursor:pointer; text-align:center; font:inherit; font-weight:600;
-  flex:1 1 0; min-width:0; overflow:hidden; text-overflow:ellipsis;
-  /* 字級跟著視窗縮：窄螢幕的英文／日文標籤（Settings、リハビリ）才不會被省略號吃掉。 */
-  font-size:clamp(.7rem, 3.1vw, .98rem);
+/* 共用：所有 .tab（底部導覽、側欄、頂端的歷史／設定）都由 app.js 的 setupTabs 綁定 */
+.tab{ position:relative; border:0; background:transparent; color:var(--muted); font:inherit; cursor:pointer;
+  -webkit-user-select:none; user-select:none;
   transition:color var(--dur-2) ease, background-color var(--dur-2) ease, transform var(--dur-1) ease; }
-.tab:hover{ color:var(--fg); }
-.tab:active{ transform:scale(.96); }
-.tab.active{ background:var(--accent); color:var(--on-accent); }
-/* 有滑動指示器時，作用中分頁本身不再上色（由底下的膠囊負責）。
-   JS 沒載到時退回上面那行：照樣看得出在哪一頁。 */
-.tabs.has-ink .tab.active{ background:transparent; }
-.tab-ink{ position:absolute; z-index:0; top:8px; bottom:8px; left:0; width:0;
-  border-radius:var(--r-pill); background:var(--accent);
-  box-shadow:0 4px 14px -4px color-mix(in srgb, var(--accent) 70%, transparent);
-  transition:transform var(--dur-3) var(--ease-out), width var(--dur-3) var(--ease-out); pointer-events:none; }
-.tab-ink.no-anim{ transition:none; }
+.tab:active{ transform:scale(.95); }
+.ico{ width:24px; height:24px; display:block; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.tab-lbl{ display:block; }
 
-main{ padding:var(--sp-4); max-width:680px; margin:0 auto; }
-/* 分頁切換：從點擊的方向輕輕滑入（--dx 由 motion.js 依分頁先後設定）。
+/* 頂端的歷史／設定：圓形圖示鈕，作用中時填上主色淡底 */
+.tab-icon{ width:44px; height:44px; border-radius:50%; display:grid; place-items:center; color:var(--fg); }
+.tab-icon .tab-lbl{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+.tab-icon:hover{ background:var(--tint); }
+.tab-icon.active{ background:var(--accent); color:var(--on-accent); }
+
+/* 底部導覽（手機）：五個大圖示，作用中那一個的圖示後面有一顆會滑過去的膠囊 */
+nav.tabs{ --ink-target:icon; position:fixed; left:0; right:0; bottom:0; z-index:20;
+  display:flex; align-items:stretch; padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+  background:color-mix(in srgb, var(--card) 94%, transparent);
+  border-top:1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  box-shadow:0 -10px 30px -18px rgb(var(--shadow-rgb) / calc(.35 * var(--shadow-k)));
+  backdrop-filter:saturate(1.3) blur(16px); -webkit-backdrop-filter:saturate(1.3) blur(16px); }
+.tabs .tab{ flex:1 1 0; min-width:0; z-index:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:3px; min-height:60px; padding:4px 2px; border-radius:16px; font-weight:700;
+  font-size:clamp(.72rem, 3.1vw, .84rem); }
+.tabs .tab .tab-ico{ width:60px; height:34px; display:grid; place-items:center; border-radius:var(--r-pill);
+  transition:color var(--dur-2) ease; }
+.tabs .tab .ico{ width:26px; height:26px; }
+.tabs .tab .tab-lbl{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.tabs .tab.active{ color:var(--accent-ink); }
+.tabs .tab.active .tab-ico{ background:var(--accent); color:var(--on-accent); }
+/* 有滑動指示器時，作用中分頁本身不再上底色（由指示器負責）；JS 沒載到時退回上面那行 */
+.tabs.has-ink .tab.active .tab-ico{ background:transparent; }
+.tab-ink{ position:absolute; z-index:0; left:0; top:0; width:0; height:0; opacity:0;
+  border-radius:var(--r-pill); background:var(--accent); pointer-events:none;
+  box-shadow:0 6px 16px -6px color-mix(in srgb, var(--accent) 75%, transparent);
+  transition:transform var(--dur-3) var(--ease-out), width var(--dur-3) var(--ease-out),
+             height var(--dur-3) var(--ease-out), opacity var(--dur-2) ease; }
+.tab-ink.no-anim{ transition:none; }
+.nav-foot{ display:none; }
+
+main{ padding:20px 16px calc(104px + env(safe-area-inset-bottom)); max-width:720px; margin:0 auto; }
+/* 分頁切換：從點擊的方向輕輕滑入（--dx 由 ui.js 依分頁先後設定）。
    用 backwards 而不是 both：動畫結束後不留 transform，
    否則 .panel 會變成裡面 position:fixed 對話框的定位容器。 */
 .panel{ display:flex; flex-direction:column; gap:var(--sp-4);
   animation:panel-in var(--dur-3) var(--ease-out) backwards; }
 
-.card{ background:var(--card); border:1px solid var(--line); border-radius:var(--r-lg);
-  padding:18px; box-shadow:var(--shadow-1); }
-.card h3{ margin:0 0 8px; font-size:1.1rem; font-weight:700; }
-.lbl{ display:block; font-size:.88rem; font-weight:600; color:var(--muted); margin:12px 0 6px; letter-spacing:.02em; }
+/* ── 頁首：大標＋一句說明，標題下面一小段暖黃絲線（品牌記號）── */
+.page-head{ padding:2px 4px 2px; }
+.page-head h2{ position:relative; margin:0; font-size:clamp(1.55rem, 6vw, 2rem); font-weight:800; letter-spacing:.03em; padding-bottom:10px; }
+.page-head h2::after{ content:""; position:absolute; left:0; bottom:0; width:64px; height:10px;
+  background:no-repeat center/100% 100% url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 10'%3E%3Cpath d='M2 6 C 12 0, 20 10, 32 5 S 52 1, 62 5' fill='none' stroke='%23f2b84b' stroke-width='3.2' stroke-linecap='round'/%3E%3C/svg%3E"); }
+.page-head p{ margin:8px 0 0; color:var(--muted); font-size:1rem; }
+
+/* ── 卡片：暖白、大圓角、柔和的雙層陰影，不再用細灰邊框分格 ── */
+.card{ position:relative; background:var(--card); border:1px solid color-mix(in srgb, var(--line) 55%, transparent);
+  border-radius:var(--r-lg); padding:20px; box-shadow:var(--shadow-2); }
+.card h3{ margin:0 0 10px; font-size:1.12rem; font-weight:800; letter-spacing:.02em; }
+.lbl{ display:block; font-size:.9rem; font-weight:700; color:var(--muted); margin:14px 0 6px; letter-spacing:.03em; }
 .card > .lbl:first-child, .card > h3:first-child{ margin-top:0; }
+.card-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
+.card-head h3{ margin:0; }
+.card-head .btn.link{ min-height:44px; padding:0 6px; white-space:nowrap; }
+
+/* ── 步驟：圓形編號＋標題（重組、復健共用）── */
+.step-head{ display:flex; align-items:center; gap:10px; margin:0 0 12px; font-size:1.1rem; font-weight:800; }
+.step-no{ width:30px; height:30px; flex:0 0 auto; border-radius:50%; display:grid; place-items:center;
+  background:var(--accent); color:var(--on-accent); font-size:.95rem; font-weight:800;
+  box-shadow:0 0 0 4px var(--accent-glow); }
+.step-card .step-head + .lbl{ margin-top:0; }
+/* 步驟條（重組頁首）：做完的打勾、目前這一步亮起來，中間用絲線連起來 */
+.stepper{ list-style:none; display:flex; margin:16px 0 0; padding:0; counter-reset:none; }
+.stepper li{ position:relative; flex:1 1 0; display:flex; flex-direction:column; align-items:center; gap:4px;
+  font-size:.8rem; font-weight:700; color:var(--muted); text-align:center; min-width:0; }
+.stepper li::before{ content:""; position:absolute; top:15px; left:calc(-50% + 18px); right:calc(50% + 18px); height:3px;
+  border-radius:2px; background:var(--line); transition:background-color var(--dur-3) ease; }
+.stepper li:first-child::before{ display:none; }
+.stepper li i{ font-style:normal; width:32px; height:32px; border-radius:50%; display:grid; place-items:center;
+  background:var(--card); border:2px solid var(--line); color:var(--muted); font-size:.9rem;
+  transition:background-color var(--dur-3) ease, border-color var(--dur-3) ease, color var(--dur-3) ease, transform var(--dur-3) var(--ease-spring); }
+.stepper li.is-done i{ background:var(--accent-soft); border-color:var(--accent); color:var(--accent-ink); }
+.stepper li.is-done::before, .stepper li.is-current::before{ background:var(--gold); }
+.stepper li.is-current{ color:var(--fg); }
+.stepper li.is-current i{ background:var(--accent); border-color:var(--accent); color:var(--on-accent); transform:scale(1.12);
+  box-shadow:0 0 0 5px var(--accent-glow); }
+
+/* ═══════════════ 首頁主控台 ═══════════════ */
+/* 問候卡：品牌深綠，下方一條暖黃絲線；「開始說話」是整個 App 最主要的一顆鈕 */
+.hero-card{ overflow:hidden; color:#fff; border:0; padding:26px 22px 22px;
+  background:
+    radial-gradient(420px 260px at 105% 120%, rgb(242 184 75 / .32), transparent 65%),
+    linear-gradient(150deg, var(--hero-a), var(--hero-b));
+  box-shadow:0 18px 40px -20px color-mix(in srgb, var(--hero-b) 90%, transparent); }
+.hero-greet{ margin:0; font-size:clamp(1.7rem, 7.4vw, 2.3rem); font-weight:800; letter-spacing:.04em; }
+.hero-sub{ margin:8px 0 0; font-size:1.05rem; line-height:1.6; color:rgb(255 255 255 / .88); max-width:30em; }
+.hero-text{ position:relative; z-index:1; }
+.hero-cta{ position:relative; z-index:1; margin-top:20px; min-height:58px; padding:0 28px; font-size:1.15rem; font-weight:800;
+  background:var(--pick-bg); color:var(--pick-fg); border-radius:var(--r-pill);
+  box-shadow:0 10px 24px -10px rgb(0 0 0 / .45); }
+.hero-thread{ position:absolute; left:0; right:0; bottom:0; width:100%; height:90px; pointer-events:none; }
+.hero-thread path{ fill:none; stroke:var(--gold-300); stroke-width:3; stroke-linecap:round; opacity:.55;
+  stroke-dasharray:1; vector-effect:non-scaling-stroke; animation:thread-draw 1.6s var(--ease-out) .2s backwards; }
+html[data-contrast="high"] .hero-card{ background:#000; border:2px solid #ffe600; }
+
+.sos-card{ background:color-mix(in srgb, var(--danger) 5%, var(--card)); border-color:color-mix(in srgb, var(--danger) 22%, transparent); }
+.sos-lbl{ color:var(--danger) !important; font-weight:800 !important; font-size:1rem !important; margin-top:0 !important; }
+#quickSos{ margin-top:8px; }
+
+/* 六張功能卡（設計書的功能入口）：大圖示磚＋標題＋一句說明，每張一個識別色 */
+.feat-grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; }
+.feat{ --fc:var(--accent); display:flex; flex-direction:column; align-items:flex-start; gap:6px; text-align:left;
+  padding:16px 14px; min-height:132px; border-radius:20px; cursor:pointer; font:inherit; color:var(--fg);
+  background:color-mix(in srgb, var(--fc) 6%, var(--card)); border:1.5px solid color-mix(in srgb, var(--fc) 16%, transparent);
+  transition:transform var(--dur-2) var(--ease-out), box-shadow var(--dur-2) ease, border-color var(--dur-2) ease; }
+.feat:active{ transform:scale(.97); }
+@media (hover:hover){ .feat:hover{ transform:translateY(-3px); box-shadow:var(--shadow-2); border-color:color-mix(in srgb, var(--fc) 40%, transparent); } }
+.feat-ico{ width:48px; height:48px; border-radius:16px; display:grid; place-items:center; margin-bottom:4px;
+  background:color-mix(in srgb, var(--fc) 15%, var(--card)); color:color-mix(in srgb, var(--fc) 80%, var(--fg)); }
+.feat-ico .ico{ width:26px; height:26px; }
+.feat-t{ font-size:1.05rem; font-weight:800; line-height:1.3; }
+.feat-d{ font-size:.82rem; color:var(--muted); line-height:1.45; }
+.feat-compose{ --fc:#2f7d67; } .feat-rehab{ --fc:#2a8aa0; } .feat-aac{ --fc:#c98a1b; }
+.feat-report{ --fc:#c0603f; } .feat-tts{ --fc:#7d5cc0; } .feat-sync{ --fc:#3a86c0; }
+html[data-contrast="high"] .feat{ background:#000; border:2px solid #fff; }
+html[data-contrast="high"] .feat-ico{ background:#000; color:#ffe600; border:2px solid #ffe600; }
+
+/* 最近說過的話 */
+#homeRecent{ display:flex; flex-direction:column; gap:8px; }
+.recent-item{ display:flex; align-items:center; gap:12px; width:100%; min-height:56px; padding:10px 14px;
+  border-radius:16px; border:0; background:var(--tint); color:var(--fg); font:inherit; font-size:1.02rem; font-weight:600;
+  text-align:left; cursor:pointer; animation:rise-in var(--dur-3) var(--ease-out) backwards;
+  transition:transform var(--dur-1) ease, background-color var(--dur-2) ease; }
+.recent-item:nth-child(2){ animation-delay:50ms; } .recent-item:nth-child(3){ animation-delay:100ms; } .recent-item:nth-child(4){ animation-delay:150ms; }
+.recent-item:active{ transform:scale(.98); }
+.ri-text{ flex:1; min-width:0; }
+.ri-play{ flex:0 0 auto; width:36px; height:36px; border-radius:50%; display:grid; place-items:center; background:var(--card); font-size:1rem; }
+html[data-contrast="high"] .recent-item{ border:2px solid #fff; }
+/* 空狀態：一條暖黃絲線串著三顆還沒有字的碎詞——跟 logo 同一個意象 */
+.empty-state{ text-align:center; padding:8px 8px 4px; color:var(--muted); }
+.empty-state p{ margin:6px 0 0; font-size:.95rem; }
+.empty-art{ width:160px; height:70px; }
+.empty-art rect{ fill:var(--card); stroke:color-mix(in srgb, var(--accent) 45%, var(--line)); stroke-width:2; stroke-dasharray:4 4; }
+.empty-art .ea-thread{ fill:none; stroke:var(--gold); stroke-width:3; stroke-linecap:round; stroke-dasharray:1; animation:thread-draw 1.4s var(--ease-out) backwards; }
+
+/* ═══════════════ 設定：帳號卡＋分組清單 ═══════════════ */
+.account-card{ display:flex; align-items:center; gap:14px; }
+.acct-avatar{ width:52px; height:52px; flex:0 0 auto; border-radius:50%; display:grid; place-items:center; font-size:1.6rem;
+  background:var(--accent-soft); box-shadow:inset 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent); }
+.acct-text{ flex:1; min-width:0; }
+.acct-label{ font-size:.8rem; font-weight:700; color:var(--muted); letter-spacing:.05em; }
+.acct-who{ display:block; font-weight:700; font-size:1.02rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.account-card .btn{ flex:0 0 auto; }
+/* 進到子頁時只看得到那一區：帳號卡與頁首收起來 */
+#tab-settings:has(#btnSettingsBack:not(.hidden)) .account-card,
+#tab-settings:has(#btnSettingsBack:not(.hidden)) .page-head,
+#tab-settings:has(#btnSettingsBack:not(.hidden)) #appVersion{ display:none; }
 
 /* ── 輸入框 ── */
 textarea,input,select{ width:100%; font:inherit; color:var(--fg); background:var(--surface-2);
-  border:1.5px solid var(--line); border-radius:var(--r-md); padding:11px 14px; min-height:48px;
+  border:2px solid color-mix(in srgb, var(--line) 80%, transparent); border-radius:var(--r-md); padding:11px 16px; min-height:52px;
   transition:border-color var(--dur-2) ease, box-shadow var(--dur-2) ease, background-color var(--dur-2) ease; }
 textarea{ resize:vertical; line-height:1.55; font-size:1.05rem; }
 textarea::placeholder, input::placeholder{ color:color-mix(in srgb, var(--muted) 85%, transparent); }
@@ -286,7 +444,7 @@ label.row{ margin-top:12px; cursor:pointer; align-items:flex-start; }
 /* ── 按鈕：一套規格（圓角 14、最小高度 48、字重一致）──
    語意：primary＝主要動作、ghost＝次要、danger＝破壞性、link＝純文字。
    按下時縮 3%：手抖的人最需要「有按到」的立即回饋。 */
-.btn{ position:relative; border:0; border-radius:var(--r-md); padding:0 16px; min-height:48px;
+.btn{ position:relative; border:0; border-radius:var(--r-pill); padding:0 20px; min-height:50px;
   font:inherit; font-size:.98rem; font-weight:600; letter-spacing:.01em; cursor:pointer;
   display:inline-flex; align-items:center; justify-content:center; gap:6px;
   transition:transform var(--dur-1) ease, box-shadow var(--dur-2) ease, background-color var(--dur-2) ease,
@@ -297,7 +455,7 @@ label.row{ margin-top:12px; cursor:pointer; align-items:flex-start; }
   background:linear-gradient(180deg, color-mix(in srgb, var(--accent) 86%, #fff), var(--accent));
   background-color:var(--accent);
   box-shadow:0 1px 0 rgb(255 255 255 / .18) inset, 0 6px 16px -8px color-mix(in srgb, var(--accent) 85%, transparent); }
-.btn.ghost{ background:var(--card); color:var(--fg); border:1.5px solid var(--line); box-shadow:var(--shadow-1); }
+.btn.ghost{ background:var(--tint); color:var(--fg); border:1.5px solid color-mix(in srgb, var(--accent) 14%, transparent); }
 /* 破壞性動作：紅字紅框，不用整片紅底嚇人（iOS 慣例） */
 .btn.danger{ background:transparent; color:var(--danger); border:1.5px solid var(--danger); }
 /* 純文字動作（例如「更多」） */
@@ -305,12 +463,12 @@ label.row{ margin-top:12px; cursor:pointer; align-items:flex-start; }
 .btn.link:hover{ color:var(--accent-ink); }
 /* 整行寬按鈕，彼此間距一致 */
 .btn.block{ width:100%; margin-top:10px; }
-.btn.big{ width:100%; margin-top:14px; min-height:58px; font-size:1.12rem; border-radius:16px; }
+.btn.big{ width:100%; margin-top:16px; min-height:60px; font-size:1.15rem; font-weight:800; }
 .btn.tiny{ min-height:40px; font-size:.85rem; padding:0 12px; }
 @media (hover:hover){
   .btn.primary:hover:not(:disabled){ filter:brightness(1.06);
     box-shadow:0 1px 0 rgb(255 255 255 / .18) inset, 0 10px 22px -8px color-mix(in srgb, var(--accent) 85%, transparent); }
-  .btn.ghost:hover:not(:disabled){ border-color:color-mix(in srgb, var(--accent) 45%, var(--line)); background:var(--surface-2); }
+  .btn.ghost:hover:not(:disabled){ border-color:color-mix(in srgb, var(--accent) 45%, var(--line)); background:color-mix(in srgb, var(--accent) 12%, var(--card)); }
   .btn.danger:hover:not(:disabled){ background:color-mix(in srgb, var(--danger) 8%, transparent); }
 }
 /* 重組中：按鈕本身保持清楚可讀（不要變灰像壞掉），上面掃過一道柔光表示「正在做」 */
@@ -329,22 +487,20 @@ label.row{ margin-top:12px; cursor:pointer; align-items:flex-start; }
 /* 求救鈕：紅底白字。安全功能不該低調到跟「登出」長一樣——急的時候要一眼找到。
    觸控目標 44px（iOS HIG 最小值），手抖也按得中。不做持續閃動：那會讓人焦慮。 */
 .chip.sos-chip{ background:var(--danger); color:#fff; border-color:var(--danger);
-  font-weight:800; min-height:44px; padding:5px 16px; margin-right:6px; font-size:.95rem;
+  font-weight:800; min-height:44px; padding:5px 16px; margin-left:4px; font-size:.95rem;
   box-shadow:0 6px 16px -6px color-mix(in srgb, var(--danger) 80%, transparent); }
 /* 活動標記。用 accent 而不是 danger——它是好消息，不該跟求救搶同一種紅色的注意力。 */
 .chip.campaign-chip{ background:var(--gold); color:#3b2a06; border-color:transparent;
   font-weight:700; font-size:.82rem; padding:4px 10px; min-height:36px; }
-#btnLogout{ min-height:40px; }
 /* 窄螢幕只留 🎁：文字讓位給「登出」，但按鈕還在、點下去照樣說明活動內容。 */
 @media (max-width: 460px){
   .chip.campaign-chip{ font-size:0; padding:4px 9px; }
   .chip.campaign-chip::before{ content:"🎁"; font-size:.95rem; }
-  .topbar{ padding-left:12px; padding-right:12px; gap:6px; }
-  .title{ font-size:1rem; letter-spacing:.02em; }
-  .brand-mark{ width:30px; height:30px; border-radius:9px; }
+  .topbar{ padding-left:12px; padding-right:12px; gap:4px; }
+  .title{ font-size:1.05rem; letter-spacing:.03em; }
+  .brand-mark{ width:32px; height:32px; border-radius:10px; margin-right:2px; }
   /* 求救鈕只縮橫向內距，44px 的觸控高度不能動——那是急著按的時候按得中的原因。 */
-  .chip.sos-chip{ margin-right:0; padding-left:13px; padding-right:13px; }
-  #btnLogout{ padding:4px 12px; }
+  .chip.sos-chip{ margin:0 0 0 2px; padding-left:13px; padding-right:13px; }
 }
 @media (max-width: 360px){ .brand-mark{ display:none; } }
 /* 復健題庫的題目在英文介面會是整句英文，比中文長很多；允許換行並限制單一 chip 的寬度。 */
@@ -472,7 +628,7 @@ html[data-contrast="high"] .combo{ border-color:#ffe600; background:#000; }
 /* ── Toast：從下方浮上來、消失時淡出。
    .hidden 原本是 display:none（瞬間消失、看不到淡出），這裡改成 visibility 隱藏，
    讀屏與點擊照樣碰不到它，但有過場。 */
-.toast{ position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom)); z-index:60;
+.toast{ position:fixed; left:50%; bottom:calc(96px + env(safe-area-inset-bottom)); z-index:60;
   transform:translate(-50%, 0); max-width:calc(100vw - 32px); width:max-content;
   background:color-mix(in srgb, var(--fg) 94%, transparent); color:var(--card);
   padding:12px 20px; border-radius:var(--r-pill); font-size:.98rem; font-weight:600; line-height:1.4;
@@ -499,7 +655,7 @@ html[data-contrast="high"] .combo{ border-color:#ffe600; background:#000; }
 .score-ring svg{ position:absolute; inset:0; width:100%; height:100%; transform:rotate(-90deg); }
 .score-ring .sr-track{ fill:none; stroke:color-mix(in srgb, currentColor 18%, transparent); stroke-width:7; }
 .score-ring .sr-bar{ fill:none; stroke:currentColor; stroke-width:7; stroke-linecap:round; stroke-dasharray:100; stroke-dashoffset:100; }
-.score-ring .score-num{ font-size:34px; min-width:0; }
+.score-ring .score-num{ font-size:30px; min-width:0; letter-spacing:-.02em; }
 .score-info{ flex:1; min-width:0; }
 .score-head{ font-weight:800; font-size:1.1rem; }
 .score-fb{ margin-top:4px; font-size:.95rem; }
@@ -717,15 +873,19 @@ html[data-contrast="high"] .modal-card{ border:2px solid #fff; }
 #settingsIndex{ padding:6px 10px; }
 #settingsIndex:not(.hidden), #settingsCards > .card:not(.hidden){ animation:rise-in var(--dur-3) var(--ease-out) backwards; }
 .setrow{ display:flex; align-items:center; gap:14px; width:100%;
-  padding:12px 8px; min-height:58px;              /* 手指點得中（iOS HIG 最小 44） */
+  padding:12px 10px; min-height:62px;              /* 手指點得中（iOS HIG 最小 44） */
   background:none; border:0; border-bottom:1px solid var(--line); border-radius:0;
   font:inherit; color:var(--fg); text-align:left; cursor:pointer;
   transition:background-color var(--dur-2) ease; }
 .setrow:last-child{ border-bottom:0; }
-.setrow:hover{ background:color-mix(in srgb,var(--fg) 4%,transparent); }
+.setrow:hover{ background:var(--tint); }
 .setrow:active{ background:color-mix(in srgb,var(--fg) 8%,transparent); }
-.setrow-ico{ flex:0 0 auto; width:38px; height:38px; border-radius:12px;
-  display:grid; place-items:center; font-size:19px; background:var(--accent-soft); }
+.setrow-ico{ --sc:var(--accent); flex:0 0 auto; width:40px; height:40px; border-radius:13px;
+  display:grid; place-items:center; font-size:19px; background:color-mix(in srgb, var(--sc) 16%, var(--card)); }
+.setrow:nth-child(6n+2) .setrow-ico{ --sc:#c98a1b; } .setrow:nth-child(6n+3) .setrow-ico{ --sc:#2a8aa0; }
+.setrow:nth-child(6n+4) .setrow-ico{ --sc:#c0603f; } .setrow:nth-child(6n+5) .setrow-ico{ --sc:#7d5cc0; }
+.setrow:nth-child(6n) .setrow-ico{ --sc:#3a86c0; }
+html[data-contrast="high"] .setrow-ico{ background:#000; border:2px solid #fff; }
 .setrow-label{ flex:1; min-width:0; font-size:1.02rem; font-weight:500; }
 .setrow-chev{ flex:0 0 auto; color:var(--muted); font-size:22px; line-height:1; transition:transform var(--dur-2) var(--ease-out); }
 .setrow:hover .setrow-chev{ transform:translateX(3px); }
@@ -819,8 +979,8 @@ body.demo-nocursor, body.demo-nocursor * { cursor: none !important; }
 .scan-hl{ outline:4px solid var(--accent) !important; outline-offset:3px;
   box-shadow:0 0 0 8px color-mix(in srgb, var(--accent) 25%, transparent) !important;
   animation:scanglow 1s ease-in-out infinite alternate; border-radius:12px; }
-body.scan-on{ padding-bottom:84px; }
-.scan-bar{ position:fixed; left:8px; right:8px; bottom:calc(8px + env(safe-area-inset-bottom)); z-index:60;
+body.scan-on main{ padding-bottom:calc(180px + env(safe-area-inset-bottom)); }
+.scan-bar{ position:fixed; left:8px; right:8px; bottom:calc(88px + env(safe-area-inset-bottom)); z-index:60;
   display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:18px;
   background:var(--card); color:var(--fg); border:2px solid var(--accent);
   box-shadow:var(--shadow-3); animation:rise-in var(--dur-3) var(--ease-out) backwards; }
@@ -855,24 +1015,46 @@ body.kiosk-on .scan-bar{ z-index:45; }
    推到畫面外 500px 處——主要靠圖卡說話的使用者等於不能用。
    ═══════════════════════════════════════════════════════════════ */
 
+/* ── 圖卡頁的句子條：往下捲找圖卡時一直黏在頂端，選了什麼一眼看得到 ── */
+.aac-combo{ position:sticky; top:calc(var(--topbar-h) + 8px); z-index:3; }
+
+.aac-combo .lbl{ margin-bottom:6px; }
+.aac-combo .row .btn{ white-space:nowrap; padding:0 16px; }
+#tab-aac [data-i18n="aac.fontSize"]{ white-space:nowrap; }
+.practice-card .row{ flex-wrap:wrap; }
+.practice-card .row .btn{ flex:1 1 auto; white-space:nowrap; }
+/* ── 報表：儀表板（KPI 磚 2×2，寬螢幕 4 欄；趨勢圖寬螢幕並排）── */
+.stats{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; }
+.dash-toolbar .row{ gap:8px; justify-content:flex-start !important; }
+.dash-toolbar .btn{ min-height:46px; padding:0 16px; font-size:.92rem; }
+.dash-toolbar #reportRange{ flex:1 1 100%; }
+
+@media (min-width: 600px){
+  .stats{ grid-template-columns:repeat(4, minmax(0,1fr)); }
+  .feat-grid{ grid-template-columns:repeat(3, minmax(0,1fr)); }
+  .dash-toolbar #reportRange{ flex:1 1 auto; }
+}
+
 /* ── 窄機（≤360px，如 iPhone SE）：縮排距換空間給內容 ── */
 @media (max-width: 360px){
-  main{ padding:10px; }
+  main{ padding-left:10px; padding-right:10px; }
   .card{ padding:14px; }
   .cards-grid{ grid-template-columns:repeat(auto-fill,minmax(82px,1fr)); gap:8px; }
+  .feat{ min-height:120px; padding:12px; }
+  .tabs .tab .tab-ico{ width:48px; }
 }
 
 /* ── 矮螢幕（橫向手機）：壓縮固定佔位的東西，把高度讓給內容 ── */
 @media (max-height: 500px){
-  :root{ --topbar-h:52px; }   /* .tabs 的 sticky top 吃同一個變數，不會蓋住分頁列 */
-  .topbar{ padding:0 14px; }
+  :root{ --topbar-h:52px; }
   .title{ font-size:1rem; }
-  .tabs{ padding:4px 10px; }
-  .tab-ink{ top:4px; bottom:4px; }
-  .tab{ min-height:38px; padding:4px 2px; }
-  main{ padding:10px; }
+  .tabs .tab{ min-height:46px; flex-direction:row; gap:6px; }
+  .tabs .tab .tab-ico{ width:40px; height:30px; }
+  main{ padding-top:10px; padding-bottom:calc(76px + env(safe-area-inset-bottom)); }
   .card{ padding:12px; }
   .panel{ gap:10px; }
+  .page-head p, .stepper{ display:none; }
+  .aac-combo{ position:static; }
   /* 對話框在矮螢幕要能捲，否則按鈕會掉到畫面外按不到 */
   .modal{ padding:10px; }
   .modal-card{ max-height:94dvh; }
@@ -880,41 +1062,73 @@ body.kiosk-on .scan-bar{ z-index:45; }
   .confirm-text{ font-size:1.1rem; margin:4px 0 10px; }
   .crisis-orb{ width:64px; height:64px; }
   .crisis-orb-wrap{ margin:8px 0; gap:8px; }
+  .toast{ bottom:calc(64px + env(safe-area-inset-bottom)); }
 }
 
 /* ── 橫向且夠寬：圖卡分頁改雙欄，右欄整片留給圖卡（同 App 的做法）── */
 @media (min-width: 700px) and (max-height: 500px){
   /* 字級調整在橫向先收起來——它不是溝通用的控制項，而這裡每一列都在跟圖卡搶高度。 */
-  #tab-aac .aac-scale-chip, #tab-aac .aac-scale-chip + .chip, #tab-aac [data-i18n="aac.fontSize"]{ display:none; }
+  #tab-aac .aac-scale-chip, #tab-aac [data-i18n="aac.fontSize"]{ display:none; }
   /* 12 個分類 chip 原本會折成三行，改成單行橫向捲動，省下約 70px 給圖卡 */
   #aacCats{ flex-wrap:nowrap; overflow-x:auto; margin-bottom:6px; padding-bottom:2px; }
   #aacCats .chip{ flex:0 0 auto; }
-  #tab-aac{ display:grid; grid-template-columns:300px 1fr; align-items:start; gap:12px; }
-  /* 組合區與自訂圖卡留在左欄；中間那張（搜尋＋分類＋圖卡）獨佔右欄並可捲 */
-  #tab-aac > .card:nth-child(2){ grid-column:2; grid-row:1 / span 3;
-    max-height:calc(100dvh - 110px); overflow-y:auto; }
-  #tab-aac > .card:nth-child(1), #tab-aac > .card:nth-child(3){ grid-column:1; }
+  #tab-aac:not(.hidden){ display:grid; grid-template-columns:300px 1fr; align-items:start; gap:12px; }
+  #tab-aac > .page-head{ display:none; }
+  /* 句子條與自訂圖卡留在左欄；搜尋＋分類＋圖卡那張獨佔右欄並可捲 */
+  #tab-aac > .aac-board{ grid-column:2; grid-row:1 / span 3; max-height:calc(100dvh - 140px); overflow-y:auto; }
+  #tab-aac > .aac-combo, #tab-aac > #aacResult, #tab-aac > .aac-custom{ grid-column:1; }
 }
 
-/* ── 平板／桌機：放寬主欄，圖卡自然變多欄；分頁列置中成一條膠囊軌道 ── */
-@media (min-width: 900px){
-  main{ max-width:900px; padding:24px; }
-  .panel{ gap:18px; }
-  .card{ padding:22px 24px; }
-  .cards-grid{ grid-template-columns:repeat(auto-fill,minmax(116px,1fr)); }
+/* ── 寬螢幕（≥960px）：左側欄導覽＋右側內容的雙欄版面 ── */
+@media (min-width: 960px){
+  #app{ display:grid; grid-template-columns:264px minmax(0,1fr); grid-template-rows:auto 1fr; min-height:100dvh; }
+  .topbar{ grid-column:1 / -1; padding:0 28px; }
+  .tab-icon{ width:auto; padding:0 16px 0 12px; border-radius:var(--r-pill); display:inline-flex; gap:8px; font-weight:700; }
+  .tab-icon .tab-lbl{ position:static; width:auto; height:auto; clip:auto; }
+  nav.tabs{ --ink-target:tab; grid-column:1; grid-row:2; position:sticky; top:var(--topbar-h); bottom:auto; left:auto; right:auto;
+    align-self:start; height:calc(100dvh - var(--topbar-h)); flex-direction:column; gap:6px; padding:24px 16px;
+    background:transparent; border-top:0; border-right:1px solid color-mix(in srgb, var(--line) 60%, transparent);
+    box-shadow:none; backdrop-filter:none; -webkit-backdrop-filter:none; }
+  .tabs .tab{ flex:0 0 auto; flex-direction:row; justify-content:flex-start; gap:14px; min-height:56px; padding:8px 18px 8px 12px;
+    border-radius:var(--r-pill); font-size:1.05rem; }
+  .tabs .tab .tab-ico{ width:36px; height:36px; }
+  .tabs .tab:hover:not(.active){ background:var(--tint); color:var(--fg); }
+  .tabs .tab.active{ color:var(--on-accent); }
+  .tabs .tab.active .tab-ico{ background:transparent; }
+  .tabs:not(.has-ink) .tab.active{ background:var(--accent); }
+  .nav-foot{ display:block; margin:auto 4px 0; padding:16px 14px 0; font-size:.82rem; line-height:1.6; color:var(--muted);
+    border-top:1px dashed color-mix(in srgb, var(--gold) 55%, var(--line)); }
+  main{ grid-column:2; grid-row:2; width:100%; max-width:1000px; padding:32px 40px 48px; }
+  .panel{ gap:20px; }
+  .card{ padding:24px 26px; }
+  .cards-grid{ grid-template-columns:repeat(auto-fill,minmax(118px,1fr)); }
   .story-grid{ gap:12px; }
-  .topbar{ padding:0 max(24px, calc((100vw - 900px) / 2 + 24px)); }
-  .tabs{ padding:8px max(24px, calc((100vw - 900px) / 2 + 24px)); }
-  .result-text{ font-size:1.7rem; }
+  .result-text{ font-size:1.75rem; }
+  .toast{ bottom:32px; left:calc(50% + 132px); }
+  .scan-bar{ left:280px; bottom:16px; }
+  body.scan-on main{ padding-bottom:120px; }
+  /* 首頁：問候卡＋求救並排，功能卡三欄 */
+  #tab-home:not(.hidden){ display:grid; grid-template-columns:1.5fr 1fr; align-items:stretch; }
+  #tab-home > .feat-card, #tab-home > #favCard, #tab-home > .recent-card{ grid-column:1 / -1; }
+  .sos-card{ display:flex; flex-direction:column; justify-content:center; }
+  .sos-card #quickSos{ flex-direction:column; }
+  .sos-card .sos-btn{ flex:0 0 auto; width:100%; }
+  /* 報表：趨勢圖兩張並排 */
+  .panel.dash:not(.hidden){ display:grid; grid-template-columns:1fr 1fr; align-items:start; }
+  .panel.dash > .page-head, .panel.dash > .dash-toolbar, .panel.dash > .dash-kpi, .panel.dash > .dash-wide{ grid-column:1 / -1; }
+  /* 復健：說故事與最近練習並排 */
+  .aac-combo{ top:calc(var(--topbar-h) + 12px); }
 }
-@media (min-width: 1200px){
-  main{ max-width:1040px; }
-  .topbar{ padding:0 max(24px, calc((100vw - 1040px) / 2 + 24px)); }
-  .tabs{ padding:8px max(24px, calc((100vw - 1040px) / 2 + 24px)); }
+@media (min-width: 1280px){
+  #app{ grid-template-columns:288px minmax(0,1fr); }
+  main{ max-width:1080px; padding:36px 56px 56px; }
+  .toast{ left:calc(50% + 144px); }
+  .scan-bar{ left:304px; }
 }
 
 /* ═══════════════ 動畫 keyframes ═══════════════ */
 @keyframes fade-in{ from{ opacity:0; } }
+@keyframes drift{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-10px); } }
 @keyframes fade-out{ to{ opacity:0; } }
 @keyframes rise-in{ from{ opacity:0; transform:translateY(12px); } }
 @keyframes panel-in{ from{ opacity:0; transform:translate(var(--dx, 0px), 6px); } }
@@ -954,6 +1168,8 @@ body.kiosk-on .scan-bar{ z-index:45; }
 @media (prefers-reduced-motion: reduce){
   html{ scroll-behavior:auto; }
   @keyframes rise-in{ from{ opacity:0; } }
+  @keyframes drift{ to{ transform:none; } }
+  @keyframes thread-draw{ from{ opacity:0; } }
   @keyframes panel-in{ from{ opacity:0; } }
   @keyframes pop-in{ from{ opacity:0; } }
   @keyframes emoji-pop{ from{ opacity:0; } }

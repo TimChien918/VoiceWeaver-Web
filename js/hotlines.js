@@ -40,9 +40,6 @@ function uiLangCountry() {
 // 由 detectCountry() 寫入；其他人只讀。
 let _observed = null;
 
-/** 目前已知的國別（測試與除錯用）。 */
-export function observedCountry() { return _observed; }
-
 /** 記住一個國別。空值不覆蓋既有的。 */
 export function rememberCountry(cc) {
   const v = String(cc || "").trim().toUpperCase();

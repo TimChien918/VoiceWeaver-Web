@@ -95,5 +95,3 @@ export function behaviorSummary() {
     aacPct: inputTotal > 0 ? Math.round(b.aacInputCount / inputTotal * 100) : null,
   };
 }
-
-export function resetBehavior() { state.behavior = { ...D }; save(); }

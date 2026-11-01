@@ -50,10 +50,8 @@ export function localComputeEnabled() {
 export function localTtsEnabled() {
   return localComputeEnabled() && hasVoiceConsent() && _health.voice !== false;
 }
-export function localBase() { return _base; }
 // 各項運算電腦端是否可用（需先 detectLocalTts 過一次）
 export function localHas(kind) { return localComputeEnabled() && !!_health[kind]; }
-export function localHealth() { return { ..._health }; }
 
 // ngrok 免費版對「瀏覽器請求」會插一頁 HTML 警告攔截頁 → fetch 拿到 HTML、JSON 解析失敗
 // → Colab 節點被誤判成死的。帶 ngrok-skip-browser-warning 標頭即可繞過。

@@ -22,6 +22,7 @@ import { t } from "./i18n.js?v=1.5.78";
 import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.5.78";
 import { startScan, stopScan } from "./a11yscan.js?v=1.5.78";
 import { bankFor } from "./clinical.js?v=1.5.78";
+import { hotlinesFor } from "./hotlines.js?v=1.5.78";
 import { drawTrajectory, loadReport } from "./report.js?v=1.5.78";
 
 const $ = (s) => document.querySelector(s);
@@ -316,11 +317,11 @@ function UNITS(L = demoLang()) {
                  "Below, one tap dials emergency services or a crisis line — 119 and 1925 in Taiwan. The screen closes only after the family responds.",
                  "下のボタンで救急や相談窓口にワンタップで電話できます（台湾では119と1925）。この画面は家族が確認するまで閉じません。",
                  "아래 버튼으로 응급 번호와 위기 상담 전화에 바로 걸 수 있습니다(대만은 119와 1925). 이 화면은 가족이 확인해야 닫힙니다.") },
-        { act: () => { crisisClose(); goTab("compose"); }, focus: "#quickSos",
-          cap: c("平常在任何頁面右上角都有求救鈕，重組頁最上方也有一鍵發聲。演示中的通報都已攔截，不會真的送出。",
-                 "The help button sits at the top of every screen, with one-tap emergency phrases on the compose page. In this demo every alert is intercepted — nothing is actually sent.",
-                 "ふだんもすべての画面の右上にSOSボタンがあり、再構成ページの上部にはワンタップの緊急フレーズがあります。このデモでは通報はすべて止めてあり、実際には送信されません。",
-                 "평소에도 모든 화면 오른쪽 위에 SOS 버튼이 있고, 재구성 화면 맨 위에는 한 번에 말하는 긴급 문구가 있습니다. 이 데모의 알림은 모두 차단되어 실제로 보내지지 않습니다.") },
+        { act: () => { crisisClose(); goTabOf("#quickSos"); }, focus: "#quickSos",
+          cap: c("平常在任何畫面都按得到求救鈕，還有一鍵發聲的快速求救。演示中的通報都已攔截，不會真的送出。",
+                 "A help button is always within reach, along with one-tap emergency phrases. In this demo every alert is intercepted — nothing is actually sent.",
+                 "ふだんもSOSボタンはどの画面からでも押せ、ワンタップで話せる緊急フレーズもあります。このデモでは通報はすべて止めてあり、実際には送信されません。",
+                 "평소에도 어느 화면에서든 SOS 버튼을 누를 수 있고, 한 번에 말하는 긴급 문구도 있습니다. 이 데모의 알림은 모두 차단되어 실제로 보내지지 않습니다.") },
       ],
     },
     {
@@ -485,14 +486,23 @@ async function ensureVisible(focus, cap) {
   const el = typeof focus === "function" ? focus() : $(focus);
   const name = typeof focus === "function" ? "(fn)" : focus;
   if (!el) { console.warn(`[demo] 錄影池：找不到「${name}」 — 「${(cap || "").slice(0, 48)}」`); return; }
+  // 元素被版面改版搬到別的分頁時，自己跟過去，而不是對著空白畫面講。
+  const panel = el.closest('[id^="tab-"]');
+  if (panel && panel.classList.contains("hidden")) goTab(panel.id.slice(4));
   spot(el);                               // spot() 會 scrollIntoView({block:"center"})
   // 等 smooth 捲動停下來再量，否則會誤報。不吃加速倍率：捲動動畫的長度由瀏覽器決定
   await new Promise((r) => setTimeout(r, FOCUS_SETTLE));
-  const r = el.getBoundingClientRect();
   const vh = window.innerHeight || document.documentElement.clientHeight;
   const vw = window.innerWidth || document.documentElement.clientWidth;
-  const visible = r.bottom > 0 && r.top < vh && r.right > 0 && r.left < vw && r.width > 0 && r.height > 0;
-  if (!visible) {
+  const inView = (r) => r.bottom > 0 && r.top < vh && r.right > 0 && r.left < vw && r.width > 0 && r.height > 0;
+  let r = el.getBoundingClientRect();
+  if (!inView(r)) {
+    // 捲完之後版面又長高了（報表、聲音清單是非同步畫出來的）→ 再捲一次、再量一次
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    await new Promise((res) => setTimeout(res, FOCUS_SETTLE));
+    r = el.getBoundingClientRect();
+  }
+  if (!inView(r)) {
     console.warn(`[demo] 錄影池：「${name}」不在畫面上 — 「${(cap || "").slice(0, 48)}」`,
                  { top: Math.round(r.top), bottom: Math.round(r.bottom), viewportH: vh });
   }
@@ -500,6 +510,12 @@ async function ensureVisible(focus, cap) {
 
 // 捲動動畫跑完要一點時間。不等就開始講，觀眾看到的是「畫面還在滑」而旁白已經在講那個東西了。
 const FOCUS_SETTLE = 650;
+
+// 走到「這個元素所在的分頁」：快速求救這類東西會隨版面改版換分頁，用 id 找它住哪裡最穩
+function goTabOf(sel) {
+  const panel = $(sel)?.closest('[id^="tab-"]');
+  goTab(panel ? panel.id.slice(4) : "compose");
+}
 
 function goTab(name) {
   clearSpot();
@@ -880,6 +896,12 @@ function crisisMock(S) {
   if (quick) quick.innerHTML = S.crisisQuick.map((s) => `<span class="chip">${s}</span>`).join("");
   $("#crisisChipVideo")?.classList.remove("hidden");
   $("#crisisChipPhoto")?.classList.remove("hidden");
+  // 撥號鍵平常依所在國家畫（錄影那台電腦可能被判成別國）。旁白講的是台灣的 119／1925，
+  // 演示期間把兩顆鍵的字換成台灣的號碼才對得上；只換字，撥號用的 data-number 不動（演示也不會按）。
+  const tw = hotlinesFor("TW");
+  for (const [id, h] of [["#crisisHotlineCrisis", tw.crisis], ["#crisisHotlineEmergency", tw.emergency]]) {
+    const b = $(id); if (b) { stash(b); b.textContent = h.label; }
+  }
   // 呼吸引導：吸 4 秒、吐 4 秒，與 crisis.js 的 startBreathing() 同一個節奏
   const orb = $("#crisisOrb"), lbl = $("#crisisBreath");
   let inhale = true;

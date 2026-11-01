@@ -207,8 +207,3 @@ export function activeItemCount() {
   const now = Date.now();
   return Object.values(stats).filter(s => decayed(s.s, s.t, now) >= 1).length;
 }
-
-/** 清空統計（設定頁「重置」用）。 */
-export function clearRanker() {
-  stats = {}; edges = {}; persist();
-}

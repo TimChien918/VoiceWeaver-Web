@@ -67,6 +67,7 @@ export function setupRehab(){
     if(mic){ mic.stop(); return; }
     if(!sttSupported()){ toast(tr("toast.sttUnsupported")); return; }
     $("#rehabRecord").textContent = tr("mic.recording");
+    $("#rehabRecord").classList.add("recording");   // 樣式：脈動光圈＋聲波，看得出「還在收音」
     // 作答時間：按下「開始跟讀」→ 第一次聽到字（開口前停頓＝反應時間）→ 最後一次聽到字。
     // 只記時間戳，不碰聲音本身。瀏覽器語音辨識不會把錄音交給這支程式，
     // 所以這裡從頭到尾沒有任何錄音 Blob 可以存——評分只拿辨識出來的文字跟這兩個數字。
@@ -80,11 +81,11 @@ export function setupRehab(){
         tLast = now;
       },
       onEnd: async (text)=>{
-        mic = null; $("#rehabRecord").textContent = tr("rehab.record");
+        mic = null; $("#rehabRecord").textContent = tr("rehab.record"); $("#rehabRecord").classList.remove("recording");
         const timing = tFirst === null ? {} : { latencyMs: tFirst - t0, durationMs: Math.max(0, tLast - tFirst) };
         await doScore(text, timing);
       },
-      onError:(e)=>{ toast(tr("toast.sttPrefix")+e); mic=null; $("#rehabRecord").textContent=tr("rehab.record"); }
+      onError:(e)=>{ toast(tr("toast.sttPrefix")+e); mic=null; $("#rehabRecord").textContent=tr("rehab.record"); $("#rehabRecord").classList.remove("recording"); }
     });
   });
 }

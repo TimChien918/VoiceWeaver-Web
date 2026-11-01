@@ -87,11 +87,11 @@ export function setupStory() {
     if (!sttSupported()) mic.classList.add("hidden");
     mic.addEventListener("click", async () => {
       try {
-        mic.textContent = t("mic.recording");
+        mic.textContent = t("mic.recording"); mic.classList.add("recording");
         const said = await listen();
         $("#storyInput").value = (($("#storyInput").value || "") + said).trim();
       } catch { toast(t("stt.error")); }
-      finally { mic.textContent = t("story.mic"); }
+      finally { mic.textContent = t("story.mic"); mic.classList.remove("recording"); }
     });
   }
 }

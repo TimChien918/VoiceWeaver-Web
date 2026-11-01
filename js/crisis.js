@@ -269,8 +269,12 @@ function startBreathing() {
   const orb = $("#crisisOrb"), lbl = $("#crisisBreath");
   if (!orb) return;
   let inhale = true;
+  // 先回到「吐完」的大小再開始吸：上次關閉時若停在吸飽，第一口氣就看不到圓變大。
+  orb.style.transition = "none"; orb.style.transform = "scale(0.72)";
+  void orb.offsetWidth; orb.style.transition = "";
   const tick = () => {
     orb.style.transform = inhale ? "scale(1)" : "scale(0.72)";
+    orb.dataset.phase = inhale ? "in" : "out";   // 減少動態時改用亮暗表示吸／吐（見 style.css）
     if (lbl) lbl.textContent = t(inhale ? "crisis.inhale" : "crisis.exhale");
     inhale = !inhale;
   };
