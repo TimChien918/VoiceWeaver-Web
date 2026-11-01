@@ -13,7 +13,7 @@
 // ② **判不出國別時不留空白**，退回介面語言對應的國家。危機當下沒有按鈕等於
 //    沒有出口；因為①，猜錯至少是看得見的。
 
-import { t } from "./i18n.js?v=1.5.78";
+import { t } from "./i18n.js?v=1.6.0";
 
 // 各國號碼表。**改之前請先查證**——這些號碼是要在最壞的時刻被撥出去的，
 // 寫錯沒有任何測試抓得到。新增國家時附上查證來源與日期。
@@ -39,9 +39,6 @@ function uiLangCountry() {
 
 // 由 detectCountry() 寫入；其他人只讀。
 let _observed = null;
-
-/** 目前已知的國別（測試與除錯用）。 */
-export function observedCountry() { return _observed; }
 
 /** 記住一個國別。空值不覆蓋既有的。 */
 export function rememberCountry(cc) {

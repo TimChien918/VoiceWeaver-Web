@@ -3,8 +3,14 @@
 //       data-i18n-html="key"（譯 innerHTML，給含 <code> 的說明用）。
 
 export const STRINGS = {
+  // 產品名（原名 VoiceWeaver，更名為「拾語者 Speak My Life」）。
+  // 只改使用者看得到的名字：Drive 資料夾 VoiceWeaver/、localStorage 鍵、Live 網址都沿用舊名，
+  // 改了既有使用者的曲庫與設定會「消失」。app.short 給 topbar／版本號這種窄位置用。
+  "app.name":     { "zh-TW":"拾語者 Speak My Life", "en":"Speak My Life", "ja":"Speak My Life（拾語者）", "ko":"Speak My Life（拾語者）" },
+  "app.short":    { "zh-TW":"拾語者", "en":"Speak My Life", "ja":"Speak My Life", "ko":"Speak My Life" },
+  "app.docTitle": { "zh-TW":"拾語者 Speak My Life｜網頁版", "en":"Speak My Life · Web", "ja":"Speak My Life（拾語者）· ウェブ版", "ko":"Speak My Life（拾語者）· 웹" },
   // 登入
-  "login.tagline": { "zh-TW":"輕量網頁版 · 失語溝通輔助", "en":"Lightweight web · aphasia communication aid", "ja":"軽量ウェブ版 · 失語コミュニケーション支援", "ko":"경량 웹 · 실어증 의사소통 보조" },
+  "login.tagline": { "zh-TW":"中風失語者的 AI 溝通與居家復健系統", "en":"AI communication & home rehabilitation for stroke survivors with aphasia", "ja":"脳卒中後の失語症の方のための AI コミュニケーション＆在宅リハビリシステム", "ko":"뇌졸중 후 실어증 환자를 위한 AI 의사소통·재택 재활 시스템" },
   "login.google":  { "zh-TW":"使用 Google 登入（跨裝置同步）", "en":"Sign in with Google (sync across devices)", "ja":"Google でログイン（端末間で同期）", "ko":"Google로 로그인 (기기 간 동기화)" },
   "login.anon":    { "zh-TW":"▶ 直接開始", "en":"▶ Start now", "ja":"▶ すぐにはじめる", "ko":"▶ 바로 시작" },
   "login.note":    { "zh-TW":"「直接開始」資料存在這台裝置。照護者用 Google 登入，設定與圖卡換裝置也會跟著走。", "en":"“Start now” keeps data on this device. Caregivers can sign in with Google so settings and cards follow across devices.", "ja":"「すぐにはじめる」はこの端末にのみ保存。介護者は Google ログインで設定とカードを他端末へ同期できます。", "ko":"'바로 시작'은 이 기기에만 저장됩니다. 보호자는 Google 로그인으로 설정과 카드를 다른 기기와 동기화할 수 있습니다." },
@@ -29,20 +35,6 @@ export const STRINGS = {
   "btn.regen":   { "zh-TW":"重組一次", "en":"Redo", "ja":"もう一度", "ko":"다시 구성" },
   // 候選數量不一定是 3（模型講得一致時會塌成 1～2 句），所以不能寫死「三個」。
   "btn.regenerate":{ "zh-TW":"都不對？重新生成", "en":"None of these? Regenerate", "ja":"どれも違う？作り直す", "ko":"모두 아닌가요? 다시 생성" },
-  // ── 網頁端聲波比對 ──
-  "set.acousticEnable": { "zh-TW":"網頁端聲波比對", "en":"Acoustic matching in the browser", "ja":"ブラウザでの波形照合", "ko":"브라우저 파형 대조" },
-  "set.acousticDesc": { "zh-TW":"在這台裝置上直接錄音、直接比對，不必用手機。演算法與手機完全一樣，但門檻是從登錄錄音算出來的——換一支麥克風就不一定還準，所以建議在這裡重新錄一組，不要沿用手機錄的。", "en":"Record and match right on this device, no phone needed. The algorithm is identical to the phone's, but the threshold is calibrated from the enrolment recordings — a different microphone may not fit it, so record a fresh set here rather than reusing the phone's.", "ja":"この端末で直接録音して照合します（スマホ不要）。アルゴリズムはスマホと同一ですが、しきい値は登録録音から算出されるため、マイクが変わると合わなくなることがあります。スマホの録音を流用せず、ここで録り直すことをお勧めします。", "ko":"이 기기에서 바로 녹음하고 대조합니다(휴대폰 불필요). 알고리즘은 휴대폰과 동일하지만 임계값은 등록 녹음에서 계산되므로 마이크가 바뀌면 맞지 않을 수 있습니다. 휴대폰 녹음을 그대로 쓰지 말고 여기서 다시 녹음하세요." },
-  "btn.acousticListen": { "zh-TW":"🎧 聽我說（專屬發音）", "en":"🎧 Listen to me (my own pronunciation)", "ja":"🎧 聞いて（わたし専用の発音）", "ko":"🎧 내 말 듣기 (내 전용 발음)" },
-  "ac.recordPrompt": { "zh-TW":"第 {n} / {total} 次：說出那幾個字，說完點一下畫面", "en":"Take {n} of {total}: say the words, then tap the screen", "ja":"{total} 回中 {n} 回目：その言葉を話し、終わったら画面をタップ", "ko":"{total}회 중 {n}회: 그 말을 하고 화면을 누르세요" },
-  "ac.tooQuiet": { "zh-TW":"沒有聽到聲音，這一次不算，請再說一次", "en":"I didn't hear anything — that one doesn't count, please try again", "ja":"音が聞こえませんでした。今のは数えません、もう一度どうぞ", "ko":"소리가 들리지 않았습니다. 이번 것은 세지 않으니 다시 말해 주세요" },
-  "ac.enrolled": { "zh-TW":"「{kw}」錄好了（一致度 {spread}、門檻 {thr}）", "en":"\u201c{kw}\u201d is ready (spread {spread}, threshold {thr})", "ja":"「{kw}」を登録しました（ばらつき {spread}、しきい値 {thr}）", "ko":"'{kw}' 등록 완료 (편차 {spread}, 임계값 {thr})" },
-  "ac.enrollFail": { "zh-TW":"錄音沒辦法建立樣板：", "en":"Could not build a template from these recordings: ", "ja":"録音からテンプレートを作れませんでした：", "ko":"녹음으로 템플릿을 만들지 못했습니다: " },
-  "ac.listening": { "zh-TW":"聽你說……說完點一下畫面", "en":"Listening… tap the screen when you're done", "ja":"聞いています…終わったら画面をタップ", "ko":"듣고 있습니다… 끝나면 화면을 누르세요" },
-  "ac.noMatch": { "zh-TW":"沒有對到任何一句", "en":"That didn't match any of your phrases", "ja":"どの言い方にも一致しませんでした", "ko":"어떤 문장과도 맞지 않았습니다" },
-  "ac.ambiguous": { "zh-TW":"聽起來像好幾句，請再說一次", "en":"That sounded like more than one phrase — please say it again", "ja":"複数の言い方に近く判断できません。もう一度お願いします", "ko":"여러 문장과 비슷해 판단할 수 없습니다. 다시 말해 주세요" },
-  "ac.noTemplates": { "zh-TW":"還沒有在這台裝置錄過任何一句", "en":"You haven't recorded any phrase on this device yet", "ja":"この端末ではまだ何も録音していません", "ko":"이 기기에서 아직 아무것도 녹음하지 않았습니다" },
-  "ac.localOnly": { "zh-TW":"（只存在這台裝置：雲端沒寫成功）", "en":"(saved on this device only — the cloud copy failed)", "ja":"（この端末のみに保存：クラウドへの保存は失敗）", "ko":"(이 기기에만 저장됨 — 클라우드 저장 실패)" },
-  "ac.listenFail": { "zh-TW":"比對失敗：", "en":"Matching failed: ", "ja":"照合に失敗しました：", "ko":"대조에 실패했습니다: " },
   // ── 登入／Drive 授權 ──
   // ── 「Drive 上還沒有語音模型」的實際原因（空清單有四種原因，畫面上長得一樣）──
   "set.diagNoRoot": { "zh-TW":"這個瀏覽器看不到 Drive 上的「{name}」資料夾。權限是 drive.file（只看得到這個 App 建立過的檔案）——如果曲庫是用別的帳號上傳的，請改用那個帳號登入。", "en":"This browser can't see the \u201c{name}\u201d folder on Drive. The scope is drive.file (only files this app created are visible) — if the library was uploaded from a different account, sign in with that account.", "ja":"このブラウザから Drive の「{name}」フォルダが見えません。スコープは drive.file（このアプリが作成したファイルのみ）です。別のアカウントでアップロードした場合は、そのアカウントでログインしてください。", "ko":"이 브라우저에서 Drive의 '{name}' 폴더가 보이지 않습니다. 범위는 drive.file(이 앱이 만든 파일만)입니다. 다른 계정으로 업로드했다면 그 계정으로 로그인하세요." },
@@ -114,21 +106,6 @@ export const STRINGS = {
   // 設定
   "set.llmTitle": { "zh-TW":"💬 文字供應商（重組／組句）", "en":"💬 Text providers (compose)", "ja":"💬 テキスト提供元（再構成）", "ko":"💬 텍스트 공급자 (재구성)" },
   "set.llmDesc":  { "zh-TW":"可加多個供應商、同一家也能放多把金鑰；使用時自動輪詢＋失敗備援。", "en":"Add multiple providers or multiple keys; auto round-robin with failover.", "ja":"複数の提供元・複数キーを追加可。自動ローテーション＋フェイルオーバー。", "ko":"여러 공급자·여러 키 추가 가능. 자동 순환＋장애 조치." },
-  "set.shortcutTitle": { "zh-TW":"🎤 我的專屬發音", "en":"🎤 My phrase shortcuts", "ja":"🎤 フレーズショートカット", "ko":"🎤 문구 단축키" },
-  "set.shortcutDesc":  { "zh-TW":"設定「聽到哪幾個字 → 說出哪一句」。這裡只負責文字；聲音要在手機上錄，因為比對是拿使用者本人的錄音做波形對齊，別人的聲音沒有用。",
-                         "en":"Set up \"hear these words → speak this sentence\". Text only here — the recording must be done on the phone, because matching aligns the waveform of the user's own voice; someone else's voice will not work.",
-                         "ja":"「この語を聞いたらこの文を話す」を設定します。ここはテキストのみ。照合は本人の録音の波形で行うため、録音はスマホで行ってください。",
-                         "ko":"\"이 단어를 들으면 이 문장을 말한다\"를 설정합니다. 여기서는 텍스트만. 대조는 본인 녹음의 파형으로 하므로 녹음은 휴대폰에서 하세요." },
-  "set.addShortcut":   { "zh-TW":"＋ 新增", "en":"＋ Add", "ja":"＋ 追加", "ko":"＋ 추가" },
-  "set.shortcutEmpty": { "zh-TW":"還沒有設定任何專屬發音。", "en":"No phrase shortcuts yet.", "ja":"まだ設定がありません。", "ko":"아직 설정된 단축키가 없습니다." },
-  "set.shortcutHears": { "zh-TW":"聽到：", "en":"Listens for: ", "ja":"認識する語：", "ko":"인식 단어: " },
-  "set.shortcutNeedsRec": { "zh-TW":"還沒錄音——要在手機上錄過才會生效", "en":"Not recorded yet — record it on the phone to activate", "ja":"未録音 — スマホで録音すると有効になります", "ko":"미녹음 — 휴대폰에서 녹음하면 활성화됩니다" },
-  "set.shortcutSaved": { "zh-TW":"已儲存。記得在手機上錄音才會生效。", "en":"Saved. Remember to record it on the phone to activate.", "ja":"保存しました。スマホで録音すると有効になります。", "ko":"저장됨. 휴대폰에서 녹음해야 활성화됩니다." },
-  "set.shortcutSaveFail": { "zh-TW":"這台裝置的儲存空間滿了，存不進去", "en":"This device's storage is full — could not save",
-                            "ja":"この端末の保存容量がいっぱいで保存できません", "ko":"이 기기의 저장 공간이 가득 차 저장할 수 없습니다" },
-  "set.shortcutBlank": { "zh-TW":"觸發詞與句子都要填", "en":"Fill in both the trigger words and the sentence", "ja":"認識する語と話す文の両方を入力してください", "ko":"인식 단어와 문장을 모두 입력하세요" },
-  "set.shortcutLoadFail": { "zh-TW":"讀取失敗：", "en":"Could not load: ", "ja":"読み込みに失敗：", "ko":"불러오기 실패: " },
-  "set.shortcutDelFail": { "zh-TW":"刪除失敗：", "en":"Could not delete: ", "ja":"削除に失敗：", "ko":"삭제 실패: " },
   "set.voicesTitle": { "zh-TW":"🗣 我的專屬聲音", "en":"🗣 My voices", "ja":"🗣 マイボイス", "ko":"🗣 내 목소리" },
   "set.voicesDesc":  { "zh-TW":"存在你自己 Google Drive 的 VoiceWeaver/Models/ 裡，手機、電腦、網頁看到的是同一份。這裡只列出有哪些聲音，合成仍然在電腦或 Colab 上跑。",
                        "en":"Stored in VoiceWeaver/Models/ on your own Google Drive — phone, computer and web all see the same copy. This only lists what you have; synthesis still runs on your computer or Colab.",
@@ -147,10 +124,6 @@ export const STRINGS = {
                           "ja":"重みか参照音声が不足しており合成できません",
                           "ko":"가중치나 참조 음성이 없어 합성할 수 없습니다" },
   "set.voicesLoading": { "zh-TW":"讀取中…", "en":"Loading…", "ja":"読み込み中…", "ko":"불러오는 중…" },
-  "set.voicesExpired": { "zh-TW":"Drive 授權過期了，請重新用 Google 登入。",
-                         "en":"Drive access expired — please sign in with Google again.",
-                         "ja":"ドライブの認可が期限切れです。Google で再ログインしてください。",
-                         "ko":"드라이브 인증이 만료되었습니다. Google로 다시 로그인하세요." },
   "set.addLlm":   { "zh-TW":"＋ 新增文字供應商", "en":"＋ Add text provider", "ja":"＋ テキスト提供元を追加", "ko":"＋ 텍스트 공급자 추가" },
   "set.imgTitle": { "zh-TW":"🖼 生圖供應商", "en":"🖼 Image providers", "ja":"🖼 画像生成の提供元", "ko":"🖼 이미지 공급자" },
   "set.imgDesc":  { "zh-TW":"Pollinations 免金鑰、永遠保底；可再加 Gemini／HuggingFace／OpenAI。", "en":"Pollinations is key-free and always available; add Gemini/HuggingFace/OpenAI.", "ja":"Pollinations はキー不要で常時利用可。Gemini／HuggingFace／OpenAI も追加可。", "ko":"Pollinations는 키 불필요·항상 사용 가능. Gemini/HuggingFace/OpenAI 추가 가능." },
@@ -159,8 +132,8 @@ export const STRINGS = {
   "set.tgChat":   { "zh-TW":"Chat ID（接收者）", "en":"Chat ID (recipient)", "ja":"Chat ID（受信者）", "ko":"Chat ID (수신자)" },
   "set.prefs":    { "zh-TW":"偏好", "en":"Preferences", "ja":"設定", "ko":"환경설정" },
   // ── 自動演示 ＋ 螢幕錄影 ──
-  // 面板跟著介面語言走；影片裡的旁白與字幕一律英文（報告用途），
-  // 單元名稱也保持英文——那是影片的段落名，會出現在錄進去的進度列上。
+  // 面板、單元名稱、影片裡的旁白與字幕全部跟著介面語言走（評審可能是任何一國人，
+  // 開演示前把介面切成他的語言即可）。
   "demo.title":   { "zh-TW":"🎬 功能介紹與螢幕錄影", "en":"🎬 Feature tour & screen recording", "ja":"🎬 機能紹介と画面録画", "ko":"🎬 기능 소개 및 화면 녹화" },
   "demo.desc":    { "zh-TW":"自動走過主要功能並錄影，錄完可以直接放進報告。以下全部是預先寫好的示範資料——不會呼叫 AI、不寫入雲端，也不會送出任何訊息（求救與危機介入只是重演畫面）。",
                     "en":"Walks through the app on its own and records the screen, so you can drop the clip straight into a report. Everything below is scripted sample data — no AI requests, no cloud writes, and no messages are ever sent (the SOS and crisis sections are simulated).",
@@ -171,10 +144,11 @@ export const STRINGS = {
   "demo.none":    { "zh-TW":"清除", "en":"Clear", "ja":"クリア", "ko":"지우기" },
   "demo.unitsN":  { "zh-TW":"個單元", "en":"sections", "ja":"セクション", "ko":"섹션" },
   "demo.about":   { "zh-TW":"約", "en":"about", "ja":"約", "ko":"약" },
-  "demo.narrate": { "zh-TW":"英文旁白與字幕（用你的 GPT-SoVITS 角色唸；電腦端連不上時退回瀏覽器語音）",
-                    "en":"Narration + subtitles (English, spoken with your GPT-SoVITS voice; falls back to the browser voice if the computer bridge is offline)",
-                    "ja":"英語ナレーションと字幕（GPT-SoVITSの声で読み上げ。PCに接続できない場合はブラウザ音声）",
-                    "ko":"영어 내레이션 및 자막(GPT-SoVITS 음성으로 낭독. 컴퓨터에 연결되지 않으면 브라우저 음성)" },
+  "demo.narrate": { "zh-TW":"旁白與字幕（跟著介面語言：中／英／日／韓；用你的 GPT-SoVITS 角色唸，電腦端連不上時退回瀏覽器語音）",
+                    "en":"Narration + subtitles (in the interface language — Chinese, English, Japanese or Korean; spoken with your GPT-SoVITS voice, or the browser voice if the computer bridge is offline)",
+                    "ja":"ナレーションと字幕（画面の言語に合わせて中・英・日・韓。GPT-SoVITSの声で読み上げ、PCに接続できない場合はブラウザ音声）",
+                    "ko":"내레이션 및 자막(인터페이스 언어에 맞춰 중·영·일·한. GPT-SoVITS 음성으로 낭독하며, 컴퓨터에 연결되지 않으면 브라우저 음성)" },
+  "demo.recFail": { "zh-TW":"沒有開始錄影，演示會照常進行但不錄影：", "en":"Screen recording was not started; the demo will run without recording: ", "ja":"録画を開始できませんでした。録画なしでデモを続けます：", "ko":"녹화를 시작하지 못했습니다. 녹화 없이 데모를 진행합니다: " },
   "demo.narrateHint": { "zh-TW":"每一句都在開始錄影之前先合成好，影片裡不會有等待。Mac 用 CPU 跑時第一次每句約 25 秒；合成過的會留著，第二次幾乎不用等。",
                     "en":"Every line is synthesised before recording starts, so the video has no waiting in it. On a CPU-only Mac that preparation takes roughly 25 s per line the first time; lines are cached, so a second run starts almost immediately.",
                     "ja":"各行は録画開始前に合成されるため、動画に待ち時間は入りません。CPUのみのMacでは初回1行あたり約25秒。合成済みは保持され、2回目はほぼ待ちません。",
@@ -213,7 +187,6 @@ export const STRINGS = {
   "set.computeEnable":{ "zh-TW":"啟用電腦運算", "en":"Enable computer compute", "ja":"PC 計算を有効化", "ko":"컴퓨터 연산 사용" },
   "set.detect":   { "zh-TW":"🔍 偵測連線", "en":"🔍 Detect", "ja":"🔍 接続を検出", "ko":"🔍 연결 감지" },
   "set.detectNot":{ "zh-TW":"尚未偵測", "en":"Not detected yet", "ja":"未検出", "ko":"아직 감지 안 됨" },
-  "set.urlLabel": { "zh-TW":"語音中心位址（選填）", "en":"Voice center address (optional)", "ja":"ボイスセンターのアドレス（任意）", "ko":"보이스 센터 주소 (선택)" },
   "set.urlPh":    { "zh-TW":"同一台電腦免填；遠端填 Tailscale 網址，例 https://mac.xxx.ts.net", "en":"Leave blank on same computer; for remote use Tailscale URL e.g. https://mac.xxx.ts.net", "ja":"同じ PC なら空欄；遠隔は Tailscale URL（例 https://mac.xxx.ts.net）", "ko":"같은 컴퓨터면 비워두기; 원격은 Tailscale 주소 예 https://mac.xxx.ts.net" },
   "set.voiceLabel":{ "zh-TW":"角色語音", "en":"Character voice", "ja":"キャラクター音声", "ko":"캐릭터 음성" },
   "set.voiceFirst":{ "zh-TW":"（先偵測連線）", "en":"(detect connection first)", "ja":"（先に接続を検出）", "ko":"(먼저 연결 감지)" },
@@ -250,8 +223,6 @@ export const STRINGS = {
   "toast.sttUnsupported": { "zh-TW":"此瀏覽器不支援語音輸入（建議 Chrome）", "en":"Voice input isn't supported in this browser (try Chrome)", "ja":"このブラウザは音声入力非対応（Chrome 推奨）", "ko":"이 브라우저는 음성 입력 미지원 (Chrome 권장)" },
   "mic.recording": { "zh-TW":"● 收音中…點此停止", "en":"● Recording… tap to stop", "ja":"● 録音中…タップで停止", "ko":"● 녹음 중… 탭하여 중지" },
   "toast.sttPrefix": { "zh-TW":"語音：", "en":"Voice: ", "ja":"音声：", "ko":"음성: " },
-  "toast.sosSent": { "zh-TW":"已送出緊急通報", "en":"Emergency alert sent", "ja":"緊急通報を送信しました", "ko":"긴급 알림 전송됨" },
-  "toast.sosFail": { "zh-TW":"通報失敗：", "en":"Alert failed: ", "ja":"通報失敗：", "ko":"알림 실패: " },
   "toast.voiceSwitching": { "zh-TW":"切換語音到 {name}（載入中，需數十秒）…", "en":"Switching voice to {name} (loading, tens of seconds)…", "ja":"{name} に切替中（読み込みに数十秒）…", "ko":"{name}(으)로 전환 중 (수십 초 소요)…" },
   "toast.voiceSwitched": { "zh-TW":"已切換到 {name}", "en":"Switched to {name}", "ja":"{name} に切替済み", "ko":"{name}(으)로 전환됨" },
   "toast.voiceSwitchFail": { "zh-TW":"切換失敗：", "en":"Switch failed: ", "ja":"切替失敗：", "ko":"전환 실패: " },
@@ -341,18 +312,15 @@ export const STRINGS = {
   "set.cloudLabel": { "zh-TW":"雲端／電腦清單（可加多個，連不上自動換下一個）", "en":"Cloud / computer list (add several; auto-fails over)", "ja":"クラウド／PC 一覧（複数追加可・自動フェイルオーバー）", "ko":"클라우드/컴퓨터 목록 (여러 개 추가, 자동 전환)" },
   "set.addCloud": { "zh-TW":"➕ 新增雲端", "en":"➕ Add cloud", "ja":"➕ クラウド追加", "ko":"➕ 클라우드 추가" },
   // ── 這一輪實機掃出來的：英文介面仍顯示中文的 placeholder ──
-  "ph.scKeyword": { "zh-TW":"要聽的字，例 need water", "en":"Words to listen for, e.g. need water", "ja":"聞き取る言葉（例：need water）", "ko":"인식할 말, 예: need water" },
-  "ph.scPhrase": { "zh-TW":"要說出口的話", "en":"The sentence to speak out loud", "ja":"実際に話す文", "ko":"실제로 말할 문장" },
   "ph.familyPhone": { "zh-TW":"例 0912345678", "en":"e.g. 0912345678", "ja":"例：09012345678", "ko":"예: 01012345678" },
   "ph.ngToken": { "zh-TW":"從 dashboard.ngrok.com 複製", "en":"Copy it from dashboard.ngrok.com", "ja":"dashboard.ngrok.com からコピー", "ko":"dashboard.ngrok.com에서 복사" },
-  "ph.ngDomain": { "zh-TW":"例 voiceweaver.ngrok-free.app（填了網址就永遠不變）", "en":"e.g. voiceweaver.ngrok-free.app (set this and the URL never changes)", "ja":"例：voiceweaver.ngrok-free.app（設定すると URL が変わりません）", "ko":"예: voiceweaver.ngrok-free.app (설정하면 주소가 바뀌지 않습니다)" },
+  "ph.ngDomain": { "zh-TW":"例 speakmylife.ngrok-free.app（填了網址就永遠不變）", "en":"e.g. speakmylife.ngrok-free.app (set this and the URL never changes)", "ja":"例：speakmylife.ngrok-free.app（設定すると URL が変わりません）", "ko":"예: speakmylife.ngrok-free.app (설정하면 주소가 바뀌지 않습니다)" },
   "lt.noClouds": { "zh-TW":"尚未新增雲端／電腦；同一台電腦可直接按「偵測連線」。", "en":"No cloud/computer added yet; on the same machine just tap Detect.", "ja":"クラウド／PC 未追加。同じ PC なら「接続を検出」をタップ。", "ko":"클라우드/컴퓨터 미추가; 같은 PC면 '연결 감지'를 누르세요." },
   "lt.removeCloud": { "zh-TW":"移除這個雲端", "en":"Remove this cloud", "ja":"このクラウドを削除", "ko":"이 클라우드 제거" },
   "lt.cloudN": { "zh-TW":"雲端 {n}", "en":"Cloud {n}", "ja":"クラウド {n}", "ko":"클라우드 {n}" },
   "lt.cloudAdded": { "zh-TW":"已新增雲端，偵測中…", "en":"Cloud added, detecting…", "ja":"クラウドを追加、検出中…", "ko":"클라우드 추가됨, 감지 중…" },
   "lt.enterUrl": { "zh-TW":"請先輸入雲端網址", "en":"Enter a cloud URL first", "ja":"先にクラウド URL を入力", "ko":"먼저 클라우드 URL을 입력하세요" },
   "lt.dupCloud": { "zh-TW":"這個網址已經在清單裡了", "en":"That URL is already in the list", "ja":"その URL は既に一覧にあります", "ko":"해당 URL은 이미 목록에 있습니다" },
-  "ng.title": { "zh-TW":"☁️ ngrok 雲端通道（Colab GPU 用）", "en":"☁️ ngrok cloud tunnel (for Colab GPU)", "ja":"☁️ ngrok クラウドトンネル（Colab GPU 用）", "ko":"☁️ ngrok 클라우드 터널 (Colab GPU용)" },
   "ng.desc": { "zh-TW":"用 Colab 免費 GPU 跑語音合成時，這裡填 ngrok 授權碼——會存到你的帳號雲端，Colab 用下方「配對碼」自動取用，你完全不用把授權碼貼進 Colab。", "en":"When running voice synthesis on a free Colab GPU, put your ngrok authtoken here. It's saved to your account cloud; Colab fetches it via the pairing code below, so you never paste the token into Colab.", "ja":"Colab の無料 GPU で音声合成する際、ここに ngrok authtoken を入力。アカウントのクラウドに保存され、Colab は下の「ペアリングコード」で自動取得します。トークンを Colab に貼る必要はありません。", "ko":"무료 Colab GPU로 음성 합성 시 ngrok authtoken을 여기 입력하세요. 계정 클라우드에 저장되고, Colab이 아래 페어링 코드로 자동으로 가져옵니다. 토큰을 Colab에 붙여넣을 필요가 없습니다." },
   "ng.section": { "zh-TW":"☁️ 用 Colab 免費 GPU（ngrok 通道）", "en":"☁️ Use free Colab GPU (ngrok tunnel)", "ja":"☁️ 無料 Colab GPU を使う（ngrok トンネル）", "ko":"☁️ 무료 Colab GPU 사용 (ngrok 터널)" },
   "ng.useUrl": { "zh-TW":"☁️ 用此 Colab 網址連線", "en":"☁️ Connect via this Colab URL", "ja":"☁️ この Colab URL で接続", "ko":"☁️ 이 Colab 주소로 연결" },
@@ -390,10 +358,7 @@ export const STRINGS = {
   "err.localSpeakFell": { "zh-TW":"⚠️ 電腦/Colab 合成失敗，暫用瀏覽器語音：{err}", "en":"⚠️ PC/Colab synthesis failed, using browser voice: {err}", "ja":"⚠️ PC/Colab 合成に失敗、ブラウザ音声で代替：{err}", "ko":"⚠️ PC/Colab 합성 실패, 브라우저 음성 사용: {err}" },
   "lib.oldServer": { "zh-TW":"⚠️ 伺服器版本較舊，下載狀態不會更新——請用最新 notebook 重新啟動 Colab（或重啟語音中心）", "en":"⚠️ Server is outdated; download status won't update — restart Colab with the latest notebook (or restart the voice center)", "ja":"⚠️ サーバーが旧版のため状態が更新されません——最新の notebook で Colab を再起動してください", "ko":"⚠️ 서버 버전이 오래되어 상태가 갱신되지 않습니다 — 최신 notebook으로 Colab을 재시작하세요" },
   "care.title": { "zh-TW":"🧑‍⚕️ 使用模式（依嚴重程度）", "en":"🧑‍⚕️ Usage mode (by severity)", "ja":"🧑‍⚕️ 使用モード（重症度別）", "ko":"🧑‍⚕️ 사용 모드 (중증도별)" },
-  "care.desc": { "zh-TW":"給看不懂手機的長輩：全螢幕只剩 2–4 張大卡，像一張紙圖卡，怎麼按都不會跳走、點了就唸出來。照護者要離開時：點右上角的「退出」鈕，再輸入密碼。", "en":"For elders unfamiliar with phones: fullscreen shows only 2–4 big cards, like a paper board. Nothing else to tap into; tapping a card speaks it. Caregiver exit: tap the Exit button at the top right, then enter the PIN.", "ja":"スマホが苦手な高齢者向け：全画面に 2–4 枚の大きなカードだけ。紙のカードのようで、どこを押しても迷子になりません。押すと読み上げます。介護者の退出：右上の「退出」ボタン→暗証番号。", "ko":"휴대폰이 낯선 어르신용: 전체 화면에 큰 카드 2–4장만 표시됩니다. 종이 카드처럼 어디를 눌러도 다른 화면으로 넘어가지 않고, 누르면 읽어줍니다. 보호자 종료: 오른쪽 위 '종료' 버튼을 누른 뒤 비밀번호 입력." },
-  "care.scenario": { "zh-TW":"鎖定情境（畫面只顯示這個情境的卡片）", "en":"Locked scenario (screen shows only these cards)", "ja":"固定シーン（この場面のカードだけ表示）", "ko":"고정 상황 (이 상황의 카드만 표시)" },
   "care.pin": { "zh-TW":"重度退出密碼（4 位數字）", "en":"Severe exit PIN (4 digits)", "ja":"重度の退出暗証番号（4桁）", "ko":"중증 종료 비밀번호 (4자리)" },
-  "care.enter": { "zh-TW":"🔒 進入防呆模式", "en":"🔒 Enter fail-safe mode", "ja":"🔒 あんしんモードに入る", "ko":"🔒 안심 모드 시작" },
   "care.exited": { "zh-TW":"已退出防呆模式", "en":"Exited fail-safe mode", "ja":"あんしんモードを終了しました", "ko":"안심 모드를 종료했습니다" },
   "care.pinTitle": { "zh-TW":"照護者密碼", "en":"Caregiver PIN", "ja":"介護者の暗証番号", "ko":"보호자 비밀번호" },
   "care.pinCancel": { "zh-TW":"返回卡片", "en":"Back to cards", "ja":"カードに戻る", "ko":"카드로 돌아가기" },
@@ -401,13 +366,12 @@ export const STRINGS = {
   "care.next": { "zh-TW":"下一張 ▶", "en":"Next ▶", "ja":"次へ ▶", "ko":"다음 ▶" },
   "care.severeHint": { "zh-TW":"重度＝全螢幕逐張掃描大圖卡；要離開時點右上角的「退出」鈕再輸入密碼。圖卡內容用「AAC 圖卡」分頁的自訂圖卡（拍家人／熟悉的東西最好）。", "en":"Severe = fullscreen one-card-at-a-time scan of the big cards; to exit, tap the Exit button at the top right then enter the PIN. Cards come from your custom cards in the AAC tab (photos of family/familiar things work best).", "ja":"重度＝大きなカードを全画面で1枚ずつスキャン。退出は右上の「退出」ボタン→暗証番号。カードはAACタブの自作カード（家族・身近な物の写真が最適）。", "ko":"중증＝큰 카드를 전체화면에서 한 장씩 스캔. 종료는 오른쪽 위 '종료' 버튼을 누른 뒤 비밀번호. 카드는 AAC 탭의 사용자 카드(가족·익숙한 물건 사진 권장).", },
   "kiosk.exitBtn": { "zh-TW":"✕ 關閉", "en":"✕ Close", "ja":"✕ 閉じる", "ko":"✕ 닫기" },
-  "safety.uncertainAlert": { "zh-TW":"⚠ VoiceWeaver 偵測到可能的高風險訊息，但無法確認狀況，請盡快關心。原文：", "en":"⚠ VoiceWeaver detected a possibly high-risk message but could not verify it. Please check in soon. Original: ", "ja":"⚠ VoiceWeaver が高リスクの可能性がある発言を検知しましたが確認できません。至急ご確認ください。原文：", "ko":"⚠ VoiceWeaver가 고위험 가능성이 있는 메시지를 감지했으나 확인하지 못했습니다. 빨리 확인해 주세요. 원문: " },
+  "safety.uncertainAlert": { "zh-TW":"⚠ 拾語者偵測到可能的高風險訊息，但無法確認狀況，請盡快關心。原文：", "en":"⚠ Speak My Life detected a possibly high-risk message but could not verify it. Please check in soon. Original: ", "ja":"⚠ Speak My Life（拾語者）が高リスクの可能性がある発言を検知しましたが確認できません。至急ご確認ください。原文：", "ko":"⚠ Speak My Life（拾語者）가 고위험 가능성이 있는 메시지를 감지했으나 확인하지 못했습니다. 빨리 확인해 주세요. 원문: " },
   "safety.lockTitle": { "zh-TW":"語音輸出已鎖定", "en":"Speech output locked", "ja":"読み上げを停止しました", "ko":"음성 출력이 잠겼습니다" },
   "safety.lockOk":    { "zh-TW":"我知道了", "en":"I understand", "ja":"わかりました", "ko":"알겠습니다" },
   "safety.blockedCompose": { "zh-TW":"⚠ 偵測到高風險訊息，已停止重組並通報緊急聯絡人。\n如有立即危險請撥打 1925 安心專線或 119。", "en":"⚠ High-risk message detected. Reconstruction stopped and your emergency contact has been notified.\nIf you are in immediate danger, call your local emergency number.", "ja":"⚠ 高リスクのメッセージを検知し、再構成を停止して緊急連絡先へ通報しました。\n差し迫った危険がある場合は 119 へ。", "ko":"⚠ 고위험 메시지가 감지되어 문장 재구성을 중단하고 비상 연락처에 알렸습니다.\n즉각적인 위험이 있으면 119로 전화하세요." },
   "safety.lockedCrisis":  { "zh-TW":"⚠ 已通報緊急聯絡人。語音輸出已鎖定，請照護者協助。\n如有立即危險請撥打 1925 安心專線或 119。", "en":"⚠ Your emergency contact has been notified. Speech output is locked — please ask a caregiver for help.\nIf you are in immediate danger, call your local emergency number.", "ja":"⚠ 緊急連絡先へ通報しました。読み上げを停止しています。介護者にお手伝いをお願いしてください。\n差し迫った危険がある場合は 119 へ。", "ko":"⚠ 비상 연락처에 알렸습니다. 음성 출력이 잠겼으니 보호자에게 도움을 요청하세요.\n즉각적인 위험이 있으면 119로 전화하세요." },
   "safety.lockedRefusal": { "zh-TW":"這句涉及治療決定，語音已鎖定，請與照護者或醫師當面確認。", "en":"This involves a treatment decision — speech is locked. Please confirm with a caregiver or doctor.", "ja":"治療の判断に関わるため読み上げを停止しました。介護者か医師と直接ご確認ください。", "ko":"치료 결정과 관련되어 음성이 잠겼습니다. 보호자나 의사와 직접 확인하세요." },
-  "care.customScenario": { "zh-TW":"📷 我的照片卡", "en":"📷 My photo cards", "ja":"📷 わたしの写真カード", "ko":"📷 내 사진 카드" },
   "care.entered": { "zh-TW":"已進入防呆模式。要離開：點右上角「退出」鈕，再輸入密碼", "en":"Fail-safe mode on. To exit: tap the Exit button at the top right, then enter the PIN", "ja":"あんしんモード開始。終了は右上の「退出」ボタン→暗証番号", "ko":"안심 모드 시작. 종료: 오른쪽 위 '종료' 버튼을 누른 뒤 비밀번호 입력" },
   "aac.fontSize": { "zh-TW":"字體：", "en":"Font:", "ja":"文字：", "ko":"글자:" },
   "cc.title": { "zh-TW":"📷 自訂圖卡（拍熟悉的東西）", "en":"📷 Custom cards (photo of familiar things)", "ja":"📷 カスタムカード（身近な物を撮影）", "ko":"📷 사용자 카드 (익숙한 물건 촬영)" },
@@ -442,11 +406,11 @@ export const STRINGS = {
   "set.confirmCard":     { "zh-TW":"AAC 確認卡", "en":"AAC confirm card", "ja":"AAC 確認カード", "ko":"AAC 확인 카드" },
   "set.confirmCardDesc": { "zh-TW":"組句後跳出大圖卡供確認，按「對」才朗讀。", "en":"Shows a big card to confirm after composing; speaks only after you tap Yes.", "ja":"文の生成後に大カードで確認、「はい」で読み上げ。", "ko":"문장 구성 후 큰 카드로 확인, '네'를 눌러야 읽습니다." },
   "set.style":  { "zh-TW":"視覺風格", "en":"Visual style", "ja":"ビジュアルスタイル", "ko":"비주얼 스타일" },
-  "style.tech": { "zh-TW":"科技風", "en":"Tech", "ja":"テック", "ko":"테크" },
+  "style.tech": { "zh-TW":"拾語者（預設）", "en":"Speak My Life (default)", "ja":"Speak My Life（既定）", "ko":"Speak My Life (기본)" },
   "style.cute": { "zh-TW":"可愛風", "en":"Cute", "ja":"かわいい", "ko":"큐트" },
   "style.anime":{ "zh-TW":"動漫風", "en":"Anime", "ja":"アニメ", "ko":"애니메" },
   "style.minimal":{ "zh-TW":"簡約風", "en":"Minimal", "ja":"ミニマル", "ko":"미니멀" },
-  "blurb.tech": { "zh-TW":"深色霓虹 · 專業感（預設）", "en":"Dark neon · professional (default)", "ja":"ダークネオン · プロ仕様（既定）", "ko":"다크 네온 · 프로페셔널 (기본)" },
+  "blurb.tech": { "zh-TW":"深綠＋暖黃 · 溫和沉穩，深淺色跟隨系統", "en":"Deep green & warm gold · calm, follows light/dark", "ja":"深緑＋暖かい黄 · 落ち着き、明暗はシステムに追従", "ko":"딥그린 & 웜옐로 · 차분함, 밝기는 시스템 따름" },
   "blurb.cute": { "zh-TW":"奶油糖果 · 兒童用", "en":"Cream candy · for children", "ja":"クリームキャンディ · 子ども向け", "ko":"크림 캔디 · 어린이용" },
   "blurb.anime":{ "zh-TW":"鮮豔光暈 · 青少年用", "en":"Vivid glow · for teens", "ja":"ビビッドグロー · ティーン向け", "ko":"비비드 글로우 · 청소년용" },
   "blurb.minimal":{ "zh-TW":"白底為主 · 高對比", "en":"White base · high contrast", "ja":"ホワイトベース · 高コントラスト", "ko":"화이트 베이스 · 고대비" },
@@ -473,14 +437,14 @@ export const STRINGS = {
   "report.bmEdit":    { "zh-TW":"✏️ 修改", "en":"✏️ Edits", "ja":"✏️ 修正", "ko":"✏️ 수정" },
   "report.bmCard":    { "zh-TW":"🖼 圖卡", "en":"🖼 Cards", "ja":"🖼 カード", "ko":"🖼 카드" },
   "report.bmNote":    { "zh-TW":"反應＝開 App 到第一次發聲的平均耗時 · 選句＝AI 第一候選被採用率 · 修改＝退回／刪卡累計 · 圖卡＝圖卡輸入佔總輸入比例", "en":"Reaction = avg time from open to first speech · Pick = AI top-candidate adoption · Edits = undo/delete total · Cards = card-input share", "ja":"反応＝起動から初発声までの平均 · 文選択＝AI第一候補の採用率 · 修正＝取消/削除の累計 · カード＝カード入力の割合", "ko":"반응＝실행~첫 발성 평균 · 문장 선택＝AI 1순위 채택률 · 수정＝취소/삭제 누적 · 카드＝카드 입력 비율" },
-  "report.pdfTitle":  { "zh-TW":"VoiceWeaver 成績單", "en":"VoiceWeaver report", "ja":"VoiceWeaver レポート", "ko":"VoiceWeaver 리포트" },
+  "report.pdfTitle":  { "zh-TW":"拾語者 Speak My Life 成績單", "en":"Speak My Life report", "ja":"Speak My Life（拾語者）レポート", "ko":"Speak My Life（拾語者）리포트" },
   "crisis.title":     { "zh-TW":"我們在這裡陪你", "en":"We're here with you", "ja":"私たちがそばにいます", "ko":"우리가 곁에 있어요" },
   "crisis.contacting":{ "zh-TW":"正在聯繫家人…", "en":"Contacting family…", "ja":"家族に連絡中…", "ko":"가족에게 연락 중…" },
   "crisis.notified":  { "zh-TW":"已通知家人，請稍等。你並不孤單。", "en":"Family has been notified. Please wait — you're not alone.", "ja":"家族に通知しました。少しお待ちください。あなたは一人じゃない。", "ko":"가족에게 알렸어요. 잠시만요 — 혼자가 아니에요." },
   "crisis.sendFail":  { "zh-TW":"通報傳送失敗，請改撥下方專線", "en":"Alert failed to send — please call a hotline below", "ja":"通報の送信に失敗しました。下の専用ダイヤルへ", "ko":"알림 전송 실패 — 아래 전화로 연락하세요" },
   "crisis.sysNotified":  { "zh-TW":"已通知家人，請稍等。你並不孤單，我們一起慢慢呼吸。", "en":"Family notified. Please wait — you're not alone. Let's breathe together.", "ja":"家族に通知しました。少しお待ちを。一緒にゆっくり呼吸しましょう。", "ko":"가족에게 알렸어요. 잠시만요. 함께 천천히 숨 쉬어요." },
   "crisis.sysVideoHint": { "zh-TW":"可點下方「開始即時視訊通話」與家人面對面。", "en":"Tap \"Start a live video call\" below to see your family face to face.", "ja":"下の「ビデオ通話を開始」で家族と顔を合わせられます。", "ko":"아래 '영상 통화 시작'으로 가족과 얼굴을 보며 대화할 수 있어요." },
-  "crisis.alertMsg":  { "zh-TW":"我現在需要協助，請聯絡我（VoiceWeaver 緊急通報）。", "en":"I need help right now, please contact me (VoiceWeaver alert).", "ja":"今すぐ助けが必要です、連絡してください（VoiceWeaver 通報）。", "ko":"지금 도움이 필요해요, 연락해 주세요 (VoiceWeaver 알림)." },
+  "crisis.alertMsg":  { "zh-TW":"我現在需要協助，請聯絡我（拾語者緊急通報）。", "en":"I need help right now, please contact me (Speak My Life alert).", "ja":"今すぐ助けが必要です、連絡してください（Speak My Life 通報）。", "ko":"지금 도움이 필요해요, 연락해 주세요 (Speak My Life 알림)." },
   "crisis.video":     { "zh-TW":"開始即時視訊通話", "en":"Start a live video call", "ja":"ビデオ通話を開始", "ko":"영상 통화 시작" },
   "crisis.call":      { "zh-TW":"改用電話打給家人", "en":"Call family by phone instead", "ja":"電話で家族にかける", "ko":"전화로 가족에게 걸기" },
   "crisis.noPhone":   { "zh-TW":"尚未設定家人電話（設定頁）", "en":"No family phone set (Settings)", "ja":"家族の電話が未設定（設定）", "ko":"가족 전화 미설정 (설정)" },
@@ -497,8 +461,6 @@ export const STRINGS = {
   "crisis.purposeCrisis":    { "zh-TW":"安心專線", "en":"Crisis line", "ja":"相談ダイヤル", "ko":"상담 전화" },
   "crisis.purposeEmergency": { "zh-TW":"緊急", "en":"Emergency", "ja":"緊急", "ko":"긴급" },
   "crisis.privacy": { "zh-TW":"畫面與聲音僅安全傳給家人，不會公開。", "en":"Screen and audio are sent privately to family only.", "ja":"画面と音声は家族にのみ安全に送信されます。", "ko":"화면과 소리는 가족에게만 안전하게 전송됩니다." },
-  // 沒有關閉鈕了（結束由家人 /end 決定），保留字串以防其他地方引用
-  "crisis.close":   { "zh-TW":"關閉", "en":"Close", "ja":"閉じる", "ko":"닫기" },
   "crisis.lockedNote": { "zh-TW":"🔒 為了你的安全，這個畫面需要家人確認後才能關閉（家人在訊息輸入 /end 即可結束）", "en":"🔒 For your safety, only your family can close this screen (they send /end in the chat).", "ja":"🔒 安全のため、この画面は家族が確認するまで閉じられません（家族がメッセージに /end と入力すると終了）。", "ko":"🔒 안전을 위해 이 화면은 가족이 확인해야 닫힙니다 (가족이 메시지에 /end 입력)." },
   "crisis.chipVideo": { "zh-TW":"📹 視訊連結已傳家人", "en":"📹 Video link sent to family", "ja":"📹 ビデオリンクを家族に送信", "ko":"📹 영상 링크를 가족에게 전송" },
   "crisis.chipPhoto": { "zh-TW":"📸 畫面已傳家人", "en":"📸 Photos sent to family", "ja":"📸 画像を家族に送信", "ko":"📸 사진을 가족에게 전송" },
@@ -565,7 +527,6 @@ export const STRINGS = {
   "aac.search":    { "zh-TW":"搜尋圖卡", "en":"Search cards", "ja":"カードを検索", "ko":"카드 검색" },
   "aac.noMatch":   { "zh-TW":"沒有符合的圖卡", "en":"No matching cards", "ja":"一致するカードなし", "ko":"일치하는 카드 없음" },
   "aac.searchHint":{ "zh-TW":"嘗試調整搜尋條件或選擇其他分類", "en":"Try different search terms or another category", "ja":"検索条件を変えるか別のカテゴリを選んでください", "ko":"검색어를 바꾸거나 다른 분류를 선택해 보세요" },
-  "aac.allCats":   { "zh-TW":"全部分類", "en":"All categories", "ja":"すべてのカテゴリ", "ko":"모든 분류" },
   "aac.customAmount":  { "zh-TW":"自訂金額", "en":"Custom amount", "ja":"金額を入力", "ko":"금액 입력" },
   "aac.amountLabel":   { "zh-TW":"金額", "en":"Amount", "ja":"金額", "ko":"금액" },
   "aac.currencyLabel": { "zh-TW":"幣別", "en":"Currency", "ja":"通貨", "ko":"통화" },
@@ -584,8 +545,6 @@ export const STRINGS = {
   "confirm.reject": { "zh-TW":"已連續 {n} 次選錯，再 {m} 次將呼叫家屬", "en":"{n} wrong picks in a row; {m} more will call family", "ja":"連続{n}回の誤選択、あと{m}回で家族に連絡", "ko":"연속 {n}회 오선택, {m}회 더면 가족 호출" },
   "confirm.alertTitle": { "zh-TW":"連續 3 次選錯", "en":"3 wrong picks in a row", "ja":"3回連続で誤選択", "ko":"연속 3회 오선택" },
   "confirm.alertBody":  { "zh-TW":"為了安全，建議聯絡家人。要開啟訊息求助嗎？", "en":"For safety, we suggest contacting family. Send a help message?", "ja":"安全のためご家族へ連絡をお勧めします。ヘルプを送信しますか？", "ko":"안전을 위해 가족에게 연락하시기 바랍니다. 도움을 요청할까요?" },
-  "confirm.alertSend":  { "zh-TW":"傳送求助訊息", "en":"Send help message", "ja":"ヘルプを送信", "ko":"도움 요청 보내기" },
-  "confirm.alertLater": { "zh-TW":"稍後", "en":"Later", "ja":"あとで", "ko":"나중에" },
   // ── 使用模式（三段，對齊 App 的 SeverityMode）──
   "sev.mild":     { "zh-TW":"輕度", "en":"Mild", "ja":"軽度", "ko":"경도" },
   "sev.mildDesc": { "zh-TW":"鍵盤打字為主，完整功能", "en":"Mostly keyboard typing, full features", "ja":"キーボード入力中心、全機能", "ko":"키보드 입력 위주, 전체 기능" },
@@ -596,8 +555,7 @@ export const STRINGS = {
   // ── 情境前綴 / 求助 / 自訂卡分類 ──
   "ctx.saw":      { "zh-TW":"看到：", "en":"Seen: ", "ja":"見えるもの：", "ko":"보이는 것: " },
   "ctx.loc":      { "zh-TW":"地點：", "en":"Place: ", "ja":"場所：", "ko":"장소: " },
-  "sos.default":  { "zh-TW":"我需要協助", "en":"I need help", "ja":"助けが必要です", "ko":"도움이 필요해요" },
-  "sos.prefix":   { "zh-TW":"🆘 VoiceWeaver 求助：", "en":"🆘 VoiceWeaver help request: ", "ja":"🆘 VoiceWeaver 救援要請：", "ko":"🆘 VoiceWeaver 도움 요청: " },
+  "sos.prefix":   { "zh-TW":"🆘 拾語者求助：", "en":"🆘 Speak My Life help request: ", "ja":"🆘 Speak My Life（拾語者）救援要請：", "ko":"🆘 Speak My Life（拾語者）도움 요청: " },
   "sos.noLoc":    { "zh-TW":"\n📍 位置未知", "en":"\n📍 Location unknown", "ja":"\n📍 位置不明", "ko":"\n📍 위치 불명" },
   "cc.myCards":   { "zh-TW":"📷 我的", "en":"📷 Mine", "ja":"📷 わたしの", "ko":"📷 내 카드" },
   "lib.langOther":{ "zh-TW":"🌐 其他", "en":"🌐 Other", "ja":"🌐 その他", "ko":"🌐 기타" },
@@ -606,13 +564,13 @@ export const STRINGS = {
   "loc.position": { "zh-TW":"位置", "en":"Position", "ja":"位置", "ko":"위치" },
   // ── 成績單匯出／Telegram ──
   "report.csvHeader": { "zh-TW":"時間,場景,目標句,分數", "en":"Time,Place,Target,Score", "ja":"日時,場面,目標文,スコア", "ko":"시간,장소,목표 문장,점수" },
-  "report.csvName":   { "zh-TW":"voiceweaver_成績報告.csv", "en":"voiceweaver_report.csv", "ja":"voiceweaver_レポート.csv", "ko":"voiceweaver_리포트.csv" },
-  "report.tgTitle":   { "zh-TW":"📊 VoiceWeaver 成績單 · {label}", "en":"📊 VoiceWeaver report · {label}", "ja":"📊 VoiceWeaver レポート · {label}", "ko":"📊 VoiceWeaver 리포트 · {label}" },
+  "report.csvName":   { "zh-TW":"拾語者_成績報告.csv", "en":"SpeakMyLife_report.csv", "ja":"SpeakMyLife_レポート.csv", "ko":"SpeakMyLife_리포트.csv" },
+  "report.tgTitle":   { "zh-TW":"📊 拾語者成績單 · {label}", "en":"📊 Speak My Life report · {label}", "ja":"📊 Speak My Life（拾語者）レポート · {label}", "ko":"📊 Speak My Life（拾語者）리포트 · {label}" },
   "report.tgSessions":{ "zh-TW":"🎯 練習次數：{v}", "en":"🎯 Sessions: {v}", "ja":"🎯 練習回数：{v}", "ko":"🎯 연습 횟수: {v}" },
   "report.tgAvg":     { "zh-TW":"📈 平均分數：{v} / 100", "en":"📈 Average score: {v} / 100", "ja":"📈 平均点：{v} / 100", "ko":"📈 평균 점수: {v} / 100" },
   "report.tgPositive":{ "zh-TW":"💖 正向情緒字眼：{v} 次", "en":"💖 Positive words: {v}", "ja":"💖 前向きな言葉：{v} 回", "ko":"💖 긍정 표현: {v}회" },
   "report.tgFrom":    { "zh-TW":"（由網頁版傳送）", "en":"(sent from the web version)", "ja":"（ウェブ版から送信）", "ko":"(웹 버전에서 전송)" },
-  "footer": { "zh-TW":"VoiceWeaver 網頁輕量版 · 純 API/瀏覽器、無本地運算", "en":"VoiceWeaver web lite · API/browser only, no on-device compute", "ja":"VoiceWeaver ウェブ軽量版 · API/ブラウザのみ、端末計算なし", "ko":"VoiceWeaver 웹 라이트 · API/브라우저 전용, 기기 연산 없음" },
+  "footer": { "zh-TW":"拾語者 Speak My Life 網頁輕量版 · 純 API/瀏覽器、無本地運算", "en":"Speak My Life web lite · API/browser only, no on-device compute", "ja":"Speak My Life（拾語者）ウェブ軽量版 · API/ブラウザのみ、端末計算なし", "ko":"Speak My Life（拾語者）웹 라이트 · API/브라우저 전용, 기기 연산 없음" },
 };
 
 function pick(entry, lang){
@@ -635,6 +593,9 @@ export function applyI18n(lang){
   const L = lang || "en";
   document.documentElement.setAttribute("data-lang", L);
   document.documentElement.setAttribute("lang", L);
+  // 分頁標題也跟著語言走：<title> 不是一般元素，data-i18n 掃不到它。
+  const docTitle = pick(STRINGS["app.docTitle"], L);
+  if(docTitle) document.title = docTitle;
   document.querySelectorAll("[data-i18n]").forEach(el=>{
     const v = pick(STRINGS[el.getAttribute("data-i18n")], L);
     if(v != null) el.textContent = v;

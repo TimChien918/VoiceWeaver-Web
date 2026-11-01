@@ -1,29 +1,37 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, saveShortcut, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.5.78";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES, testEntry, hasCloudTts } from "./providers.js?v=1.5.78";
-import { initShared, sharedAvailable, sharedUsage, campaignActive, campaignStart, campaignEnd, campaignPersonal, campaignBoth } from "./shared.js?v=1.5.78";
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.6.0";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES, testEntry, hasCloudTts } from "./providers.js?v=1.6.0";
+import { initShared, sharedAvailable, sharedUsage, campaignActive, campaignStart, campaignEnd, campaignPersonal, campaignBoth } from "./shared.js?v=1.6.0";
 import { WEBGPU_MODELS, webgpuSupported, probeWebgpu, webgpuEnabled, setWebgpuEnabled, webgpuModel,
-         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.5.78";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.5.78";
-import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.5.78";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.5.78";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.5.78";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.5.78";
-import { bindTap } from "./interaction.js?v=1.5.78";
-import { orderCards } from "./predict.js?v=1.5.78";
-import { CLINICAL_BANK, practiceItem } from "./clinical.js?v=1.5.78";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.5.78";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.5.78";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.5.78";
-import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.5.78";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.5.78";
-import { setupHeadControl, stopHeadControl } from "./headcontrol.js?v=1.5.78";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.5.78";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.5.78";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.5.78";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.5.78";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled, localHas } from "./localtts.js?v=1.5.78";
-import { applyI18n, t } from "./i18n.js?v=1.5.78";
-import { setupDemo } from "./demo.js?v=1.5.78";
+         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.6.0";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.6.0";
+import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.6.0";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.6.0";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.6.0";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.6.0";
+import { bindTap } from "./interaction.js?v=1.6.0";
+import { orderCards } from "./predict.js?v=1.6.0";
+import { bankFor } from "./clinical.js?v=1.6.0";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.6.0";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.6.0";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.6.0";
+import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.6.0";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.6.0";
+import { setupHeadControl } from "./headcontrol.js?v=1.6.0";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.6.0";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.6.0";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.6.0";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.6.0";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled, localHas } from "./localtts.js?v=1.6.0";
+import "./i18n-sml.js?v=1.6.0";
+import "./i18n-admin.js?v=1.6.0";
+import "./i18n-ui.js?v=1.6.0";
+// 版面互動與動畫（首頁、導覽指示器、載入動畫…）。只讀 DOM、不碰狀態，拿掉也不影響功能。
+import "./ui.js?v=1.6.0";
+import { applyI18n, t } from "./i18n.js?v=1.6.0";
+import { mountAdminCenter, renderAdminCenter, refreshAdmin, touchDirectory } from "./admin.js?v=1.6.0";
+import { setupVoiceConsent, renderVoiceConsent, requestVoiceConsent, hasVoiceConsent, onVoiceConsentChange } from "./consent.js?v=1.6.0";
+import { setupA11yScan, renderA11yScan } from "./a11yscan.js?v=1.6.0";
+import { setupDemo } from "./demo.js?v=1.6.0";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -147,6 +155,24 @@ function fillSettings(){
     $("#lt_voice").innerHTML = `<option value="${escapeHtml(state.settings.localVoiceName+"|"+state.settings.localVoiceLang)}">${escapeHtml(state.settings.localVoiceName)}（${escapeHtml(state.settings.localVoiceLang||"?")}）</option>`;
   }
   if($("#lt_emotion")) $("#lt_emotion").value = state.settings.voiceEmotion || "";
+  renderVoiceConsent();
+  renderTgPrivacy();
+}
+
+/**
+ * 「危機訊息僅傳送給指定家人」的狀態列（設計書第 6 點）。
+ * 通報只會送到這裡填的那一個 Chat ID（extras.js 的 telegramSend 只認 apiKeys.tgchat）；
+ * 沒填就**哪裡都不送**——不會改送給開發者、預設聯絡人或任何第三方。
+ * 把這件事寫在畫面上，家屬才知道「沒設定＝危機時沒有人會收到」，要自己補上。
+ */
+function renderTgPrivacy(){
+  const el = $("#tgPrivacyState");
+  if(!el) return;
+  const { tgtoken, tgchat } = state.apiKeys;
+  const ready = !!(tgtoken && tgchat);
+  const tail = String(tgchat||"").slice(-4);
+  el.textContent = ready ? t("tgp.ready").replace("{id}", "…" + tail) : t("tgp.none");
+  el.style.color = ready ? "var(--ok, #188038)" : "var(--danger)";
 }
 
 // 介面語言（zh-TW/en-US/ja-JP/ko-KR）→ 語音標籤（ZH/EN/JA/KO）
@@ -295,6 +321,8 @@ function renderLibraryRows(box, chars){
     const btn = row.querySelector(".lib_prep");
     if(dl) btn.style.opacity = ".55";
     btn.addEventListener("click", async ()=>{
+      // 「預備」會把聲紋模型下載到運算端——那已經是在使用聲紋了，要先同意
+      if(!await requestVoiceConsent()){ toast(t("vc.needed")); return; }
       btn.disabled = true; const old = btn.textContent; btn.textContent = t("lib.preparing");
       try{
         const r = await localPrepare(c.character||c.name, c.lang||"");
@@ -319,8 +347,8 @@ function renderLibraryRows(box, chars){
 }
 
 function bindSettings(){
-  $("#k_tgtoken").addEventListener("input", e=>{ state.apiKeys.tgtoken=e.target.value.trim(); save(); });
-  $("#k_tgchat").addEventListener("input", e=>{ state.apiKeys.tgchat=e.target.value.trim(); save(); });
+  $("#k_tgtoken").addEventListener("input", e=>{ state.apiKeys.tgtoken=e.target.value.trim(); save(); renderTgPrivacy(); });
+  $("#k_tgchat").addEventListener("input", e=>{ state.apiKeys.tgchat=e.target.value.trim(); save(); renderTgPrivacy(); });
   $("#s_theme").addEventListener("change", e=>{ state.settings.theme=e.target.value; applyTheme(); save(); });
   $("#s_lang").addEventListener("change", e=>{ state.settings.lang=e.target.value;
     applyI18n(state.settings.lang);          // 先翻譯整個介面（含儲存狀態用的語言）
@@ -339,10 +367,13 @@ function bindSettings(){
     renderProviderList("#ttsList", "ttsApis", TTS_PROVIDERS);
     renderClinicalBank(s=>{ const inp=$("#rehabTarget"); if(inp){ inp.value=s; $('.tab[data-tab="rehab"]')?.click(); } });
     renderAac();                              // AAC 分類 chip（「我的」分類名要跟著翻）
-    setShortcutMsg("");                       // 舊語言的存檔／錯誤訊息不該留在畫面上
 
     renderCloudList();                        // 雲端／電腦清單的空狀態（實機掃到它留在舊語言）
     renderVoices();                           // 專屬聲音的空狀態與「缺權重」提示
+    renderVoiceConsent();                     // 聲紋同意狀態列（含日期，是動態文字）
+    renderA11yScan();                         // 無障礙掃描的浮動列與速度標籤
+    renderTgPrivacy();                        // 危機訊息只送指定家人的狀態列
+    renderAdminCenter();                      // 開發者控制中心（只有管理員有這張卡；內容是動態產生）
     buildSettingsIndex();                     // 設定索引的每一列都取自 h3 的譯文
     // 成績單內容是「載入當下」畫出來的（含圖表裡的「尚無資料」與空狀態），
     // 正在看報表時要重跑一次，否則畫面會留著舊語言的字。
@@ -363,7 +394,6 @@ function bindSettings(){
       else toast(t("care.pinBad"));
     });
   }
-  setupShortcuts();
   setupWebgpu();
   setupVoices();
   // 新增一筆預設是「要貼金鑰」的那種。免金鑰的帳號額度有自己那張卡（要授權、
@@ -375,6 +405,11 @@ function bindSettings(){
   // 本地語音引擎
   $("#lt_enabled").addEventListener("change", async e=>{
     state.settings.localTtsEnabled = e.target.checked; save();
+    // 開電腦運算時若已選了角色語音、卻還沒有聲紋同意，就在這裡問一次。
+    // 不同意也不把開關收回去：生圖、文字照樣可以交給電腦，只有聲音不用專屬聲紋。
+    if(e.target.checked && state.settings.localVoiceName && !hasVoiceConsent()){
+      if(!await requestVoiceConsent()) toast(t("vc.needed"));
+    }
     if(e.target.checked) await refreshLocalVoices();
   });
   $("#lt_add").addEventListener("click", addCloudServer);
@@ -416,6 +451,8 @@ function bindSettings(){
     const [name, lang] = (e.target.value||"").split("|");
     if(!name) return;
     state.settings.localVoiceName = name; state.settings.localVoiceLang = lang||""; save();
+    // 選角色＝要開始用某個人的聲紋講話，沒有同意就先停在這裡（選擇照樣記住，同意後即生效）
+    if(!await requestVoiceConsent()){ toast(t("vc.needed")); return; }
     toast(t("toast.voiceSwitching").replace("{name}", name));
     try{ await localSwitch(name, lang); toast(t("toast.voiceSwitched").replace("{name}", name)); }
     catch(x){ toast(t("toast.voiceSwitchFail")+(x.message||x)); }
@@ -499,8 +536,10 @@ function renderTtsLayers(){
   if(!box) return;
   const webOk = "speechSynthesis" in window;
   const rows = [
-    { key:"tts.layerLocal",   ok: localHas("tts"),
-      st: localHas("tts") ? "tts.stOn" : "tts.stOff" },
+    // 專屬聲音要有聲紋同意才會真的用（localtts.js 的 localTtsEnabled 會擋），
+    // 這裡跟著顯示，不然列表寫「使用中」、實際唸出來卻是別的聲音。
+    { key:"tts.layerLocal",   ok: localHas("tts") && hasVoiceConsent(),
+      st: !localHas("tts") ? "tts.stOff" : hasVoiceConsent() ? "tts.stOn" : "vc.layerNeed" },
     { key:"tts.layerCloud",   ok: hasCloudTts(),
       st: hasCloudTts() ? "tts.stOn" : "tts.stNone" },
     { key:"tts.layerBrowser", ok: webOk,
@@ -681,7 +720,7 @@ function settingsCards(){
 function buildSettingsIndex(){
   // 版本號不隨語言變，但這支是每次切語言都會重跑的，順手填掉最省事。
   const ver = $("#appVersion");
-  if(ver) ver.textContent = "VoiceWeaver " + APP_VERSION;
+  if(ver) ver.textContent = t("app.short") + " " + APP_VERSION;
   const idx = $("#settingsIndex");
   if(!idx) return;
   idx.innerHTML = settingsCards().map((c, i) => {
@@ -694,10 +733,10 @@ function buildSettingsIndex(){
     // 卡片上的 data-setkey 原封不動帶到列上。自動演示要用它找到目標卡——
     // 以前是拿標題文字去比中文關鍵字，介面一換成英文/日文/韓文就一個都對不上，
     // 然後靜靜地退回第一張卡：旁白在講發音模型，畫面開的是文字供應商設定。
-    const setkey = c.dataset.setkey ? ` data-setkey="${esc(c.dataset.setkey)}"` : "";
+    const setkey = c.dataset.setkey ? ` data-setkey="${escapeHtml(c.dataset.setkey)}"` : "";
     return `<button type="button" class="setrow${c.classList.contains("complex") ? " complex" : ""}" data-i="${i}"${setkey}>
-        <span class="setrow-ico">${esc(icon)}</span>
-        <span class="setrow-label">${esc(label)}</span>
+        <span class="setrow-ico">${escapeHtml(icon)}</span>
+        <span class="setrow-label">${escapeHtml(label)}</span>
         <span class="setrow-chev" aria-hidden="true">›</span>
       </button>`;
   }).join("");
@@ -713,6 +752,9 @@ function openSettingsCard(i){
   const cards = settingsCards();
   const card = cards[i];
   if(!card) return closeSettingsCard();
+  // 控制中心的資料（活動、名冊、用量）每次打開才讀：只有開發者會進來，
+  // 不必讓每次登入都多發一輪讀取；而且進來看的就是「現在」的狀態。
+  if(card.dataset.setkey === "admin") refreshAdmin().catch(()=>{});
   _openCard = i;
   cards.forEach((c, n) => c.classList.toggle("hidden", n !== i));
   $("#settingsIndex")?.classList.add("hidden");
@@ -775,7 +817,6 @@ function restoreLastTab(){
 // 三個都看過還是不對，最後一顆會變成「重新生成」才真的重新呼叫 LLM。
 let altList = [];       // 目前這批候選
 let altIndex = 0;       // 正在顯示第幾個
-let lastFrag = "";      // 重新生成時要用的原始碎詞
 
 /**
  * 把候選句整批攤開（與 App 的做法一致）。
@@ -844,7 +885,6 @@ async function doCompose(){
   }
   $("#btnCompose").disabled = true; $("#btnCompose").textContent = t("btn.composing");
   try{
-    lastFrag = frag;
     const r = await reconstruct(frag, ctxText);
     altList = r.alternatives || [{ text: r.text, confidence: r.confidence }];
     altIndex = 0;
@@ -1308,13 +1348,15 @@ function renderClinicalBank(onPick){
   const box = $("#rehabBank"); if(!box) return;
   // 題目跟著介面語言走：英文介面就練英文句子（辨識也是英文，見 speech.js 的 rec.lang）。
   // 顯示的字和送去練習的字是同一個字串，不然唸的跟比對的不一樣，分數會永遠是 0。
-  box.innerHTML = CLINICAL_BANK.map((g,gi)=>
-    `<div style="margin-top:8px"><div class="tiny muted">${escapeHtml(t(g.key))}</div>
+  // 四級（名詞→動作→短句→情境句）由易到難，每級在四種語言都至少 8 題（見 clinical.js）。
+  const bank = bankFor();
+  box.innerHTML = bank.map((g,gi)=>
+    `<div style="margin-top:8px"><div class="tiny muted">${escapeHtml(t(g.levelKey))} · ${escapeHtml(t(g.key))}</div>
       <div class="chips" style="margin-top:4px">${g.items.map((s,i)=>
-        `<span class="chip" data-g="${gi}" data-i="${i}">${escapeHtml(practiceItem(s))}</span>`
+        `<span class="chip" data-g="${gi}" data-i="${i}">${escapeHtml(s)}</span>`
       ).join("")}</div></div>`).join("");
   $$("#rehabBank .chip").forEach(c=>bindTap(c, ()=>
-    onPick(practiceItem(CLINICAL_BANK[+c.dataset.g].items[+c.dataset.i])), 250));
+    onPick(bank[+c.dataset.g].items[+c.dataset.i]), 250));
 }
 
 // ── 歷史 ──
@@ -1370,13 +1412,13 @@ function setupActions(){
   // 麥克風
   let mic=null;
   $("#btnMic").addEventListener("click", ()=>{
-    if(mic){ mic.stop(); mic=null; $("#btnMic").textContent=t("btn.mic"); return; }
+    if(mic){ mic.stop(); mic=null; $("#btnMic").textContent=t("btn.mic"); $("#btnMic").classList.remove("recording"); return; }
     if(!sttSupported()){ toast(t("toast.sttUnsupported")); return; }
-    $("#btnMic").textContent=t("mic.recording");
+    $("#btnMic").textContent=t("mic.recording"); $("#btnMic").classList.add("recording");
     mic = listen({
       onResult:(t)=>{ $("#fragments").value = t; },
-      onEnd:()=>{ mic=null; $("#btnMic").textContent=t("btn.mic"); },
-      onError:(e)=>{ toast(t("toast.sttPrefix")+e); mic=null; $("#btnMic").textContent=t("btn.mic"); }
+      onEnd:()=>{ mic=null; $("#btnMic").textContent=t("btn.mic"); $("#btnMic").classList.remove("recording"); },
+      onError:(e)=>{ toast(t("toast.sttPrefix")+e); mic=null; $("#btnMic").textContent=t("btn.mic"); $("#btnMic").classList.remove("recording"); }
     });
   });
   $("#btnLogout").addEventListener("click", logout);
@@ -1413,7 +1455,12 @@ function showApp(user){
   // 設定索引的每一列是從卡片的 h3 抄過來的，**applyI18n 掃不到它**（它是動態產生的）。
   // 雲端設定把語言換掉時不重建，索引就會卡在登入前那個語言——整頁都翻好了，
   // 只有設定的目錄還是英文。
+  // 開發者控制中心：只有管理員帳號會掛上那張卡（換帳號登入時也在這裡拿掉），
+  // 要在 buildSettingsIndex 之前——索引是從現有卡片掃出來的。
+  mountAdminCenter({ toast, toastErr });
   buildSettingsIndex();
+  // Google 帳號登記到名冊（開發者的「帳號管理」要用）。背景跑、一天一次、失敗安靜略過。
+  touchDirectory().catch(()=>{});
   renderCampaignChip(); fillSettings(); renderFavorites();
   // 雲端設定載入後重繪 AAC：帳號裡的字級/自訂圖卡/「📷 我的」分類才會立即出現。
   // renderCombo 也要在這裡重跑一次——setupAac() 在登入完成前就先畫過一次，
@@ -1434,6 +1481,9 @@ function showApp(user){
   renderAac(); renderCombo(); renderCcList(); renderQuickSos(); setupCrisis();
   setStoryToast(toast); setupStory();
   setupHeadControl(msg=>{ const el=$("#headStatus"); if(el) el.textContent = msg; });
+  // 同意／撤回後：朗讀層級清單要跟著變（撤回＝立刻停用專屬聲音）
+  if(setupVoiceConsent()) onVoiceConsentChange(ok=>{ renderTtsLayers(); toast(t(ok ? "vc.granted" : "vc.revoked")); });
+  setupA11yScan();
   // 臨床題庫點一下＝填進目標句欄位並捲到練習區
   renderClinicalBank(s=>{ const inp=$("#rehabTarget"); if(!inp) return;
     inp.value = s; $('.tab[data-tab="rehab"]')?.click();
@@ -1512,44 +1562,6 @@ function authErrorText(e){
   return t("auth.generic") + code;
 }
 
-function setShortcutMsg(text){
-  const el = $("#shortcutMsg");
-  if(el) el.textContent = text || "";
-}
-
-// 跟 escapeHtml 同一件事，但原本這支用 String(s) 而不是 String(s??"")——
-// 錯誤物件沒有 message 時（例如 `throw 0`）畫面上會出現一行「undefined」。
-function esc(s){ return escapeHtml(s); }
-
-// 引號跟著語言走：「」在英文介面裡看起來就是跑錯字型的中文標點
-function quote(s){
-  const cjk = /^(zh|ja|ko)/.test(document.documentElement.getAttribute("data-lang") || "zh-TW");
-  return cjk ? `「${s}」` : `“${s}”`;
-}
-
-function setupShortcuts(){
-  const btn = $("#addShortcut");
-  if(!btn) return;
-  btn.addEventListener("click", async ()=>{
-    const kw = $("#sc_keyword").value;
-    const ph = $("#sc_phrase").value;
-    try{
-      await saveShortcut({ keyword: kw, spokenPhrase: ph });
-      $("#sc_keyword").value = ""; $("#sc_phrase").value = "";
-      setShortcutMsg(t("set.shortcutSaved"));
-
-    }catch(e){ setShortcutMsg(e.message); }
-  });
-  // Enter 直接送出：照顧者要連續打很多句，每次都要移到按鈕很慢
-  ["#sc_keyword", "#sc_phrase"].forEach(sel=>{
-    const el = $(sel);
-    if(el) el.addEventListener("keydown", e=>{
-      if(e.key === "Enter"){ e.preventDefault(); btn.click(); }
-    });
-  });
-
-}
-
 // ── 我的專屬聲音（Drive 上的語音模型）──────────────────────
 //
 // 直接讀 Drive，不透過電腦端的語音服務——電腦不一定開著，而「我有哪些聲音」
@@ -1575,9 +1587,9 @@ function accountLineHtml(){
   const mail = accountEmail();
   if(!mail) return "";
   return `<p class="tiny muted" style="opacity:.75;margin-top:6px">${
-      esc(t("set.voicesAccount").replace("{email}", mail))}
+      escapeHtml(t("set.voicesAccount").replace("{email}", mail))}
     <button id="btnSwitchAccount" class="btn ghost" style="margin-left:6px"
-      >${esc(t("set.voicesSwitchAccount"))}</button></p>`;
+      >${escapeHtml(t("set.voicesSwitchAccount"))}</button></p>`;
 }
 
 /**
@@ -1633,13 +1645,13 @@ async function renderVoices(){
     const needsAuth = e.message === "noDrive" || e.message === "driveExpired";
     const msg = needsAuth
       ? (needsDriveReauth() ? t("set.voicesNeedAuth") : t("set.voicesNoDrive"))
-      : esc(e.message);
+      : escapeHtml(e.message);
     box.innerHTML = `<p class="tiny muted">${msg}</p>` +
       // 這顆按鈕是動態產生的，**不能靠 data-i18n**：applyI18n 只在切語言時
       // 掃一次 DOM，那時這顆還不存在，於是它會永遠停在寫死的中文。
       // 動態內容一律在組 HTML 時就呼叫 t()（renderVoices 本身有掛在切語言的重繪清單裡）。
       (needsAuth ? `<button id="btnDriveReauth" class="btn ghost" style="margin-top:6px"
-                      >${esc(t("set.voicesReauth"))}</button>` : "") +
+                      >${escapeHtml(t("set.voicesReauth"))}</button>` : "") +
       accountLineHtml();
     bindSwitchAccount();
     bindDriveReauth();
@@ -1656,18 +1668,18 @@ async function renderVoices(){
     // 一切都是殘缺的（別的程式建立的檔案在這個權杖眼中根本不存在），
     // 那些描述只會把人帶去修沒有壞的東西。
     if(needsScopeUpgrade()){
-      parts.push(`<p class="tiny muted" style="opacity:.75">${esc(t("set.voicesScopeUpgrade"))}
+      parts.push(`<p class="tiny muted" style="opacity:.75">${escapeHtml(t("set.voicesScopeUpgrade"))}
         <button id="btnDriveReauth" class="btn ghost" style="margin-left:6px"
-          >${esc(t("set.voicesReauth"))}</button></p>`);
+          >${escapeHtml(t("set.voicesReauth"))}</button></p>`);
     }
     try{
-      const drive = await import("./drive.js?v=1.5.78");
+      const drive = await import("./drive.js?v=1.6.0");
       const d = await drive.diagnoseVoiceModels();
       // 同名根要先講。有兩個 VoiceWeaver 時，底下那些「沒有 Models」之類的
       // 描述全部都是在講錯的那一個資料夾，先看到它才不會被帶去修錯的地方。
       if(d.roots > 1){
         parts.push(`<p class="tiny muted" style="opacity:.75">${
-          esc(t("set.diagDupRoot").replace("{n}", String(d.roots)))}</p>`);
+          escapeHtml(t("set.diagDupRoot").replace("{n}", String(d.roots)))}</p>`);
       }
       // 「VoiceWeaver 底下只有 AcousticModels」＝這個資料夾裡只有本 App 自己寫過的東西。
       // 這幾乎一定是登錯 Google 帳號：曲庫在另一個帳號，而 drive.file 看不到它。
@@ -1683,7 +1695,7 @@ async function renderVoices(){
       : d.catalog             ? t("set.diagCatalogOnly").replace("{n}", String(d.catalog))
       : d.langs.length        ? t("set.diagEmptyLang").replace("{langs}", d.langs.join("、"))
       :                         t("set.diagEmptyModels").replace("{kids}", d.modelKids.join("、") || "—");
-      parts.push(`<p class="tiny muted" style="opacity:.75">${esc(line)}</p>`);
+      parts.push(`<p class="tiny muted" style="opacity:.75">${escapeHtml(line)}</p>`);
     }catch{ /* 診斷失敗就算了，第一句已經說明狀況 */ }
     // 帳號放最後：上面幾句解釋了「這個帳號裡沒有」，這句回答「那這是哪個帳號」，
     // 而換帳號正是接下來最可能要做的事。
@@ -1696,9 +1708,9 @@ async function renderVoices(){
   box.innerHTML = list.map(v=>`
     <div class="row" style="align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--sep,#eee)">
       <div style="flex:1;min-width:0">
-        <div style="font-size:15px">${esc(v.character)} <span class="tiny muted">${esc(v.lang)}</span></div>
+        <div style="font-size:15px">${escapeHtml(v.character)} <span class="tiny muted">${escapeHtml(v.lang)}</span></div>
         <div class="tiny" style="color:var(--accent,#007AFF)">
-          ${v.emotions.map(e=>esc(zhDisp(e))).join("・") || "—"}
+          ${v.emotions.map(e=>escapeHtml(zhDisp(e))).join("・") || "—"}
         </div>
         ${v.ready ? "" : `<div class="tiny muted">${t("set.voicesNeedsFix")}</div>`}
         ${v.fromCatalog ? `<div class="tiny muted">${t("set.voicesFromCatalog")}</div>` : ""}

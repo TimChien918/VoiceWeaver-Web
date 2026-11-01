@@ -39,6 +39,12 @@ def main() -> int:
             lambda m: m.group(1) + stamp(m.group(2), ver) + m.group(3),
             src,
         )
+        # 沒有 from 的副作用 import："import "./i18n-sml.js";"（只為了執行、不取任何名字）
+        new = re.sub(
+            r'(\bimport\s+")(\.{1,2}/[^"?]+\.js)(?:\?v=[^"]*)?(")',
+            lambda m: m.group(1) + stamp(m.group(2), ver) + m.group(3),
+            new,
+        )
         # 動態 import("./x.js") 也一起處理
         new = re.sub(
             r'(\bimport\(\s*")(\.{1,2}/[^"?]+\.js)(?:\?v=[^"]*)?(")',

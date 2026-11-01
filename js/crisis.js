@@ -15,13 +15,13 @@
 // 這是刻意的——會走到這個畫面的人，正是最不該讓他一個人把求救關掉的時候。
 //
 // 呼吸引導不是裝飾：等待家人回應的那幾分鐘最難熬，給一個節奏可以跟著做。
-import { t } from "./i18n.js?v=1.5.78";
-import { state, save } from "./store.js?v=1.5.78";
+import { t } from "./i18n.js?v=1.6.0";
+import { state, save } from "./store.js?v=1.6.0";
 import {
   telegramSend, locationLine,
   telegramSendPhoto, telegramSendVoice, telegramPollReplies
-} from "./extras.js?v=1.5.78";
-import { currentHotlines, hotlinesFor, detectCountry } from "./hotlines.js?v=1.5.78";
+} from "./extras.js?v=1.6.0";
+import { currentHotlines, hotlinesFor, detectCountry } from "./hotlines.js?v=1.6.0";
 
 const $ = s => document.querySelector(s);
 
@@ -43,7 +43,8 @@ function roomUrl() {
     "config.prejoinPageEnabled=false&" +
     "config.prejoinConfig.enabled=false&" +
     "config.requireDisplayName=false&" +
-    'userInfo.displayName=%22VoiceWeaver%22';
+    // 家人進視訊時看到的名字＝產品名（依介面語言）。房間名前綴 vw- 是識別字，不跟著改名。
+    "userInfo.displayName=" + encodeURIComponent(JSON.stringify(t("app.short")));
 }
 
 const QUICK = ["crisis.q1", "crisis.q2", "crisis.q3", "crisis.q4", "crisis.q5"];
@@ -74,10 +75,18 @@ export function openCrisis() {
   }));
 
   $("#crisisLog").innerHTML = "";
+  startBreathing();
+
+  // 危機訊息只送給設定裡指定的家人（apiKeys.tgchat），沒有其他收件人（設計書第 6 點）。
+  // 沒設定時明講「沒有傳出去」，不要顯示成一般的「傳送失敗」，更不能顯示「已通知家人」——
+  // 前者要照護者去補設定，後者會讓人以為只是網路不好、等一下就會到。
+  if (!state.apiKeys?.tgtoken || !state.apiKeys?.tgchat) {
+    $("#crisisStatus").textContent = t("crisis.noFamily");
+    pushMsg(t("crisis.noFamily"), "sys");
+    return;     // 沒有家人可通知：不拍照、不輪詢（拍了也沒有人收），專線與呼吸引導照常可用
+  }
   pushMsg(t("crisis.sysNotified"), "sys");
   pushMsg(t("crisis.sysVideoHint"), "sys");
-
-  startBreathing();
 
   // 通知家人（失敗不擋畫面——專線按鈕還是要能按）。
   // 先送出、位置隨後補第二則：等定位會讓通報整整晚 6 秒才出去。
@@ -260,8 +269,12 @@ function startBreathing() {
   const orb = $("#crisisOrb"), lbl = $("#crisisBreath");
   if (!orb) return;
   let inhale = true;
+  // 先回到「吐完」的大小再開始吸：上次關閉時若停在吸飽，第一口氣就看不到圓變大。
+  orb.style.transition = "none"; orb.style.transform = "scale(0.72)";
+  void orb.offsetWidth; orb.style.transition = "";
   const tick = () => {
     orb.style.transform = inhale ? "scale(1)" : "scale(0.72)";
+    orb.dataset.phase = inhale ? "in" : "out";   // 減少動態時改用亮暗表示吸／吐（見 style.css）
     if (lbl) lbl.textContent = t(inhale ? "crisis.inhale" : "crisis.exhale");
     inhale = !inhale;
   };

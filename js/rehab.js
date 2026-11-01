@@ -1,8 +1,8 @@
 // 語音復健：聽整句／點字卡發音／跟讀錄音 → AI 評分（語意/流暢，非字元差異）→ 寫日誌。
-import { speak, listen, sttSupported } from "./speech.js?v=1.5.78";
-import { scoreRehab, suggestRehab, hasAnyLlmKey } from "./llm.js?v=1.5.78";
-import { addRehabLog, listRehabLogs } from "./store.js?v=1.5.78";
-import { t as tr } from "./i18n.js?v=1.5.78";
+import { speak, listen, sttSupported } from "./speech.js?v=1.6.0";
+import { scoreRehab, suggestRehab, hasAnyLlmKey } from "./llm.js?v=1.6.0";
+import { addRehabLog, listRehabLogs } from "./store.js?v=1.6.0";
+import { t as tr } from "./i18n.js?v=1.6.0";
 
 const esc = (x)=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
@@ -67,13 +67,25 @@ export function setupRehab(){
     if(mic){ mic.stop(); return; }
     if(!sttSupported()){ toast(tr("toast.sttUnsupported")); return; }
     $("#rehabRecord").textContent = tr("mic.recording");
+    $("#rehabRecord").classList.add("recording");   // 樣式：脈動光圈＋聲波，看得出「還在收音」
+    // 作答時間：按下「開始跟讀」→ 第一次聽到字（開口前停頓＝反應時間）→ 最後一次聽到字。
+    // 只記時間戳，不碰聲音本身。瀏覽器語音辨識不會把錄音交給這支程式，
+    // 所以這裡從頭到尾沒有任何錄音 Blob 可以存——評分只拿辨識出來的文字跟這兩個數字。
+    const t0 = performance.now();
+    let tFirst = null, tLast = null;
     mic = listen({
-      onResult:()=>{},
-      onEnd: async (text)=>{
-        mic = null; $("#rehabRecord").textContent = tr("rehab.record");
-        await doScore(text);
+      onResult:(txt)=>{
+        if(!txt) return;
+        const now = performance.now();
+        if(tFirst === null) tFirst = now;
+        tLast = now;
       },
-      onError:(e)=>{ toast(tr("toast.sttPrefix")+e); mic=null; $("#rehabRecord").textContent=tr("rehab.record"); }
+      onEnd: async (text)=>{
+        mic = null; $("#rehabRecord").textContent = tr("rehab.record"); $("#rehabRecord").classList.remove("recording");
+        const timing = tFirst === null ? {} : { latencyMs: tFirst - t0, durationMs: Math.max(0, tLast - tFirst) };
+        await doScore(text, timing);
+      },
+      onError:(e)=>{ toast(tr("toast.sttPrefix")+e); mic=null; $("#rehabRecord").textContent=tr("rehab.record"); $("#rehabRecord").classList.remove("recording"); }
     });
   });
 }
@@ -101,10 +113,25 @@ function updateQueueBar(){
   }
 }
 
-async function doScore(recognized){
+// 三個細項的小長條：流暢度、語調、語意。沒有分數（備援評分、模型沒給）就顯示「—」，
+// 不畫一條假的 0——0 分跟「沒評到」對患者是完全不同的訊息。
+function subBars(sub){
+  const rows = [["rehab.subSemantic", sub.semantic], ["rehab.subFluency", sub.fluency], ["rehab.subProsody", sub.prosody]];
+  return `<div class="subscores">${rows.map(([k,v])=>{
+    const ok = Number.isFinite(v);
+    const cls = !ok ? "" : v>=80 ? "good" : v>=50 ? "mid" : "low";
+    return `<div class="subscore"><span class="tiny">${esc(tr(k))}</span>
+      <span class="subbar"><i class="${cls}" style="width:${ok?v:0}%"></i></span>
+      <b class="tiny">${ok?v:"—"}</b></div>`;
+  }).join("")}</div>`;
+}
+
+async function doScore(recognized, timing = {}){
   const area = $("#rehabScore");
   area.innerHTML = `<p class="tiny muted">${tr("rehab.scoring")}</p>`;
-  const { score, feedback, wrongChars } = await scoreRehab(target, recognized);
+  const r = await scoreRehab(target, recognized, timing);
+  const { score, feedback, wrongChars } = r;
+  const extraWords = r.extraWords || [];
   const cls = score>=80 ? "good" : score>=50 ? "mid" : "low";
   const emoji = score>=80 ? "🎉" : score>=50 ? "👍" : "💪";
   const word = score>=80 ? tr("rehab.great") : score>=50 ? tr("rehab.keepGoing") : tr("rehab.tryAgain");
@@ -123,9 +150,13 @@ async function doScore(recognized){
       <div class="score-head">${emoji} ${word}</div>
       ${feedback?`<div class="score-fb">💬 ${esc(feedback)}</div>`:""}
       ${wrongChars&&wrongChars.length?`<div class="tiny" style="color:var(--danger)">${tr("rehab.focus")}${esc(wrongChars.join("、"))}</div>`:""}
+      ${extraWords.length?`<div class="tiny" style="color:var(--danger)">${tr("rehab.extraWords")}${esc(extraWords.join("、"))}</div>`:""}
       ${recognized?`<div class="tiny muted">${tr("rehab.recognizedLabel")}${esc(recognized)}</div>`:""}
-    </div></div>`;
-  await addRehabLog({ target, recognized, score, feedback });
+      ${Number.isFinite(timing.latencyMs)?`<div class="tiny muted">${esc(tr("rehab.latency").replace("{s}", (timing.latencyMs/1000).toFixed(1)))}</div>`:""}
+    </div></div>${subBars(r)}`;
+  // 寫進日誌的只有文字與數字（目標句、辨識文字、分數、反應時間）——沒有聲音。
+  await addRehabLog({ target, recognized, score, feedback,
+    latencyMs: timing.latencyMs, fluency: r.fluency, prosody: r.prosody, semantic: r.semantic });
   await renderRehabLogs();
 }
 

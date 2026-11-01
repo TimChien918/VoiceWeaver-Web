@@ -20,10 +20,10 @@
 //
 // 上面 2~4 都寫成純函式（不碰 DOM、不碰相機），下面 tools 的測試直接餵合成
 // 座標驗證——鏡頭相關的部分沒辦法在 CI 裡驗，這幾段至少要能算得出來。
-import { t } from "./i18n.js?v=1.5.78";
-import { state, save } from "./store.js?v=1.5.78";
+import { t } from "./i18n.js?v=1.6.0";
+import { state, save } from "./store.js?v=1.6.0";
 // 座標數學獨立一支：它不該依賴 i18n 或 store，抽開之後也才測得到。
-import { noseOffset, driftNeutral, toCursor, clamp01 } from "./headmath.js?v=1.5.78";
+import { noseOffset, driftNeutral, toCursor, clamp01 } from "./headmath.js?v=1.6.0";
 
 const TASKS_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
 const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/" +
@@ -33,7 +33,13 @@ const LEGACY_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.163355
 
 const NOSE = 1, L_OUT = 33, R_OUT = 263;
 const BASE_SENS_X = 4.5, BASE_SENS_Y = 6.0;
-const DWELL_MS = 1000;
+// 停留多久算點擊。預設 1 秒；可在設定的「無障礙操作」調（與滑鼠停留點選共用同一個值）：
+// 頭部控制還不穩的人需要更長，熟練之後縮短才不會覺得拖。
+let DWELL_MS = 1000;
+export function setDwellMs(ms){
+  const v = Number(ms);
+  if (Number.isFinite(v)) DWELL_MS = Math.max(400, Math.min(4000, v));
+}
 
 
 // ── One-Euro 濾波 ──────────────────────────────────
@@ -215,6 +221,7 @@ export async function startHeadControl(statusFn){
     running = true;
     ensureCursor().classList.add("on");
     setSensitivity(state.settings.noseSensitivity || 1);
+    if (state.settings.dwellMs) setDwellMs(state.settings.dwellMs);
     onStatus(t("head.tracking"));
 
     let lastTs = -1;
