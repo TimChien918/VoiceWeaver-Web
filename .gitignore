@@ -6,8 +6,11 @@ node_modules/
 
 # 管理工具與憑證：這些碰得到服務帳戶私鑰（繞過所有安全規則、
 # 等於整個專案與全部使用者資料的最高權限），不進版控、不上 GitHub。
-tools/vw_admin.py
+tools/sml_admin.py
 tools/publish-shared-keys.mjs
 *serviceaccount*.json
 *firebase-adminsdk*.json
+.speakmylife_admin.json
+# 更名（VoiceWeaver → Speak-My-Life）前的舊檔名：開發者電腦上可能還留著，照樣不能進版控。
+tools/vw_admin.py
 .voiceweaver_admin.json

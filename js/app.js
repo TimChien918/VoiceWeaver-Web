@@ -1,37 +1,38 @@
-import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.6.0";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES, testEntry, hasCloudTts } from "./providers.js?v=1.6.0";
-import { initShared, sharedAvailable, sharedUsage, campaignActive, campaignStart, campaignEnd, campaignPersonal, campaignBoth } from "./shared.js?v=1.6.0";
+import "./migrate.js?v=1.6.1";   // 必須第一個：VoiceWeaver → Speak My Life 的本機資料搬遷，要在任何模組讀 localStorage 之前跑
+import { state, newId, initAuth, loginGoogle, loginAnon, logout, save, addHistory, listHistory, toggleFavorite, ensurePairCode, pushNgrokBridge, listVoices, reauthorizeDrive, needsDriveReauth, isBenignAuthError, accountEmail, switchAccount, needsScopeUpgrade } from "./store.js?v=1.6.1";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS, TTS_VOICES, testEntry, hasCloudTts } from "./providers.js?v=1.6.1";
+import { initShared, sharedAvailable, sharedUsage, campaignActive, campaignStart, campaignEnd, campaignPersonal, campaignBoth } from "./shared.js?v=1.6.1";
 import { WEBGPU_MODELS, webgpuSupported, probeWebgpu, webgpuEnabled, setWebgpuEnabled, webgpuModel,
-         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.6.0";
-import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.6.0";
-import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.6.0";
-import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.6.0";
-import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.6.0";
-import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.6.0";
-import { bindTap } from "./interaction.js?v=1.6.0";
-import { orderCards } from "./predict.js?v=1.6.0";
-import { bankFor } from "./clinical.js?v=1.6.0";
-import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.6.0";
-import { openCrisis, setupCrisis } from "./crisis.js?v=1.6.0";
-import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.6.0";
-import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.6.0";
-import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.6.0";
-import { setupHeadControl } from "./headcontrol.js?v=1.6.0";
-import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.6.0";
-import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.6.0";
-import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.6.0";
-import { setupReport, loadReport, setReportToast } from "./report.js?v=1.6.0";
-import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled, localHas } from "./localtts.js?v=1.6.0";
-import "./i18n-sml.js?v=1.6.0";
-import "./i18n-admin.js?v=1.6.0";
-import "./i18n-ui.js?v=1.6.0";
+         setWebgpuModel, webgpuReady, webgpuLoading, loadWebgpu, onWebgpuProgress } from "./webgpu.js?v=1.6.1";
+import { reconstruct, composeAac, hasAnyLlmKey, classifyCrisisIntent } from "./llm.js?v=1.6.1";
+import { speak, speakNow, speakIn, listen, sttSupported, setSpeechToast } from "./speech.js?v=1.6.1";
+import { AAC_CATS, CAT_EMOJI, cardsOfCat, allCards, searchCards, CURRENCIES } from "./aac.js?v=1.6.1";
+import { feed as rankFeed, rankWithin, recordUse, activeItemCount } from "./aacrank.js?v=1.6.1";
+import { setupKiosk, enterKiosk } from "./kiosk.js?v=1.6.1";
+import { bindTap } from "./interaction.js?v=1.6.1";
+import { orderCards } from "./predict.js?v=1.6.1";
+import { bankFor } from "./clinical.js?v=1.6.1";
+import { markFirstSpeak, recordCandidateChoice, recordUndo, recordInputSource } from "./behavior.js?v=1.6.1";
+import { openCrisis, setupCrisis } from "./crisis.js?v=1.6.1";
+import { classifyRisk, containsCrisisSignal } from "./safety.js?v=1.6.1";
+import { preloadZhConv, toTraditionalSync } from "./zhconv.js?v=1.6.1";
+import { setupStory, renderStory, setStoryToast } from "./story.js?v=1.6.1";
+import { setupHeadControl } from "./headcontrol.js?v=1.6.1";
+import { startAudioCapture, stopAndInterpret, cancelAudioCapture, isRecording, hasNativeAudio } from "./audiodirect.js?v=1.6.1";
+import { generateImage, intentPrompt, detectLocation, recognizePhoto, telegramNotify } from "./extras.js?v=1.6.1";
+import { setupRehab, renderRehabLogs, setRehabToast } from "./rehab.js?v=1.6.1";
+import { setupReport, loadReport, setReportToast } from "./report.js?v=1.6.1";
+import { detectLocalTts, localVoices, localSwitch, localCatalog, localPrepare, localComputeEnabled, localHas } from "./localtts.js?v=1.6.1";
+import "./i18n-sml.js?v=1.6.1";
+import "./i18n-admin.js?v=1.6.1";
+import "./i18n-ui.js?v=1.6.1";
 // 版面互動與動畫（首頁、導覽指示器、載入動畫…）。只讀 DOM、不碰狀態，拿掉也不影響功能。
-import "./ui.js?v=1.6.0";
-import { applyI18n, t } from "./i18n.js?v=1.6.0";
-import { mountAdminCenter, renderAdminCenter, refreshAdmin, touchDirectory } from "./admin.js?v=1.6.0";
-import { setupVoiceConsent, renderVoiceConsent, requestVoiceConsent, hasVoiceConsent, onVoiceConsentChange } from "./consent.js?v=1.6.0";
-import { setupA11yScan, renderA11yScan } from "./a11yscan.js?v=1.6.0";
-import { setupDemo } from "./demo.js?v=1.6.0";
+import "./ui.js?v=1.6.1";
+import { applyI18n, t } from "./i18n.js?v=1.6.1";
+import { mountAdminCenter, renderAdminCenter, refreshAdmin, touchDirectory } from "./admin.js?v=1.6.1";
+import { setupVoiceConsent, renderVoiceConsent, requestVoiceConsent, hasVoiceConsent, onVoiceConsentChange } from "./consent.js?v=1.6.1";
+import { setupA11yScan, renderA11yScan } from "./a11yscan.js?v=1.6.1";
+import { setupDemo } from "./demo.js?v=1.6.1";
 
 const $ = (s)=>document.querySelector(s);
 const $$ = (s)=>document.querySelectorAll(s);
@@ -788,7 +789,7 @@ function setupTabs(){
     t.classList.add("active");
     $$(".panel").forEach(p=>p.classList.add("hidden"));
     $("#tab-"+t.dataset.tab).classList.remove("hidden");
-    try{ localStorage.setItem("vw_tab", t.dataset.tab); }catch{}   // 記住分頁，下次開啟直接回來
+    try{ localStorage.setItem("sml_tab", t.dataset.tab); }catch{}   // 記住分頁，下次開啟直接回來
     if(t.dataset.tab==="history") renderHistory();
     if(t.dataset.tab==="rehab") renderRehabLogs();
     if(t.dataset.tab==="report") loadReport();
@@ -807,7 +808,7 @@ function setupTabs(){
 // 回到上次使用的分頁（長輩不用每次找「AAC 圖卡」在哪）
 function restoreLastTab(){
   let k = "";
-  try{ k = localStorage.getItem("vw_tab") || ""; }catch{}
+  try{ k = localStorage.getItem("sml_tab") || ""; }catch{}
   const btn = k && document.querySelector(`.tab[data-tab="${k}"]`);
   if(btn && !btn.classList.contains("active")) btn.click();
 }
@@ -1673,23 +1674,23 @@ async function renderVoices(){
           >${escapeHtml(t("set.voicesReauth"))}</button></p>`);
     }
     try{
-      const drive = await import("./drive.js?v=1.6.0");
+      const drive = await import("./drive.js?v=1.6.1");
       const d = await drive.diagnoseVoiceModels();
-      // 同名根要先講。有兩個 VoiceWeaver 時，底下那些「沒有 Models」之類的
+      // 同名根要先講。有兩個 Speak-My-Life 時，底下那些「沒有 Models」之類的
       // 描述全部都是在講錯的那一個資料夾，先看到它才不會被帶去修錯的地方。
       if(d.roots > 1){
         parts.push(`<p class="tiny muted" style="opacity:.75">${
-          escapeHtml(t("set.diagDupRoot").replace("{n}", String(d.roots)))}</p>`);
+          escapeHtml(t("set.diagDupRoot").replace("{n}", String(d.roots)).replaceAll("{name}", d.rootName))}</p>`);
       }
-      // 「VoiceWeaver 底下只有 AcousticModels」＝這個資料夾裡只有本 App 自己寫過的東西。
+      // 「Speak-My-Life 底下只有 AcousticModels」＝這個資料夾裡只有本 App 自己寫過的東西。
       // 這幾乎一定是登錯 Google 帳號：曲庫在另一個帳號，而 drive.file 看不到它。
       // 泛用的「沒有 Models 資料夾」會把人帶去檢查資料夾結構，方向就錯了。
       const onlyOurs = d.step === "noModels" && d.rootKids.length > 0 &&
         d.rootKids.every(n => n.toUpperCase() === "ACOUSTICMODELS");
       const line =
         d.step === "noRoot"   ? t("set.diagNoRoot").replace("{name}", d.root)
-      : onlyOurs              ? t("set.diagWrongAccount")
-      : d.step === "noModels" ? t("set.diagNoModels").replace("{name}", "VoiceWeaver").replace("{kids}", d.rootKids.join("、") || "—")
+      : onlyOurs              ? t("set.diagWrongAccount").replaceAll("{name}", d.rootName)
+      : d.step === "noModels" ? t("set.diagNoModels").replace("{name}", d.rootName).replace("{kids}", d.rootKids.join("、") || "—")
       : d.step === "legacy"   ? t("set.diagLegacy").replace("{langs}", d.legacy.join("、"))
       : d.chars.length        ? t("set.diagHasChars").replace("{chars}", d.chars.slice(0,8).join("、"))
       : d.catalog             ? t("set.diagCatalogOnly").replace("{n}", String(d.catalog))

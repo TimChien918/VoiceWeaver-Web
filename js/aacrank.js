@@ -19,7 +19,7 @@
 // 統計存 localStorage（對應 App 的 SharedPreferences）：量小、跨重啟持續學習、
 // 壞掉就重新開始學，不影響主功能。
 
-const LS_KEY = "vw_aac_ranker";
+const LS_KEY = "sml_aac_ranker";
 const HALF_LIFE_MS = 7 * 24 * 3600_000;   // 半衰期 7 天
 const HOUR_BUCKETS = 6;                    // 一天切 6 桶（每 4 小時）
 export const FEED_SIZE = 8;                // 「常用」推薦列最多幾張

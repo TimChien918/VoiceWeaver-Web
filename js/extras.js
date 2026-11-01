@@ -1,7 +1,7 @@
 // 進階功能（全部純 API / 瀏覽器）：生圖、定位、相機雲端辨識、Telegram 通報。
-import { state } from "./store.js?v=1.6.0";
-import { runImage, geminiEntries, geminiCall } from "./providers.js?v=1.6.0";
-import { t } from "./i18n.js?v=1.6.0";
+import { state } from "./store.js?v=1.6.1";
+import { runImage, geminiEntries, geminiCall } from "./providers.js?v=1.6.1";
+import { t } from "./i18n.js?v=1.6.1";
 
 // ── AI 生圖：走多供應商輪詢（pollinations 免金鑰保底）──
 export async function generateImage(prompt){ return runImage(prompt); }
@@ -61,7 +61,7 @@ export async function recognizePhoto(base64Jpeg){
 // 而且演示是要錄影給別人看的——真的把家人的聊天室洗版是不可接受的。
 // 擋在這一層（而不是各個呼叫點）才擋得乾淨：SOS、危機介入、成績單推播都經過這裡。
 function demoBlocked(what){
-  if(!window.__VW_DEMO__) return false;
+  if(!window.__SML_DEMO__) return false;
   console.info(`[demo] ${what} 已攔截（自動演示不外送）`);
   return true;
 }

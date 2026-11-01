@@ -1,4 +1,5 @@
 // Firebase 設定（web config 為公開可見，安全靠 Auth + Firestore 規則）。
+// 專案 ID 仍是 voiceweaver-af4da：Firebase 專案 ID 建立後永遠不能改名，更名為 Speak-My-Life 後照舊沿用。
 window.__FIREBASE_CONFIG__ = {
   apiKey: "AIzaSyDawUNHovFwAjjxy3jfs55aSOjEnrtk4qQ",
   authDomain: "voiceweaver-af4da.firebaseapp.com",

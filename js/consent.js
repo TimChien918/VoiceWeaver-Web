@@ -11,8 +11,8 @@
 //   沒有這個欄位                                     → 從沒同意過
 // 撤回不刪除這筆紀錄而是改成 granted:false：Firestore 用 merge 寫入，刪欄位要另外處理，
 // 而且「什麼時候撤回的」本身就是該留下的紀錄。
-import { state, save } from "./store.js?v=1.6.0";
-import { t } from "./i18n.js?v=1.6.0";
+import { state, save } from "./store.js?v=1.6.1";
+import { t } from "./i18n.js?v=1.6.1";
 
 const $ = (s) => document.querySelector(s);
 

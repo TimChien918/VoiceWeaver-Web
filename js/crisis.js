@@ -1,4 +1,4 @@
-// 危機介入視窗——與 App 的 CrisisConversationWindow / VoiceWeaverCore 同一套流程。
+// 危機介入視窗——與 App 的 CrisisConversationWindow / SpeakMyLifeCore 同一套流程。
 //
 // 觸發時機：使用者按下求助，或偵測到自傷語句被鎖定時。畫面設計刻意「不像軟體」：
 // 一顆會呼吸的圓、柔和的字、少量大按鈕。人在崩潰邊緣時，介面越複雜越幫倒忙。
@@ -15,13 +15,13 @@
 // 這是刻意的——會走到這個畫面的人，正是最不該讓他一個人把求救關掉的時候。
 //
 // 呼吸引導不是裝飾：等待家人回應的那幾分鐘最難熬，給一個節奏可以跟著做。
-import { t } from "./i18n.js?v=1.6.0";
-import { state, save } from "./store.js?v=1.6.0";
+import { t } from "./i18n.js?v=1.6.1";
+import { state, save } from "./store.js?v=1.6.1";
 import {
   telegramSend, locationLine,
   telegramSendPhoto, telegramSendVoice, telegramPollReplies
-} from "./extras.js?v=1.6.0";
-import { currentHotlines, hotlinesFor, detectCountry } from "./hotlines.js?v=1.6.0";
+} from "./extras.js?v=1.6.1";
+import { currentHotlines, hotlinesFor, detectCountry } from "./hotlines.js?v=1.6.1";
 
 const $ = s => document.querySelector(s);
 
@@ -36,14 +36,15 @@ function roomUrl() {
   // 產生之後**一定要存檔**：原本只寫進 state 沒有 save()，重新整理就重新產生一組，
   // 家人手上那個連結會連進一個沒有人的空房間——而他們正在等著看到人。
   if (!state.settings.crisisRoom) {
-    state.settings.crisisRoom = "vw-" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+    state.settings.crisisRoom = "sml-" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
     save();
   }
   return `${base}/${state.settings.crisisRoom}#` +
     "config.prejoinPageEnabled=false&" +
     "config.prejoinConfig.enabled=false&" +
     "config.requireDisplayName=false&" +
-    // 家人進視訊時看到的名字＝產品名（依介面語言）。房間名前綴 vw- 是識別字，不跟著改名。
+    // 家人進視訊時看到的名字＝產品名（依介面語言）。房間名前綴 sml- 只是識別字；
+    // 舊版產生的 vw- 房名已存進設定、家人手上的連結也是它，所以照用、不重產。
     "userInfo.displayName=" + encodeURIComponent(JSON.stringify(t("app.short")));
 }
 

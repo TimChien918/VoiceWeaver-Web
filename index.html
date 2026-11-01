@@ -10,13 +10,13 @@
 <!-- 這一版是哪一版。由 tools/stamp-version.py 跟著 ?v= 一起更新。
      沒有這個東西的話，「網頁到底有沒有更新」誰都答不出來——只能猜快取、猜部署，
      而每猜一次就是使用者再白試一次。畫面右下角會顯示它，錯誤訊息也會帶著它。 -->
-<meta name="app-version" content="1.6.0" />
+<meta name="app-version" content="1.6.1" />
 <!-- 品牌字體 Noto Sans TC（依字元切片下載，只抓畫面用到的字）。連不到時 style.css 的字體堆疊
      會退回各平台系統中文字，日文、韓文介面另有各自的後備。 -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;800&amp;display=swap" />
-<link rel="stylesheet" href="style.css?v=1.6.0" />
+<link rel="stylesheet" href="style.css?v=1.6.1" />
 </head>
 <body>
   <!-- 登入閘＝品牌開場。深綠底上漂著幾個「碎詞」，一條暖黃絲線穿過畫面：
@@ -483,7 +483,7 @@
         </div>
         <div class="card" data-setkey="voice">
           <h3 data-i18n="set.voicesTitle">🗣 我的專屬聲音</h3>
-          <p class="tiny muted" data-i18n="set.voicesDesc">存在你自己 Google Drive 的 VoiceWeaver/Models/ 裡，手機、電腦、網頁看到的是同一份。這裡只列出有哪些聲音，合成仍然在電腦或 Colab 上跑。</p>
+          <p class="tiny muted" data-i18n="set.voicesDesc">存在你自己 Google Drive 的 Speak-My-Life/Models/ 裡，手機、電腦、網頁看到的是同一份。這裡只列出有哪些聲音，合成仍然在電腦或 Colab 上跑。</p>
           <div id="voiceList"></div>
           <!-- 聲紋同意（設計書第 6 點）：沒有同意，專屬聲音一律不會被拿來朗讀 -->
           <div class="vc-box">
@@ -613,7 +613,7 @@
           <label class="lbl" data-i18n="ng.domain">固定網域（選填，建議）</label>
           <input id="ng_domain" type="text" data-i18n-ph="ph.ngDomain" placeholder="例 speakmylife.ngrok-free.app（填了網址就永遠不變）" autocomplete="off" />
           <button id="ng_use" class="btn ghost" style="margin-top:6px" data-i18n="ng.useUrl">☁️ 用此 Colab 網址連線</button>
-          <label class="lbl" data-i18n="ng.pair">Colab 配對碼（貼到 Colab 的 VW_PAIR_CODE）</label>
+          <label class="lbl" data-i18n="ng.pair">Colab 配對碼（貼到 Colab 的 SML_PAIR_CODE）</label>
           <div class="row" style="gap:6px">
             <input id="ng_pair" type="text" readonly style="flex:1;font-family:monospace" />
             <button id="ng_copy" class="btn ghost" data-i18n="ng.copy">📋 複製</button>
@@ -702,7 +702,7 @@
     <div class="modal-card vc-card">
       <h3 data-i18n="vc.title">🗣 使用專屬聲音（聲紋）之前</h3>
       <p class="tiny" data-i18n="vc.what">用途：用 GPT-SoVITS 模仿一個真實的人的聲音（患者病發前的聲音，或家人的聲音），把患者確認過的句子用這個聲音唸出來。聽的人會以為是本人在說話，所以必須先取得聲音主人的同意。</p>
-      <p class="tiny" data-i18n="vc.where">存放：聲音模型存在你自己的 Google Drive（VoiceWeaver/Models/），合成在你自己的電腦或 Colab 上進行。這個網頁不會上傳、也不會保存任何錄音；設定裡只記錄「是否同意、何時同意」。</p>
+      <p class="tiny" data-i18n="vc.where">存放：聲音模型存在你自己的 Google Drive（Speak-My-Life/Models/），合成在你自己的電腦或 Colab 上進行。這個網頁不會上傳、也不會保存任何錄音；設定裡只記錄「是否同意、何時同意」。</p>
       <p class="tiny" data-i18n="vc.revoke">撤回：隨時可以在設定裡按「撤回聲紋同意」，撤回後立刻停用專屬聲音、改用一般語音。要徹底刪除聲音模型，請到 Google Drive 刪除對應資料夾。</p>
       <label class="row" style="align-items:flex-start;gap:8px;margin:10px 0"><input id="vcAgreeChk" type="checkbox" />
         <span class="tiny" data-i18n="vc.owner">我是這個聲音的本人，或已取得聲音本人（或其法定代理人）的同意。</span></label>
@@ -730,7 +730,7 @@
 
   <!-- 你的 Firebase 設定（複製 config.example.js 為 config.js 並填入）。沒有 config.js 時為純本機模式。 -->
   <script>window.__FIREBASE_CONFIG__ = null;</script>
-  <script src="config.js?v=1.6.0" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
-  <script type="module" src="js/app.js?v=1.6.0"></script>
+  <script src="config.js?v=1.6.1" onerror="console.warn('沒有 config.js → 純本機模式（不雲端同步）')"></script>
+  <script type="module" src="js/app.js?v=1.6.1"></script>
 </body>
 </html>
