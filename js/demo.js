@@ -17,13 +17,13 @@
 // ③ **字幕與旁白跟著介面語言（中／英／日／韓）。** 評審可能是任何一國人，按下去之前
 //    先把介面切成他的語言即可。旁白走電腦端 GPT-SoVITS 該語言的角色；連不上才退回
 //    瀏覽器語音——寧可音色差一點，也不能錄到一半沒有聲音。
-import { state } from "./store.js?v=1.6.0";
-import { t } from "./i18n.js?v=1.6.0";
-import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.6.0";
-import { startScan, stopScan } from "./a11yscan.js?v=1.6.0";
-import { bankFor } from "./clinical.js?v=1.6.0";
-import { hotlinesFor } from "./hotlines.js?v=1.6.0";
-import { drawTrajectory, loadReport } from "./report.js?v=1.6.0";
+import { state } from "./store.js?v=1.6.1";
+import { t } from "./i18n.js?v=1.6.1";
+import { localSynth, localVoices, detectLocalTts } from "./localtts.js?v=1.6.1";
+import { startScan, stopScan } from "./a11yscan.js?v=1.6.1";
+import { bankFor } from "./clinical.js?v=1.6.1";
+import { hotlinesFor } from "./hotlines.js?v=1.6.1";
+import { drawTrajectory, loadReport } from "./report.js?v=1.6.1";
 
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];

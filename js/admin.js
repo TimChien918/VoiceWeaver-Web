@@ -9,13 +9,13 @@
 // 改前端讓自己看到這一頁很容易，但寫入時資料庫那一層會用 request.auth.token
 // 再比一次 email，對不上就拒絕。所以換管理員要改兩處：下面的 ADMIN_EMAILS
 // 與 firestore.rules 的 isAdmin()——只改這裡只會得到一頁按了全部失敗的介面。
-import { state, currentAuthUser, firestoreDb } from "./store.js?v=1.6.0";
+import { state, currentAuthUser, firestoreDb } from "./store.js?v=1.6.1";
 import {
   doc, getDoc, setDoc, deleteDoc, collection, getDocs, Timestamp, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS } from "./providers.js?v=1.6.0";
-import { DAILY_LIMIT } from "./shared.js?v=1.6.0";
-import { t } from "./i18n.js?v=1.6.0";
+import { LLM_PROVIDERS, IMAGE_PROVIDERS, TTS_PROVIDERS } from "./providers.js?v=1.6.1";
+import { DAILY_LIMIT } from "./shared.js?v=1.6.1";
+import { t } from "./i18n.js?v=1.6.1";
 
 /** 開發者帳號（單一來源；firestore.rules 的 isAdmin() 要跟著同步）。 */
 export const ADMIN_EMAILS = ["timchien918@gmail.com"];

@@ -19,7 +19,7 @@
 // 改一次就多一個孤兒檔）。看不看得懂交給資料夾——平放時使用者在自己的雲端硬碟
 // 只會看到一排 5.json、6.json，完全認不出哪個是哪一句。
 
-import { driveToken } from "./store.js?v=1.6.0";
+import { driveToken } from "./store.js?v=1.6.1";
 
 const FILES = "https://www.googleapis.com/drive/v3/files";
 const FOLDER_MIME = "application/vnd.google-apps.folder";
@@ -27,6 +27,8 @@ const FOLDER_MIME = "application/vnd.google-apps.folder";
 export const ROOT_FOLDER = "Speak-My-Life";
 /** 更名前的根資料夾名。只用來找到舊曲庫並把它改名過來。 */
 export const LEGACY_ROOT_FOLDER = "VoiceWeaver";
+/** 網頁端要不要主動把舊資料夾改名。等所有裝置都更新到新版後才可以打開（見 speakMyLifeRoot）。 */
+const RENAME_LEGACY_ROOT = false;
 export const MODELS_DIR = "Models";
 export const ACOUSTIC_DIR = "AcousticModels";
 const LANG_DIRS = ["ZH", "EN", "JA", "KO"];
@@ -159,9 +161,14 @@ async function speakMyLifeRoot(){
     const legacy = await findFolders(LEGACY_ROOT_FOLDER, "root");
     if(legacy.length){
       id = await pickRoot(legacy);
-      // 只改「裝著曲庫的那一個」；其他同名的舊資料夾原封不動。
-      const ok = !_renameFailed.has(id) && await renameFolder(id, ROOT_FOLDER);
-      if(!ok){ _renameFailed.add(id); name = LEGACY_ROOT_FOLDER; }
+      // 網頁版**只沿用、不改名**：網頁永遠比 App／電腦端先上線（推上去就部署），
+      // 而還沒更新的舊版 App／電腦端只認 VoiceWeaver/。網頁先改名的話，那些裝置
+      // 會找不到曲庫、甚至另建一個空的 VoiceWeaver/，曲庫就裂成兩份。
+      // 改名交給使用者親手更新的電腦端／App 去做；網頁看到新名就跟著用新的。
+      if(RENAME_LEGACY_ROOT){
+        const ok = !_renameFailed.has(id) && await renameFolder(id, ROOT_FOLDER);
+        if(!ok){ _renameFailed.add(id); name = LEGACY_ROOT_FOLDER; }
+      } else name = LEGACY_ROOT_FOLDER;
     }
   }
   if(id){ _rootId = id; _rootTok = tok; _rootAt = Date.now(); _rootName = name; }

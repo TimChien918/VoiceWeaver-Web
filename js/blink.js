@@ -14,7 +14,7 @@
 //
 // 模型與 CDN 跟 headcontrol.js 同一套（Tasks Vision FaceLandmarker、VIDEO 模式跨幀追蹤）。
 // 兩個同時開時會各跑一份推論，比較吃電；但兩者的使用者幾乎不重疊，合併的複雜度不划算。
-import { t } from "./i18n.js?v=1.6.0";
+import { t } from "./i18n.js?v=1.6.1";
 
 const TASKS_CDN = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
 const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/face_landmarker/" +

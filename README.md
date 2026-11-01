@@ -70,11 +70,12 @@ Console 上的「顯示名稱」可以自己改成 Speak My Life。
 
 1. **改用新網址** https://timchien918.github.io/Speak-My-Life-Web/ 並更新書籤／主畫面捷徑。
    GitHub repo 改名後，Pages 的舊網址**不會**自動轉址。
-2. **在新網址重新登入一次**（同一個 Google 帳號）。瀏覽器儲存是「依網址」分開的：舊網址存的本機資料，
-   新網址讀不到——雲端同步的部分登入就回來；只存在本機、沒登入過的資料（純本機模式）請先在舊網址登入 Google 同步上雲，
-   或照常在新網址重新設定。同網址下的舊鍵則會自動搬遷。
-3. 第一次在新版打開「設定 → 專屬聲音」時，網頁會試著把 Drive 上的 `VoiceWeaver/` 改名成 `Speak-My-Life/`。
-   改名成功後，**還沒更新的舊版 App／電腦端**會找不到 `VoiceWeaver/`——請把各裝置都更新到新版。
+2. **本機設定會跟著過來**。瀏覽器儲存是依「網域」（`timchien918.github.io`）分開的，不是依路徑，
+   所以舊網址存在這台裝置上的設定、歷史與排序，在新網址一樣讀得到，第一次開啟時會自動把舊鍵搬成新鍵。
+   用 Google 登入的話，雲端同步的資料本來就跟著帳號走。
+3. Drive 曲庫資料夾：網頁版**只沿用、不改名**——有 `Speak-My-Life/` 就用它，沒有就繼續用舊的 `VoiceWeaver/`。
+   真正的改名由**更新後的電腦端語音中心或 App** 來做（網頁先改名的話，還沒更新的舊版裝置會找不到曲庫）。
+   所以：先把電腦端與手機 App 都更新到新版，其中任何一台第一次連上 Drive 時就會完成改名，網頁會自動跟上。
 4. Colab 的 Secret 名稱改為 `SML_PAIR_CODE`（配對碼本身不變）。
 5. 開發者：GitHub 上把兩個 repo 改名，Firebase → Authentication → Authorized domains 確認 `timchien918.github.io` 仍在清單內。
 

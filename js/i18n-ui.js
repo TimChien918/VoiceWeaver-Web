@@ -3,7 +3,7 @@
 // 跟 i18n-sml.js / i18n-admin.js 同一個做法：另開一支、直接把鍵併進同一個 STRINGS 物件，
 // t()、data-i18n、applyI18n 全部照舊運作。i18n.js 很大、也有其他工作同時在改，
 // 分開放可以避免互相覆蓋。app.js 在第一次 applyI18n 之前匯入這支。
-import { STRINGS } from "./i18n.js?v=1.6.0";
+import { STRINGS } from "./i18n.js?v=1.6.1";
 
 Object.assign(STRINGS, {
   "nav.home": { "zh-TW":"首頁", "en":"Home", "ja":"ホーム", "ko":"홈" },
