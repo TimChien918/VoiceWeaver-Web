@@ -5,6 +5,9 @@
 // 設計原則：這支只「看」DOM（MutationObserver），不改任何狀態、不攔任何事件——
 // 功能邏輯全在 app.js 等原本的模組裡。所以它壞掉或被拿掉，App 照樣能用，只是少了動畫。
 // 減少動態（prefers-reduced-motion）時，所有位移／縮放改成單純淡入。
+//
+// 1.6.2「靈動＋液態玻璃」：分頁指示器像一滴液體拉長後回彈地滑過去、選中的圖示小跳一下、
+// 首頁功能卡懸停時微微 3D 傾斜＋光澤跟著游標（只限滑鼠）、報表數字滾動、Chromium 的玻璃折射濾鏡。
 import { t } from "./i18n.js?v=1.6.1";
 import { listHistory } from "./store.js?v=1.6.1";
 import { speak } from "./speech.js?v=1.6.1";
@@ -16,6 +19,12 @@ const reduced = () => RM.matches;
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const shown = (el) => !!el && !el.classList.contains("hidden") && !el.closest(".hidden");
 const watch = (el, opts, fn) => { if (el) new MutationObserver(fn).observe(el, opts); };
+// 彈簧曲線：支援 CSS linear() 就用真正的阻尼彈簧（衝過頭一點再落定），否則退回 cubic-bezier。
+const HAS_LINEAR = !!window.CSS?.supports?.("transition-timing-function", "linear(0, 1)");
+const SPRING = HAS_LINEAR
+  ? "linear(0, 0.029, 0.105, 0.213, 0.338, 0.47, 0.599, 0.719, 0.826, 0.916, 0.989, 1.045, 1.085, 1.11, 1.123, 1.126, 1.122, 1.111, 1.097, 1.081, 1.064, 1.048, 1.033, 1.02, 1.009, 1, 0.993, 0.989, 0.986, 0.984, 0.984, 0.985, 0.986, 0.988, 0.99, 0.992, 0.994, 0.996, 0.998, 0.999, 1)"
+  : "cubic-bezier(.34,1.45,.64,1)";
+const lerp = (a, b, k) => a + (b - a) * k;
 
 // 分頁的前後順序：決定轉場從左邊還是右邊滑進來（往後的分頁從右邊進來，像翻頁）。
 const ORDER = ["home", "compose", "rehab", "aac", "report", "history", "settings"];
@@ -32,19 +41,63 @@ function setupNav() {
 
   // 指示器的大小跟著版面走：手機底部列是圖示後面的小膠囊，桌面側欄是整列。
   // 由 CSS 的 --ink-target 決定，JS 不必知道現在是哪一種版面。
+  // 液體般的移動：前緣先衝出去、後緣慢一拍跟上（中途拉長、橫向被擠扁一點），
+  // 到站時用彈簧曲線回彈成原本的膠囊。只動這一顆小小的絕對定位元素，不影響版面。
+  let last = null;
+  const box = (b) => ({ transform: `translate(${b.x}px, ${b.y}px)`, width: `${b.w}px`, height: `${b.h}px` });
+  const liquid = (p, n) => {
+    const horiz = Math.abs(n.x - p.x) >= Math.abs(n.y - p.y);
+    const LEAD = 0.78, TRAIL = 0.28;
+    const m = {};
+    if (horiz) {
+      const fwd = n.x > p.x;
+      const L = lerp(p.x, n.x, fwd ? TRAIL : LEAD), R = lerp(p.x + p.w, n.x + n.w, fwd ? LEAD : TRAIL);
+      const ch = lerp(p.h, n.h, 0.5), sq = ch < 80 ? 0.82 : 0.94;
+      Object.assign(m, { x: L, w: R - L, h: ch * sq, y: lerp(p.y + p.h / 2, n.y + n.h / 2, 0.5) - (ch * sq) / 2 });
+    } else {
+      const fwd = n.y > p.y;
+      const T = lerp(p.y, n.y, fwd ? TRAIL : LEAD), B = lerp(p.y + p.h, n.y + n.h, fwd ? LEAD : TRAIL);
+      const cw = lerp(p.w, n.w, 0.5), sq = cw < 80 ? 0.82 : 0.95;
+      Object.assign(m, { y: T, h: B - T, w: cw * sq, x: lerp(p.x + p.w / 2, n.x + n.w / 2, 0.5) - (cw * sq) / 2 });
+    }
+    const dist = Math.hypot(n.x - p.x, n.y - p.y);
+    ink.animate([
+      { ...box(p), easing: "cubic-bezier(.4,0,.7,1)" },
+      { ...box(m), offset: 0.34, easing: SPRING },
+      box(n),
+    ], { duration: Math.round(620 + Math.min(260, dist * 0.5)) });
+  };
   const place = (animate = true) => {
     const a = nav.querySelector(".tab.active");
-    if (!a || !a.offsetParent) { ink.style.opacity = "0"; return; }
+    if (!a || !a.offsetParent) { ink.style.opacity = "0"; last = null; return; }
     const useIcon = getComputedStyle(nav).getPropertyValue("--ink-target").trim() === "icon";
     const target = (useIcon && a.querySelector(".tab-ico")) || a;
     const nr = nav.getBoundingClientRect(), r = target.getBoundingClientRect();
-    if (!animate || ink.style.opacity !== "1") ink.classList.add("no-anim");
-    ink.style.width = r.width + "px";
-    ink.style.height = r.height + "px";
-    ink.style.transform = `translate(${r.left - nr.left - nav.clientLeft}px, ${r.top - nr.top - nav.clientTop}px)`;
+    const next = { x: r.left - nr.left - nav.clientLeft, y: r.top - nr.top - nav.clientTop, w: r.width, h: r.height };
+    const prev = last, wasShown = ink.style.opacity === "1";
+    // 同一次切換會被每顆分頁的 MutationObserver 各叫一次：位置沒變就別打斷正在跑的液體動畫
+    if (prev && wasShown && ["x", "y", "w", "h"].every((k) => Math.abs(prev[k] - next[k]) < 0.5)) return;
+    last = next;
+    ink.getAnimations?.().forEach((x) => x.cancel());
+    if (!animate || !wasShown) ink.classList.add("no-anim");
+    Object.assign(ink.style, box(next));
     ink.style.opacity = "1";
     void ink.offsetWidth;
     ink.classList.remove("no-anim");
+    if (!animate || !wasShown || !prev || reduced() || !ink.animate) return;
+    if (Math.abs(next.x - prev.x) < 1 && Math.abs(next.y - prev.y) < 1) return;
+    liquid(prev, next);
+  };
+  // 選中的圖示小跳一下：往上彈、落下時微微壓扁、再回原形（約半秒）
+  const hop = (tab) => {
+    const ico = tab?.querySelector(".ico");
+    if (!ico || reduced() || !ico.animate) return;
+    ico.animate([
+      { transform: "none" },
+      { transform: "translateY(-5px) scale(1.16)", offset: 0.32 },
+      { transform: "translateY(1px) scale(1.04, .92)", offset: 0.62 },
+      { transform: "none" },
+    ], { duration: 560, easing: "cubic-bezier(.3,.6,.4,1)" });
   };
 
   let cur = $(".tab.active")?.dataset.tab || "home";
@@ -58,6 +111,8 @@ function setupNav() {
     cur = next;
     document.body.dataset.tab = next;
     place();
+    hop($(".tab.active"));
+    if (next === "report") rollStats(true);
     if (next === "home") renderHome();
     // 換頁回到頂端：長輩在新的一頁找不到開頭，是最常見的「迷路」。
     window.scrollTo({ top: 0, behavior: "auto" });
@@ -276,8 +331,90 @@ function setupCrisis() {
   });
 }
 
+/* ───────────── 液態玻璃：Chromium 的折射濾鏡 ─────────────
+   backdrop-filter: url(#svg) 目前只有 Chromium 會真的套用；Safari／Firefox 會讓整條宣告失效
+   （連模糊都沒了），所以不能靠 @supports 判斷，改成偵測 Chromium 後才加 html.lg-refract。
+   減少透明度時不加（CSS 那邊也會把玻璃換成實色）。 */
+function setupGlass() {
+  const isChromium = !!navigator.userAgentData?.brands?.some((b) => /Chromium/i.test(b.brand));
+  if (!isChromium) return;
+  const host = document.createElement("div");
+  host.setAttribute("aria-hidden", "true");
+  host.style.cssText = "position:absolute;width:0;height:0;overflow:hidden;pointer-events:none";
+  // 低頻雜訊先模糊成平滑的起伏，再拿去推擠背景像素：效果是「隔著一片有點厚度的玻璃」的輕微扭曲，不是水波。
+  host.innerHTML = `<svg width="0" height="0" focusable="false"><filter id="lg-refract" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.008 0.016" numOctaves="2" seed="11" result="noise"/>
+    <feGaussianBlur in="noise" stdDeviation="2.5" result="soft"/>
+    <feDisplacementMap in="SourceGraphic" in2="soft" scale="22" xChannelSelector="R" yChannelSelector="G"/></filter></svg>`;
+  document.body.appendChild(host);
+  const RT = window.matchMedia("(prefers-reduced-transparency: reduce)");
+  const sync = () => document.documentElement.classList.toggle("lg-refract", !RT.matches);
+  sync();
+  RT.addEventListener?.("change", sync);
+}
+
+/* ───────────── 首頁功能卡：懸停時微微 3D 傾斜＋光澤跟著游標 ─────────────
+   只在「有滑鼠」的裝置（hover:hover 且 pointer:fine）而且沒開減少動態時才做；
+   觸控裝置完全不碰（手指按下去卡片在動，長輩會以為按錯了）。 */
+function setupTilt() {
+  const FINE = window.matchMedia("(hover: hover) and (pointer: fine)");
+  const MAX = 6;   // 最多傾斜 6 度：看得出立體，又不會讓字變形難讀
+  let cur = null;
+  const reset = (c) => {
+    if (!c) return;
+    c.classList.remove("is-tilt");
+    c.style.removeProperty("--rx"); c.style.removeProperty("--ry");
+  };
+  document.addEventListener("pointermove", (e) => {
+    const card = (e.pointerType === "mouse" && FINE.matches && !reduced()) ? e.target.closest?.(".feat") : null;
+    if (card !== cur) { reset(cur); cur = card; }
+    if (!card) return;
+    const r = card.getBoundingClientRect();
+    const px = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    const py = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
+    card.classList.add("is-tilt");
+    card.style.setProperty("--ry", `${((px - 0.5) * 2 * MAX).toFixed(2)}deg`);
+    card.style.setProperty("--rx", `${((0.5 - py) * 2 * MAX).toFixed(2)}deg`);
+    card.style.setProperty("--mx", `${(px * 100).toFixed(1)}%`);
+    card.style.setProperty("--my", `${(py * 100).toFixed(1)}%`);
+  }, { passive: true });
+  document.addEventListener("pointerleave", () => { reset(cur); cur = null; });
+  document.addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse") { reset(cur); cur = null; } }, { passive: true });
+}
+
+/* ───────────── 報表數字：從舊值滾到新值 ─────────────
+   不改元素的文字（讀屏、測試、匯出讀到的永遠是最終值），只在 CSS 的 ::after 疊一層滾動中的數字。
+   只處理整數（含單位，如「12 天」）；小數、「—」直接顯示。 */
+const _rollPrev = new WeakMap();
+const parseRoll = (s) => { const m = String(s ?? "").trim().match(/^(-?\d{1,7})(\D{0,6})$/); return m ? { n: +m[1], suf: m[2] } : null; };
+function roll(el, from, to) {
+  if (reduced() || from.n === to.n) return;
+  el.style.setProperty("--roll-from", String(from.n));
+  el.style.setProperty("--roll", String(to.n));
+  el.dataset.suffix = to.suf;
+  el.classList.remove("rolling"); void el.offsetWidth; el.classList.add("rolling");
+}
+function rollStats(fromZero = false) {
+  // 換到報表頁時：等報表畫完（report.js 是非同步讀資料）再從 0 滾上來
+  setTimeout(() => $$(".stat-val").forEach((el) => {
+    const v = parseRoll(el.textContent);
+    if (v && shown(el)) roll(el, fromZero ? { n: 0 } : (_rollPrev.get(el) || { n: 0 }), v);
+  }), 260);
+}
+function setupRoll() {
+  $$(".stat-val").forEach((el) => {
+    _rollPrev.set(el, parseRoll(el.textContent));
+    watch(el, { childList: true, characterData: true, subtree: true }, () => {
+      const v = parseRoll(el.textContent), old = _rollPrev.get(el);
+      _rollPrev.set(el, v);
+      if (v && shown(el)) roll(el, old || { n: 0 }, v);
+    });
+    el.addEventListener("animationend", (e) => { if (e.animationName === "roll-up") el.classList.remove("rolling"); });
+  });
+}
+
 function init() {
-  for (const f of [setupNav, setupHome, setupCompose, setupRecording, setupScore, setupAac, setupCrisis]) {
+  for (const f of [setupNav, setupHome, setupCompose, setupRecording, setupScore, setupAac, setupCrisis, setupGlass, setupTilt, setupRoll]) {
     try { f(); } catch (e) { console.warn("[ui]", f.name, e); }
   }
 }
