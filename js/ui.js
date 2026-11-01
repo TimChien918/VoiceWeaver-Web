@@ -8,9 +8,9 @@
 //
 // 1.6.2「靈動＋液態玻璃」：分頁指示器像一滴液體拉長後回彈地滑過去、選中的圖示小跳一下、
 // 首頁功能卡懸停時微微 3D 傾斜＋光澤跟著游標（只限滑鼠）、報表數字滾動、Chromium 的玻璃折射濾鏡。
-import { t } from "./i18n.js?v=1.6.1";
-import { listHistory } from "./store.js?v=1.6.1";
-import { speak } from "./speech.js?v=1.6.1";
+import { t } from "./i18n.js?v=1.6.2";
+import { listHistory } from "./store.js?v=1.6.2";
+import { speak } from "./speech.js?v=1.6.2";
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -47,7 +47,7 @@ function setupNav() {
   const box = (b) => ({ transform: `translate(${b.x}px, ${b.y}px)`, width: `${b.w}px`, height: `${b.h}px` });
   const liquid = (p, n) => {
     const horiz = Math.abs(n.x - p.x) >= Math.abs(n.y - p.y);
-    const LEAD = 0.78, TRAIL = 0.28;
+    const LEAD = 0.72, TRAIL = 0.32;
     const m = {};
     if (horiz) {
       const fwd = n.x > p.x;

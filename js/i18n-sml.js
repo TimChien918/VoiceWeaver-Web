@@ -5,7 +5,7 @@
 // 分開放可以避免互相覆蓋。合併方式是直接把鍵併進同一個 STRINGS 物件，
 // 所以 t()、data-i18n、applyI18n 全部照舊運作，用起來跟寫在 i18n.js 裡沒有差別。
 // app.js 在匯入 i18n.js 之前先匯入這支，確保第一次 applyI18n 時這些鍵已經在了。
-import { STRINGS } from "./i18n.js?v=1.6.1";
+import { STRINGS } from "./i18n.js?v=1.6.2";
 
 Object.assign(STRINGS, {
   // ── 臨床題庫四級 ──

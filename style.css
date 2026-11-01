@@ -284,7 +284,7 @@ nav.tabs{ --ink-target:icon; position:fixed; left:12px; right:12px; bottom:calc(
   transition:color var(--dur-2) ease; }
 .tabs .tab .ico{ width:26px; height:26px; }
 .tabs .tab .tab-lbl{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.tabs .tab.active{ color:var(--accent-ink); }
+.tabs .tab.active{ color:color-mix(in srgb, var(--accent-ink) 80%, var(--fg)); }   /* 在玻璃上：主色再壓深一點，最糟的底也有 4.5:1 */
 .tabs .tab.active .tab-ico{ background:var(--accent); color:var(--on-accent); }
 /* 有滑動指示器時，作用中分頁本身不再上底色（由指示器負責）；JS 沒載到時退回上面那行 */
 .tabs.has-ink .tab.active .tab-ico{ background:transparent; }
@@ -367,6 +367,8 @@ main{ padding:20px 16px calc(116px + env(safe-area-inset-bottom)); max-width:720
   box-shadow:inset 0 1px 1px rgb(255 255 255 / .75), inset 0 12px 18px -12px rgb(255 255 255 / .7),
              inset 0 -8px 14px -8px rgb(120 70 0 / .28), 0 14px 28px -12px rgb(0 0 0 / .5); }
 @media (hover:hover){ .hero-cta:hover{ filter:brightness(1.05) saturate(1.05); } }
+/* 簡約風的「已選」色是綠底白字（對比不足 4.5），問候卡上改成 iOS 式的白色玻璃膠囊＋藍字 */
+html[data-style="minimal"] .hero-cta{ --glass-gold:color-mix(in srgb, #fff 90%, transparent); color:var(--accent-ink); }
 .hero-thread{ position:absolute; left:0; right:0; bottom:0; width:100%; height:90px; pointer-events:none; }
 .hero-thread path{ fill:none; stroke:var(--gold-300); stroke-width:3; stroke-linecap:round; opacity:.55;
   stroke-dasharray:1; vector-effect:non-scaling-stroke; animation:thread-draw 1.6s var(--ease-out) .2s backwards; }
@@ -1171,7 +1173,7 @@ body.kiosk-on .scan-bar{ z-index:45; }
    · 退場：減少透明度（prefers-reduced-transparency）與高對比 → 全部實色、無模糊；高對比永遠最高優先。
            減少動態 → 漂移、傾斜、彈簧位移全部關掉，只留淡入（見檔尾）。
    ═══════════════════════════════════════════════════════════════ */
-@property --roll{ syntax:"<integer>"; inherits:false; initial-value:0; }
+@property --roll{ syntax:"<integer>"; inherits:true; initial-value:0; }
 
 :root{
   /* 彈簧曲線：不支援 linear() 的瀏覽器退回只彈一點點的 cubic-bezier */
@@ -1180,7 +1182,7 @@ body.kiosk-on .scan-bar{ z-index:45; }
   --dur-spring:560ms;
 
   /* 玻璃（淺色）：底色百分比是為了讓玻璃上的字在最糟的底（紅色求救鈕捲到下面）時仍有 4.5:1 */
-  --glass-a:72%; --glass-bar-a:66%; --glass-strong-a:86%;
+  --glass-a:76%; --glass-bar-a:66%; --glass-strong-a:86%;
   --glass-bg:color-mix(in srgb, var(--card) var(--glass-a), transparent);
   --glass-bar:color-mix(in srgb, var(--bg) var(--glass-bar-a), transparent);
   --glass-strong:color-mix(in srgb, var(--card) var(--glass-strong-a), transparent);
@@ -1229,7 +1231,7 @@ html[data-theme="dark"], html[data-style="anime"]{ --glass-a:64%; --glass-bar-a:
     --amb-1:color-mix(in srgb, var(--accent) 34%, transparent); --amb-2:color-mix(in srgb, var(--gold) 13%, transparent);
     --amb-3:color-mix(in srgb, var(--accent2) 12%, transparent); }
 /* 本身綁淺色的風格（可愛、簡約）與「淺色」：蓋回淺色玻璃，免得系統深色漏進來 */
-html[data-theme="light"], html[data-style="cute"], html[data-style="minimal"]{ --glass-a:72%; --glass-bar-a:66%; --glass-strong-a:86%;
+html[data-theme="light"], html[data-style="cute"], html[data-style="minimal"]{ --glass-a:76%; --glass-bar-a:66%; --glass-strong-a:86%;
     --glass-ink-bg:color-mix(in srgb, var(--fg) 78%, transparent);
     --glass-hi:rgb(255 255 255 / .9); --glass-mid:rgb(255 255 255 / .22); --glass-shade:rgb(var(--shadow-rgb) / .16);
     --glass-edge:color-mix(in srgb, var(--fg) 9%, transparent); --glass-lip:rgb(255 255 255 / .55);
@@ -1281,14 +1283,16 @@ nav.tabs::before, .hero-cta::after, .toast::before, .tab-ink::before{
 html.lg-refract:not([data-contrast="high"]) .topbar,
 html.lg-refract:not([data-contrast="high"]) nav.tabs{ backdrop-filter:url(#lg-refract) blur(16px) saturate(180%); }
 
+/* 液體滑過去要一點時間：選中分頁的字／圖示晚一拍才變成「在主色上」的顏色，免得白字先出現在玻璃上看不見 */
+.tabs.has-ink .tab.active, .tabs.has-ink .tab.active .tab-ico{ transition-delay:220ms, 220ms, 0s; }
 /* ── 導覽圖示：選中時小跳一下（ui.js 用 Web Animations 播），這裡只確保變形以圖示中心為準 ── */
 .tab .ico{ transform-origin:50% 60%; }
 
 /* ── 數字滾動：真正的文字不動（讀屏與測試讀到的永遠是最終值），
    上面疊一層 ::after 用 @property 整數插值從舊值滾到新值。不支援 @property 的瀏覽器直接顯示新值。 */
-.stat-val.rolling{ position:relative; color:transparent; }
+.stat-val.rolling{ position:relative; color:transparent; animation:roll-up 1000ms var(--ease-out) both; }
 .stat-val.rolling::after{ content:counter(roll) attr(data-suffix); counter-reset:roll var(--roll);
-  position:absolute; inset:0; color:var(--accent-ink); animation:roll-up 1000ms var(--ease-out) both; }
+  position:absolute; inset:0; color:var(--accent-ink); }
 
 /* ── 彈簧回饋：按下時 90ms 快速壓縮（手抖的人要立刻知道「有按到」），放開時用 --spring 輕彈回來 ── */
 .btn:active, .chip:active, .acard:active, .tab:active, .recent-item:active, .setback:active,
@@ -1410,4 +1414,5 @@ html[data-contrast="high"] .modal-card, html[data-contrast="high"] .topbar{ box-
   .feat::after{ display:none; }
   .recent-item:active, .btn:active:not(:disabled){ transform:none; }
   .stat-val.rolling{ color:inherit; } .stat-val.rolling::after{ display:none; }
+  .tabs.has-ink .tab.active, .tabs.has-ink .tab.active .tab-ico{ transition-delay:0s; }
 }

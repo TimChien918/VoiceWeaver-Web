@@ -13,10 +13,10 @@
 //
 // ② 停留點選：滑鼠／觸控筆停在按鈕上 N 秒就自動點。給能移動指標、但按不下去
 //    （或按下時會抖到旁邊）的人。秒數與鼻控共用（headcontrol.js 的 setDwellMs）。
-import { t } from "./i18n.js?v=1.6.1";
-import { state, save } from "./store.js?v=1.6.1";
-import { setDwellMs } from "./headcontrol.js?v=1.6.1";
-import { startBlink, stopBlink, blinkRunning, setBlinkHold } from "./blink.js?v=1.6.1";
+import { t } from "./i18n.js?v=1.6.2";
+import { state, save } from "./store.js?v=1.6.2";
+import { setDwellMs } from "./headcontrol.js?v=1.6.2";
+import { startBlink, stopBlink, blinkRunning, setBlinkHold } from "./blink.js?v=1.6.2";
 
 const $ = (s) => document.querySelector(s);
 

@@ -4,9 +4,9 @@
 //   ① http://localhost / 127.0.0.1（瀏覽器例外，限「開網頁的電腦＝語音中心電腦」）
 //   ② https://<主機>.<tailnet>.ts.net（Tailscale serve 的真憑證網址，任何地方可連）
 // 連不上時上層會自動退回瀏覽器原生語音。
-import { state } from "./store.js?v=1.6.1";
-import { t } from "./i18n.js?v=1.6.1";
-import { hasVoiceConsent } from "./consent.js?v=1.6.1";
+import { state } from "./store.js?v=1.6.2";
+import { t } from "./i18n.js?v=1.6.2";
+import { hasVoiceConsent } from "./consent.js?v=1.6.2";
 
 let _base = null;   // 已確認可用的橋接 base URL
 
